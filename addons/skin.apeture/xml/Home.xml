@@ -698,7 +698,8 @@
       <onup>9103</onup>
       <ondown>9103</ondown>
       <onback>9103</onback>
-      <onclick>ActivateWindow(playercontrols)</onclick>
+      <onclick condition="Player.HasMedia">ActivateWindow(playercontrols)</onclick>
+      <onclick condition="!Player.HasMedia">Notification(Apeture,Nothing is playing,3000)</onclick>
     </control>
     <control type="label">
       <left>1000</left>

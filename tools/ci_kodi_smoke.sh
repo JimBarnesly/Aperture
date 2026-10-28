@@ -118,6 +118,11 @@ try:
         while not monitor.abortRequested():
             sequence += 1
             window_id = xbmcgui.getCurrentWindowId()
+            dialog_id = xbmcgui.getCurrentWindowDialogId()
+            try:
+                dialog_focus = xbmcgui.Window(dialog_id).getFocusId() if dialog_id != 9999 else -1
+            except (RuntimeError, ValueError):
+                dialog_focus = -1
             try:
                 focus = xbmcgui.Window(window_id).getFocusId()
             except (RuntimeError, ValueError):
@@ -125,8 +130,10 @@ try:
             state = {
                 'sequence': sequence, 'time': time.time(), 'pid': os.getpid(),
                 'skin': xbmc.getSkinDir(), 'window': window_id,
-                'dialog': xbmcgui.getCurrentWindowDialogId(), 'focus': focus,
+                'dialog': dialog_id, 'focus': focus, 'dialog_focus': dialog_focus,
                 'window_label': xbmc.getInfoLabel('System.CurrentWindow'),
+                'control_label': xbmc.getInfoLabel('System.CurrentControl'),
+                'list_item': xbmc.getInfoLabel('ListItem.Label'),
                 'folder': xbmc.getInfoLabel('Container.FolderPath'),
                 'library_state': xbmc.getInfoLabel('Container.Property(Apeture.LibraryState)'),
                 'game_plugin_enabled': bool(xbmc.getCondVisibility('System.AddonIsEnabled(plugin.games.apeture)')),
@@ -254,6 +261,22 @@ def press(key):
     subprocess.run(['xdotool','key','--clearmodifiers',key],check=True,timeout=10)
     return before
 
+
+def labelled(s, text):
+    return any(s.get(key,'').strip()==text for key in ('list_item','control_label'))
+
+def next_observation(key):
+    before=press(key)
+    return wait_for(f'fresh state after {key}',lambda s:True,after=before)
+
+def find_label(text, direction, max_steps):
+    # The bound comes from the small menu under test; never choose an unobserved item.
+    for _ in range(max_steps+1):
+        if labelled(state(),text): return
+        next_observation(direction)
+        time.sleep(0.2)
+    raise AssertionError(f'Could not focus visible item {text!r}; actual state={state()}')
+
 # Use source navigation edges to support vertical and horizontal experiment branches,
 # but confirm every edge through actual focus changes, not source assertions.
 graph={}
@@ -320,14 +343,74 @@ try:
     before=press('Escape')
     wait_for('Repeated Settings exit',lambda s:s.get('window')==HOME,after=before)
     checks.append({'check':'repeat-settings-round-trip','state':state()})
+    # Empty-library destinations must open native windows, not just focus on Home.
+    for control,expected,name in [(9101,10025,'movies'),(9102,10025,'tv'),(9103,10502,'music'),(9104,10003,'files')]:
+        focus(control); before=press('Return')
+        wait_for(f'{name} destination',lambda s:s.get('window')==expected and s.get('skin')=='skin.apeture',after=before)
+        screenshot('06-'+name)
+        before=press('Escape')
+        wait_for(f'Back from {name}',lambda s:s.get('window')==HOME and s.get('dialog')==9999,after=before)
+        checks.append({'check':name+'-back','state':state()})
+    # Open the unconfigured game-library settings and Cancel without choosing files.
+    focus(9100); before=press('Return')
+    wait_for('Games for configuration test',lambda s:s.get('window')==GAMES and s.get('library_state')=='unconfigured',after=before)
+    find_label('Choose your ROM folder to get started…','Down',3)
+    before=press('Return')
+    wait_for('Game-library settings dialog',lambda s:s.get('dialog')==10140,after=before)
+    screenshot('07-game-config')
+    before=press('Escape')
+    wait_for('Cancel game-library settings',lambda s:s.get('window')==GAMES and s.get('dialog')==9999 and s.get('library_state')=='unconfigured',after=before)
+    checks.append({'check':'game-config-cancel','state':state()})
+    before=press('Escape')
+    wait_for('Home after game settings Cancel',lambda s:s.get('window')==HOME,after=before)
+    # Only open/dismiss Power: never select a shutdown, reboot or suspend action.
+    focus(9200); before=press('Return')
+    wait_for('Power menu dialog',lambda s:s.get('dialog')==10111,after=before)
+    screenshot('08-power-menu')
+    before=press('Escape')
+    wait_for('Dismiss Power menu',lambda s:s.get('window')==HOME and s.get('dialog')==9999,after=before)
+    focus(9201); before=press('Return')
+    wait_for('Empty Favourites browser',lambda s:s.get('window')==10060,after=before)
+    screenshot('09-favourites')
+    before=press('Escape')
+    wait_for('Back from Favourites',lambda s:s.get('window')==HOME and s.get('dialog')==9999,after=before)
+    checks.append({'check':'utilities-dismissed','state':state()})
+    # Exercise Kodi's own skin chooser and automatic rollback via keyboard only.
+    # The temporary profile is disposable, and no keep-confirmation is accepted.
+    focus(9105); before=press('Return')
+    wait_for('Settings for skin chooser',lambda s:s.get('window')==SETTINGS,after=before)
+    before=press('Down')
+    wait_for('Settings categories',lambda s:s.get('window')==SETTINGS and s.get('focus')==9001,after=before)
+    next_observation('Down')  # Second row of the observed four-column Settings grid.
+    find_label('Interface','Right',3)
+    before=press('Return')
+    wait_for('Interface settings',lambda s:s.get('window')==10032,after=before)
+    next_observation('Right')
+    screenshot('10-interface-settings')
+    before=press('Return')
+    wait_for('Native skin-selection dialog',lambda s:s.get('dialog')==12000,after=before)
+    screenshot('11-skin-chooser')
+    find_label('Estuary','Down',5)
+    before=press('Return')
+    wait_for('Native skin keep/revert confirmation',lambda s:s.get('skin')=='skin.estuary' and s.get('dialog')==10100,after=before)
+    screenshot('12-skin-keep-revert')
+    before=state()['sequence']
+    wait_for('Automatic revert to Apeture without confirmation',lambda s:s.get('skin')=='skin.apeture' and s.get('dialog')==9999,timeout=40,after=before)
+    screenshot('13-skin-reverted')
+    for _ in range(4):
+        if state().get('window')==HOME: break
+        next_observation('Escape')
+        time.sleep(0.3)
+    wait_for('Home after automatic skin rollback',lambda s:s.get('window')==HOME and s.get('skin')=='skin.apeture' and s.get('dialog')==9999)
+    checks.append({'check':'skin-auto-revert-and-home','state':state()})
     log=(out/'logs/kodi.log').read_text(errors='replace')
     fatal_markers=('Error loading skin', 'failed to load skin', 'EXCEPTION Thrown (PythonToCppException)', 'Apeture: operation failed')
     errors=[line for line in log.splitlines() if any(marker.lower() in line.lower() for marker in fatal_markers)]
     if errors: raise AssertionError('Skin/plugin errors in Kodi log: '+'\n'.join(errors))
-    result={'status':'passed','scope':'Kodi 21 software-rendered Home/Settings/unconfigured Games keyboard smoke test',
-            'checks':checks,'limitations':['No ZIP-install/keep-revert check','No Pi/hardware/controller/playback/core acceptance','Visual design still needs screenshot review']}
+    result={'status':'passed','scope':'Kodi 21 keyboard navigation, empty-library destinations, dialogs, configuration Cancel and automatic skin rollback',
+            'checks':checks,'limitations':['No ZIP-install or accepted skin-switch check','No Pi/hardware/controller/playback/core acceptance','No media-present playback-controls check','Visual design still needs screenshot review']}
     (out/'result.json').write_text(json.dumps(result,indent=2)+'\n')
-    print('PASS: real Kodi GUI Home, six focus targets, Settings, unconfigured Games and Back verified.',flush=True)
+    print('PASS: real Kodi GUI navigation, empty-library destinations, Power/Favourites, game config Cancel and skin auto-revert verified.',flush=True)
 except Exception as exc:
     try: screenshot('failure')
     except Exception: pass
