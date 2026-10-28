@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<addon id="plugin.games.apeture" name="Apeture Game Library" version="0.1.0" provider-name="Apeture contributors">
+  <requires>
+    <import addon="xbmc.python" version="3.0.1"/>
+  </requires>
+  <extension point="xbmc.python.pluginsource" library="default.py">
+    <provides>game</provides>
+  </extension>
+  <extension point="xbmc.addon.metadata">
+    <summary lang="en_GB">Your games, inside Kodi.</summary>
+    <description lang="en_GB">Read-only game browsing for Kodi 21 Omega. Discover populated system folders in your own ROM collection and hand playback to Kodi RetroPlayer. Requires compatible Kodi game add-ons; does not launch standalone RetroArch or supply games, BIOS, or metadata.</description>
+    <platform>all</platform>
+    <license>GPL-3.0-or-later</license>
+  </extension>
+</addon>

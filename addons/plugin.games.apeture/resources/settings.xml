@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<settings version="1">
+  <section id="plugin.games.apeture">
+    <category id="library" label="32001" help="32003">
+      <group id="1">
+        <setting id="rom_root" type="path" label="32002" help="32003">
+          <level>0</level>
+          <default/>
+          <constraints>
+            <sources><source>files</source></sources>
+            <writable>false</writable>
+            <allowempty>true</allowempty>
+          </constraints>
+          <control type="button" format="path"><heading>32002</heading></control>
+        </setting>
+      </group>
+    </category>
+  </section>
+</settings>
