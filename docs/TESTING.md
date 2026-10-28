@@ -15,6 +15,9 @@ Generated upstream dependencies must come from pinned official source revisions.
    change only if the keep/revert confirmation is visible and usable.
 3. Navigate every Home destination using only a keyboard/remote/controller.
    Repeat left/right/up/down, Back and select; no invisible focus or trapped paths.
+   Repeat on the real game controller and HDMI-CEC TV remote. Check D-pad/arrows,
+   OK/select and Back, including held/repeated inputs. Keyboard CI does not prove
+   physical controller mapping or a particular television's CEC behaviour.
 4. Open and close Settings, file browser, source setup, keyboard and yes/no dialogs.
    Confirm changing back to the previous skin works.
 5. Check no-library and populated-library Music, Movies and TV states.

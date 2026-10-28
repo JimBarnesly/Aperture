@@ -1,0 +1,126 @@
+{
+  "label": "SYNTHETIC QA",
+  "description": "Original quiet test tones, not a user catalogue.",
+  "duration_seconds": 20,
+  "albums": [
+    {
+      "artist": "Amber SYNTHETIC QA",
+      "title": "SYNTHETIC QA — Dawn",
+      "year": 2001,
+      "tracks": [
+        {
+          "file": "album-01/z-disc1-track1.flac",
+          "title": "SYNTHETIC QA — Disc 1 Track 1",
+          "disc": 1,
+          "track": 1,
+          "sha256": "24744bc577fc45ac13525507c7bb14145bdc86ab2c8d9ef9ae87147e3bf4abfa"
+        }
+      ]
+    },
+    {
+      "artist": "The Beacon SYNTHETIC QA",
+      "title": "SYNTHETIC QA — Earlier",
+      "year": 1999,
+      "tracks": [
+        {
+          "file": "album-02/z-disc1-track1.flac",
+          "title": "SYNTHETIC QA — Disc 1 Track 1",
+          "disc": 1,
+          "track": 1,
+          "sha256": "cb282d59c16b70c17762129c9793184775b84dbd63abb5e1cd35cc8de73c51fd"
+        }
+      ]
+    },
+    {
+      "artist": "The Beacon SYNTHETIC QA",
+      "title": "SYNTHETIC QA — Later",
+      "year": 2004,
+      "tracks": [
+        {
+          "file": "album-03/z-disc1-track1.flac",
+          "title": "SYNTHETIC QA — Disc 1 Track 1",
+          "disc": 1,
+          "track": 1,
+          "sha256": "f26ca0727bd957ee3e2eb1c9f40a8c345a472cfb02970d1f6b8c791fd302e8c7"
+        }
+      ]
+    },
+    {
+      "artist": "Cedar SYNTHETIC QA",
+      "title": "SYNTHETIC QA — Double",
+      "year": 2003,
+      "tracks": [
+        {
+          "file": "album-04/z-disc1-track1.flac",
+          "title": "SYNTHETIC QA — Disc 1 Track 1",
+          "disc": 1,
+          "track": 1,
+          "sha256": "892eef3e0d998c4636b7a72d436a68ae28bfa2b37e2a0e54dc38144e3dad5d03"
+        },
+        {
+          "file": "album-04/y-disc1-track2.flac",
+          "title": "SYNTHETIC QA — Disc 1 Track 2",
+          "disc": 1,
+          "track": 2,
+          "sha256": "7e2a7d3bb7f906475d3a77686002406e41bc18f80f6a0f0a741da112bb1af6f1"
+        },
+        {
+          "file": "album-04/x-disc2-track1.flac",
+          "title": "SYNTHETIC QA — Disc 2 Track 1",
+          "disc": 2,
+          "track": 1,
+          "sha256": "555a7a2c1164378462d4effa0d724f65d216907352655f0810886c6e1cc411da"
+        },
+        {
+          "file": "album-04/w-disc2-track2.flac",
+          "title": "SYNTHETIC QA — Disc 2 Track 2",
+          "disc": 2,
+          "track": 2,
+          "sha256": "19d84b6759e43e67736b76b830c6fc68861b8392e45189f493566ec99fb61613"
+        }
+      ]
+    },
+    {
+      "artist": "Delta SYNTHETIC QA",
+      "title": "SYNTHETIC QA — Night",
+      "year": 2000,
+      "tracks": [
+        {
+          "file": "album-05/z-disc1-track1.flac",
+          "title": "SYNTHETIC QA — Disc 1 Track 1",
+          "disc": 1,
+          "track": 1,
+          "sha256": "97bbad6fcc99c85cfcd803686114a1430fcea85c40b8898039f0853cd8d832d4"
+        }
+      ]
+    },
+    {
+      "artist": "Echo SYNTHETIC QA",
+      "title": "SYNTHETIC QA — Signal",
+      "year": 2005,
+      "tracks": [
+        {
+          "file": "album-06/z-disc1-track1.flac",
+          "title": "SYNTHETIC QA — Disc 1 Track 1",
+          "disc": 1,
+          "track": 1,
+          "sha256": "265074607a5f4c08149bd10887bb1a20106242dd87599397719d15f45a6e7346"
+        }
+      ]
+    },
+    {
+      "artist": "Zinc SYNTHETIC QA",
+      "title": "SYNTHETIC QA — Last",
+      "year": 2006,
+      "tracks": [
+        {
+          "file": "album-07/z-disc1-track1.flac",
+          "title": "SYNTHETIC QA — Disc 1 Track 1",
+          "disc": 1,
+          "track": 1,
+          "sha256": "64f9d6c43ae80c2ff6e4b560c0eee36be653a39408b36918f59d0eb9d7f43d70"
+        }
+      ]
+    }
+  ]
+}

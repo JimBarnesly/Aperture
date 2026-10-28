@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def validate() -> list[str]:
     errors = []
-    sources = [ROOT / "addons/plugin.games.apeture", ROOT / "build/skin.apeture"]
+    sources = [ROOT / "addons/plugin.games.apeture", ROOT / "addons/script.apeture.music", ROOT / "build/skin.apeture"]
     for source in sources:
         manifest = source / "addon.xml"
         if not manifest.exists():
@@ -34,7 +34,7 @@ def validate() -> list[str]:
                 if asset.text and not (source / asset.text).is_file():
                     errors.append(f"Missing declared addon asset: {asset.text}")
             for ext in addon.findall("extension"):
-                if ext.get("point") == "xbmc.python.pluginsource":
+                if ext.get("point") in ("xbmc.python.pluginsource", "xbmc.python.script"):
                     library = ext.get("library", "")
                     if not library or not (source / library).is_file():
                         errors.append(f"Missing plugin entry point: {library}")

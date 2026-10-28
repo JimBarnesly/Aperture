@@ -30,7 +30,8 @@ or fabricated album covers. Navigable destinations stay readable at TV distance.
   empty libraries. Games without the companion opens the installation explanation;
   it never silently downloads, enables or installs a game client.
 - Kodi's inherited window Back behavior, full settings and skin-switch confirmation
-  remain intact. Format-style album browsing and receiver/streaming work are deferred.
+  remain intact. The optional native Format-inspired album shelf is described in
+  `MUSIC_SHELF.md`; receiver/streaming work remains deferred.
 
 The complete pinned Estuary window foundation is intentionally retained. This
 experiment customizes Home, named fonts, the default palette, and existing source
