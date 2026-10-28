@@ -52,7 +52,7 @@ PY
 }
 trap cleanup EXIT
 
-for command in python3 Xvfb xauth xdotool xdpyinfo glxinfo xwd import dpkg git; do
+for command in python3 Xvfb xauth xdotool xdpyinfo xprop xwininfo glxinfo xwd import dpkg git; do
   command -v "$command" >/dev/null || { echo "Missing prerequisite: $command" >&2; exit 2; }
 done
 KODI_BIN="$(dpkg -L kodi-bin | grep '/kodi\.bin$' | head -1)"
@@ -123,7 +123,7 @@ try:
             except (RuntimeError, ValueError):
                 focus = -1
             state = {
-                'sequence': sequence, 'time': time.time(),
+                'sequence': sequence, 'time': time.time(), 'pid': os.getpid(),
                 'skin': xbmc.getSkinDir(), 'window': window_id,
                 'dialog': xbmcgui.getCurrentWindowDialogId(), 'focus': focus,
                 'window_label': xbmc.getInfoLabel('System.CurrentWindow'),
@@ -161,6 +161,7 @@ cat > "$KODI_DATA/userdata/guisettings.xml" <<'XML'
   <setting id="services.esenabled">false</setting>
   <setting id="services.esallinterfaces">false</setting>
   <setting id="services.zeroconf">false</setting>
+  <setting id="services.wsdiscovery">false</setting>
   <setting id="services.airplay">false</setting>
   <setting id="services.upnp">false</setting>
   <setting id="services.upnpserver">false</setting>
@@ -224,7 +225,7 @@ def wait_for(description, predicate, timeout=30, after=0):
     while time.monotonic()<deadline:
         os.kill(pid, 0)
         s=state()
-        if s.get('sequence', 0)>after and time.time()-s.get('time', 0)<3 and predicate(s):
+        if s.get('pid')==pid and s.get('sequence', 0)>after and time.time()-s.get('time', 0)<3 and predicate(s):
             return s
         if (out/'observer-error.txt').exists():
             raise AssertionError((out/'observer-error.txt').read_text())
@@ -279,9 +280,21 @@ def focus(target):
 
 try:
     wait_for('actual Apeture Home and observer',lambda s:s.get('skin')=='skin.apeture' and s.get('window')==HOME and s.get('focus') in graph,timeout=90)
-    windows=subprocess.check_output(['xdotool','search','--onlyvisible','--pid',str(pid)],text=True,timeout=10).split()
-    if not windows: raise AssertionError('No visible X window owned by the launched Kodi process')
-    subprocess.run(['xdotool','windowfocus','--sync',windows[-1]],check=True,timeout=10)
+    # Kodi 21 X11 sets WM_CLASS/WM_NAME but does not set _NET_WM_PID.
+    # Only this Kodi process runs on our fresh authenticated display; also require
+    # the in-process observer PID, one exact app class/title, and fullscreen size.
+    windows=subprocess.check_output(['xdotool','search','--onlyvisible','--class','^Kodi( from Debian)?$'],text=True,timeout=10).split()
+    if len(windows)!=1: raise AssertionError(f'Expected one visible Kodi X window, found {windows}')
+    window=windows[0]
+    title=subprocess.check_output(['xdotool','getwindowname',window],text=True,timeout=10).strip()
+    if title not in ('Kodi', 'Kodi from Debian'): raise AssertionError(f'Unexpected X window title: {title}')
+    geometry=subprocess.check_output(['xdotool','getwindowgeometry','--shell',window],text=True,timeout=10)
+    dimensions=dict(line.split('=',1) for line in geometry.splitlines() if '=' in line)
+    if dimensions.get('WIDTH')!='1920' or dimensions.get('HEIGHT')!='1080':
+        raise AssertionError(f'Kodi window is not fullscreen: {geometry}')
+    properties=subprocess.check_output(['xprop','-id',window,'WM_CLASS','WM_NAME','_NET_WM_PID'],text=True,timeout=10)
+    (out/'x-window.txt').write_text(properties+'\n'+geometry)
+    subprocess.run(['xdotool','windowfocus','--sync',window],check=True,timeout=10)
     if not state().get('game_plugin_enabled'): raise AssertionError('Apeture game companion is not enabled')
     screenshot('01-home')
     for control in range(9100,9106):
