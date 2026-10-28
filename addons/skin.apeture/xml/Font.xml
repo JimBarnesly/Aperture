@@ -156,7 +156,7 @@
     <font>
       <name>ApetureBrand</name>
       <filename>NotoSans-Regular.ttf</filename>
-      <size>44</size>
+      <size>32</size>
       <style>bold</style>
     </font>
     <font>
@@ -179,7 +179,7 @@
     <font>
       <name>ApetureBody</name>
       <filename>NotoSans-Regular.ttf</filename>
-      <size>28</size>
+      <size>26</size>
     </font>
     <font>
       <name>ApetureSmall</name>
@@ -189,7 +189,12 @@
     <font>
       <name>ApetureClock</name>
       <filename>NotoSans-Regular.ttf</filename>
-      <size>37</size>
+      <size>38</size>
+    </font>
+    <font>
+      <name>ApetureSection</name>
+      <filename>NotoSans-Regular.ttf</filename>
+      <size>32</size>
     </font>
   </fontset>
   <fontset id="Arial" idloc="31053">
@@ -337,7 +342,7 @@
     <font>
       <name>ApetureBrand</name>
       <filename>arial.ttf</filename>
-      <size>44</size>
+      <size>32</size>
       <style>bold</style>
     </font>
     <font>
@@ -360,7 +365,7 @@
     <font>
       <name>ApetureBody</name>
       <filename>arial.ttf</filename>
-      <size>28</size>
+      <size>26</size>
     </font>
     <font>
       <name>ApetureSmall</name>
@@ -370,7 +375,12 @@
     <font>
       <name>ApetureClock</name>
       <filename>arial.ttf</filename>
-      <size>37</size>
+      <size>38</size>
+    </font>
+    <font>
+      <name>ApetureSection</name>
+      <filename>arial.ttf</filename>
+      <size>32</size>
     </font>
   </fontset>
 </fonts>

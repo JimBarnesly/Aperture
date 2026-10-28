@@ -1,962 +1,728 @@
 <?xml version='1.0' encoding='utf-8'?>
+<!-- Original Apeture scenic Home. GPL-2.0-or-later. -->
 <window>
   <defaultcontrol always="false">9100</defaultcontrol>
-  <backgroundcolor>FF061522</backgroundcolor>
+  <backgroundcolor>FF11191B</backgroundcolor>
   <controls>
     <control type="image">
       <left>0</left>
       <top>0</top>
       <width>1920</width>
       <height>1080</height>
-      <texture>apeture/ambient.png</texture>
+      <texture>apeture/misty-stone-bridge.png</texture>
+    </control>
+    <control type="image">
+      <left>0</left>
+      <top>0</top>
+      <width>1920</width>
+      <height>1080</height>
+      <texture>apeture/home-scrim.png</texture>
     </control>
     <control type="image">
       <left>96</left>
-      <top>79</top>
-      <width>47</width>
-      <height>47</height>
+      <top>65</top>
+      <width>35</width>
+      <height>35</height>
       <texture>apeture/mark.png</texture>
     </control>
     <control type="label">
-      <left>158</left>
-      <top>75</top>
-      <width>350</width>
-      <height>60</height>
+      <left>148</left>
+      <top>58</top>
+      <width>420</width>
+      <height>51</height>
       <font>ApetureBrand</font>
-      <textcolor>FFE7EFF5</textcolor>
-      <shadowcolor>00000000</shadowcolor>
+      <textcolor>FFF4F8F8</textcolor>
+      <shadowcolor>90000000</shadowcolor>
+      <aligny>center</aligny>
       <label>apeture</label>
     </control>
     <control type="label">
-      <left>101</left>
-      <top>166</top>
-      <width>420</width>
-      <height>28</height>
-      <font>ApetureEyebrow</font>
-      <textcolor>FF7C9EB4</textcolor>
-      <shadowcolor>00000000</shadowcolor>
-      <label>YOUR SPACE. YOUR PACE.</label>
-    </control>
-    <control type="label">
-      <left>1500</left>
-      <top>73</top>
-      <width>320</width>
-      <height>44</height>
+      <left>1480</left>
+      <top>57</top>
+      <width>344</width>
+      <height>53</height>
       <font>ApetureClock</font>
-      <textcolor>FFE7EFF5</textcolor>
-      <shadowcolor>00000000</shadowcolor>
+      <textcolor>FFF4F8F8</textcolor>
+      <shadowcolor>90000000</shadowcolor>
+      <aligny>center</aligny>
       <label>$INFO[System.Time]</label>
       <align>right</align>
     </control>
     <control type="label">
-      <left>1400</left>
-      <top>122</top>
-      <width>420</width>
-      <height>32</height>
+      <left>1324</left>
+      <top>114</top>
+      <width>500</width>
+      <height>33</height>
       <font>ApetureSmall</font>
-      <textcolor>FF8EADBF</textcolor>
-      <shadowcolor>00000000</shadowcolor>
+      <textcolor>FFD5DEDF</textcolor>
+      <shadowcolor>90000000</shadowcolor>
+      <aligny>center</aligny>
       <label>$INFO[System.Date]</label>
       <align>right</align>
     </control>
-    <control type="button" id="9100">
-      <left>96</left>
-      <top>252</top>
-      <width>480</width>
-      <height>86</height>
-      <label>Games</label>
-      <font>ApetureNav</font>
-      <textcolor>FFB7CBDC</textcolor>
-      <focusedcolor>FF0A2636</focusedcolor>
-      <disabledcolor>FF577185</disabledcolor>
-      <shadowcolor>00000000</shadowcolor>
-      <align>left</align>
-      <aligny>center</aligny>
-      <textoffsetx>38</textoffsetx>
-      <textoffsety>0</textoffsety>
-      <texturefocus border="25">apeture/focus.png</texturefocus>
-      <texturenofocus border="25">apeture/quiet.png</texturenofocus>
-      <pulseonselect>no</pulseonselect>
-      <onup>9105</onup>
-      <ondown>9101</ondown>
-      <onleft>9200</onleft>
-      <onright>9300</onright>
-      <onclick condition="System.AddonIsEnabled(plugin.games.apeture)">ActivateWindow(Games,plugin://plugin.games.apeture/,return)</onclick>
-      <onclick condition="!System.AddonIsEnabled(plugin.games.apeture)">ActivateWindow(1190)</onclick>
-    </control>
-    <control type="label">
-      <left>502</left>
-      <top>273</top>
-      <width>40</width>
-      <height>42</height>
-      <font>ApetureNav</font>
-      <textcolor>FF0A2636</textcolor>
-      <shadowcolor>00000000</shadowcolor>
-      <label>›</label>
-      <visible>Control.HasFocus(9100)</visible>
+    <control type="image">
+      <left>0</left>
+      <top>776</top>
+      <width>1920</width>
+      <height>116</height>
+      <texture>apeture/nav-band.png</texture>
     </control>
     <control type="group">
       <visible>Control.HasFocus(9100) | Control.HasFocus(9300)</visible>
-      <animation effect="fade" time="160">VisibleChange</animation>
-      <control type="image">
-        <left>1200</left>
-        <top>260</top>
-        <width>520</width>
-        <height>420</height>
-        <texture>apeture/gamepad.png</texture>
+      <animation effect="fade" time="120">VisibleChange</animation>
+      <control type="label">
+        <left>102</left>
+        <top>640</top>
+        <width>1090</width>
+        <height>44</height>
+        <font>ApetureSection</font>
+        <textcolor>FFF4F8F8</textcolor>
+        <shadowcolor>90000000</shadowcolor>
+        <aligny>center</aligny>
+        <label>Local games</label>
       </control>
       <control type="label">
-        <left>704</left>
-        <top>272</top>
-        <width>600</width>
-        <height>40</height>
-        <font>ApetureEyebrow</font>
-        <textcolor>FF9AF8EA</textcolor>
-        <shadowcolor>00000000</shadowcolor>
-        <label>LOCAL PLAY</label>
-      </control>
-      <control type="label">
-        <left>696</left>
-        <top>335</top>
-        <width>1020</width>
-        <height>106</height>
-        <font>ApetureHero</font>
-        <textcolor>FFE7EFF5</textcolor>
-        <shadowcolor>00000000</shadowcolor>
-        <label>Good games.</label>
-      </control>
-      <control type="label">
-        <left>696</left>
-        <top>436</top>
-        <width>1020</width>
-        <height>106</height>
-        <font>ApetureHero</font>
-        <textcolor>FFE7EFF5</textcolor>
-        <shadowcolor>00000000</shadowcolor>
-        <label>Great nights.</label>
-      </control>
-      <control type="label">
-        <left>704</left>
-        <top>574</top>
-        <width>1040</width>
-        <height>50</height>
+        <left>102</left>
+        <top>695</top>
+        <width>1090</width>
+        <height>39</height>
         <font>ApetureBody</font>
-        <textcolor>FFB8CBD9</textcolor>
-        <shadowcolor>00000000</shadowcolor>
-        <label>Your collection, ready when you are.</label>
-      </control>
-      <control type="textbox">
-        <left>704</left>
-        <top>651</top>
-        <width>970</width>
-        <height>95</height>
-        <font>ApetureBody</font>
-        <textcolor>FFB8CBD9</textcolor>
-        <label>Browse local games and choose a libretro core.[CR]Play inside Kodi with a compatible game client.</label>
-        <autoscroll>false</autoscroll>
+        <textcolor>FFD5DEDF</textcolor>
+        <shadowcolor>90000000</shadowcolor>
+        <aligny>center</aligny>
+        <label>Browse your local collection with Kodi game clients.</label>
         <visible>System.AddonIsEnabled(plugin.games.apeture)</visible>
       </control>
-      <control type="textbox">
-        <left>704</left>
-        <top>651</top>
-        <width>970</width>
-        <height>95</height>
+      <control type="label">
+        <left>102</left>
+        <top>695</top>
+        <width>1090</width>
+        <height>39</height>
         <font>ApetureBody</font>
-        <textcolor>FFB8CBD9</textcolor>
-        <label>Start by installing the companion Apeture Games ZIP.[CR]Your games and emulation stay inside Kodi.</label>
-        <autoscroll>false</autoscroll>
+        <textcolor>FFD5DEDF</textcolor>
+        <shadowcolor>90000000</shadowcolor>
+        <aligny>center</aligny>
+        <label>Install Apeture Games to browse your collection.</label>
         <visible>!System.AddonIsEnabled(plugin.games.apeture)</visible>
       </control>
       <control type="button" id="9300">
-        <left>698</left>
-        <top>800</top>
-        <width>430</width>
-        <height>76</height>
-        <label>Open your games</label>
+        <left>1364</left>
+        <top>663</top>
+        <width>454</width>
+        <height>72</height>
+        <label>Open games</label>
         <font>ApetureSmall</font>
-        <textcolor>FFB7CBDC</textcolor>
-        <focusedcolor>FF0A2636</focusedcolor>
-        <disabledcolor>FF577185</disabledcolor>
-        <shadowcolor>00000000</shadowcolor>
-        <align>left</align>
+        <textcolor>FFD5DEDF</textcolor>
+        <focusedcolor>FFF4F8F8</focusedcolor>
+        <disabledcolor>FF738388</disabledcolor>
+        <shadowcolor>70000000</shadowcolor>
+        <align>center</align>
         <aligny>center</aligny>
-        <textoffsetx>24</textoffsetx>
+        <textoffsetx>0</textoffsetx>
         <textoffsety>0</textoffsety>
-        <texturefocus border="25">apeture/focus.png</texturefocus>
-        <texturenofocus border="25">apeture/quiet.png</texturenofocus>
         <pulseonselect>no</pulseonselect>
-        <onup>9105</onup>
-        <ondown>9101</ondown>
+        <texturefocus border="6">apeture/glass-focus.png</texturefocus>
+        <texturenofocus border="6">apeture/glass-quiet.png</texturenofocus>
         <onleft>9100</onleft>
         <onright>9100</onright>
+        <onup>9100</onup>
+        <ondown>9100</ondown>
+        <onback>9100</onback>
         <onclick condition="System.AddonIsEnabled(plugin.games.apeture)">ActivateWindow(Games,plugin://plugin.games.apeture/,return)</onclick>
         <onclick condition="!System.AddonIsEnabled(plugin.games.apeture)">ActivateWindow(1190)</onclick>
       </control>
+      <control type="image">
+        <left>96</left>
+        <top>776</top>
+        <width>288</width>
+        <height>116</height>
+        <texture>apeture/nav-focus.png</texture>
+        <visible>Control.HasFocus(9300)</visible>
+      </control>
     </control>
-    <control type="button" id="9101">
+    <control type="button" id="9100">
       <left>96</left>
-      <top>350</top>
-      <width>480</width>
-      <height>86</height>
-      <label>Movies</label>
+      <top>776</top>
+      <width>288</width>
+      <height>116</height>
+      <label>Games</label>
       <font>ApetureNav</font>
-      <textcolor>FFB7CBDC</textcolor>
-      <focusedcolor>FF0A2636</focusedcolor>
-      <disabledcolor>FF577185</disabledcolor>
-      <shadowcolor>00000000</shadowcolor>
-      <align>left</align>
+      <textcolor>FFD5DEDF</textcolor>
+      <focusedcolor>FFF4F8F8</focusedcolor>
+      <disabledcolor>FF738388</disabledcolor>
+      <shadowcolor>70000000</shadowcolor>
+      <align>center</align>
       <aligny>center</aligny>
-      <textoffsetx>38</textoffsetx>
+      <textoffsetx>0</textoffsetx>
       <textoffsety>0</textoffsety>
-      <texturefocus border="25">apeture/focus.png</texturefocus>
-      <texturenofocus border="25">apeture/quiet.png</texturenofocus>
       <pulseonselect>no</pulseonselect>
-      <onup>9100</onup>
-      <ondown>9102</ondown>
-      <onleft>9200</onleft>
-      <onright>9301</onright>
-      <onclick condition="Library.HasContent(movies)">ActivateWindow(Videos,videodb://movies/titles/,return)</onclick>
-      <onclick condition="!Library.HasContent(movies)">ActivateWindow(Videos,sources://video/,return)</onclick>
-    </control>
-    <control type="label">
-      <left>502</left>
-      <top>371</top>
-      <width>40</width>
-      <height>42</height>
-      <font>ApetureNav</font>
-      <textcolor>FF0A2636</textcolor>
-      <shadowcolor>00000000</shadowcolor>
-      <label>›</label>
-      <visible>Control.HasFocus(9101)</visible>
+      <texturefocus border="6">apeture/nav-focus.png</texturefocus>
+      <texturenofocus border="6">apeture/clear.png</texturenofocus>
+      <onleft>9105</onleft>
+      <onright>9101</onright>
+      <onup>9300</onup>
+      <ondown>9200</ondown>
+      <onclick condition="System.AddonIsEnabled(plugin.games.apeture)">ActivateWindow(Games,plugin://plugin.games.apeture/,return)</onclick>
+      <onclick condition="!System.AddonIsEnabled(plugin.games.apeture)">ActivateWindow(1190)</onclick>
     </control>
     <control type="group">
       <visible>Control.HasFocus(9101) | Control.HasFocus(9301)</visible>
-      <animation effect="fade" time="160">VisibleChange</animation>
-      <control type="image">
-        <left>1200</left>
-        <top>260</top>
-        <width>520</width>
-        <height>420</height>
-        <texture>apeture/film.png</texture>
+      <animation effect="fade" time="120">VisibleChange</animation>
+      <control type="label">
+        <left>102</left>
+        <top>640</top>
+        <width>1090</width>
+        <height>44</height>
+        <font>ApetureSection</font>
+        <textcolor>FFF4F8F8</textcolor>
+        <shadowcolor>90000000</shadowcolor>
+        <aligny>center</aligny>
+        <label>Film library</label>
       </control>
       <control type="label">
-        <left>704</left>
-        <top>272</top>
-        <width>600</width>
-        <height>40</height>
-        <font>ApetureEyebrow</font>
-        <textcolor>FF9AF8EA</textcolor>
-        <shadowcolor>00000000</shadowcolor>
-        <label>LIGHTS DOWN</label>
-      </control>
-      <control type="label">
-        <left>696</left>
-        <top>335</top>
-        <width>1020</width>
-        <height>106</height>
-        <font>ApetureHero</font>
-        <textcolor>FFE7EFF5</textcolor>
-        <shadowcolor>00000000</shadowcolor>
-        <label>A little</label>
-      </control>
-      <control type="label">
-        <left>696</left>
-        <top>436</top>
-        <width>1020</width>
-        <height>106</height>
-        <font>ApetureHero</font>
-        <textcolor>FFE7EFF5</textcolor>
-        <shadowcolor>00000000</shadowcolor>
-        <label>escape.</label>
-      </control>
-      <control type="label">
-        <left>704</left>
-        <top>574</top>
-        <width>1040</width>
-        <height>50</height>
+        <left>102</left>
+        <top>695</top>
+        <width>1090</width>
+        <height>39</height>
         <font>ApetureBody</font>
-        <textcolor>FFB8CBD9</textcolor>
-        <shadowcolor>00000000</shadowcolor>
-        <label>Films from your own Kodi library.</label>
-      </control>
-      <control type="textbox">
-        <left>704</left>
-        <top>651</top>
-        <width>970</width>
-        <height>95</height>
-        <font>ApetureBody</font>
-        <textcolor>FFB8CBD9</textcolor>
-        <label>Your library is ready to browse.[CR]Pick something good and settle in.</label>
-        <autoscroll>false</autoscroll>
+        <textcolor>FFD5DEDF</textcolor>
+        <shadowcolor>90000000</shadowcolor>
+        <aligny>center</aligny>
+        <label>Browse films in your Kodi library.</label>
         <visible>Library.HasContent(movies)</visible>
       </control>
-      <control type="textbox">
-        <left>704</left>
-        <top>651</top>
-        <width>970</width>
-        <height>95</height>
+      <control type="label">
+        <left>102</left>
+        <top>695</top>
+        <width>1090</width>
+        <height>39</height>
         <font>ApetureBody</font>
-        <textcolor>FFB8CBD9</textcolor>
-        <label>Your library is empty. Open this section to add a video[CR]source, then choose its content type and scan.</label>
-        <autoscroll>false</autoscroll>
+        <textcolor>FFD5DEDF</textcolor>
+        <shadowcolor>90000000</shadowcolor>
+        <aligny>center</aligny>
+        <label>No movies yet. Open video sources to add your films.</label>
         <visible>!Library.HasContent(movies)</visible>
       </control>
       <control type="button" id="9301">
-        <left>698</left>
-        <top>800</top>
-        <width>430</width>
-        <height>76</height>
+        <left>1364</left>
+        <top>663</top>
+        <width>454</width>
+        <height>72</height>
         <label>Browse movies</label>
         <font>ApetureSmall</font>
-        <textcolor>FFB7CBDC</textcolor>
-        <focusedcolor>FF0A2636</focusedcolor>
-        <disabledcolor>FF577185</disabledcolor>
-        <shadowcolor>00000000</shadowcolor>
-        <align>left</align>
+        <textcolor>FFD5DEDF</textcolor>
+        <focusedcolor>FFF4F8F8</focusedcolor>
+        <disabledcolor>FF738388</disabledcolor>
+        <shadowcolor>70000000</shadowcolor>
+        <align>center</align>
         <aligny>center</aligny>
-        <textoffsetx>24</textoffsetx>
+        <textoffsetx>0</textoffsetx>
         <textoffsety>0</textoffsety>
-        <texturefocus border="25">apeture/focus.png</texturefocus>
-        <texturenofocus border="25">apeture/quiet.png</texturenofocus>
         <pulseonselect>no</pulseonselect>
-        <onup>9100</onup>
-        <ondown>9102</ondown>
+        <texturefocus border="6">apeture/glass-focus.png</texturefocus>
+        <texturenofocus border="6">apeture/glass-quiet.png</texturenofocus>
         <onleft>9101</onleft>
         <onright>9101</onright>
+        <onup>9101</onup>
+        <ondown>9101</ondown>
+        <onback>9101</onback>
         <onclick condition="Library.HasContent(movies)">ActivateWindow(Videos,videodb://movies/titles/,return)</onclick>
         <onclick condition="!Library.HasContent(movies)">ActivateWindow(Videos,sources://video/,return)</onclick>
       </control>
+      <control type="image">
+        <left>384</left>
+        <top>776</top>
+        <width>288</width>
+        <height>116</height>
+        <texture>apeture/nav-focus.png</texture>
+        <visible>Control.HasFocus(9301)</visible>
+      </control>
     </control>
-    <control type="button" id="9102">
-      <left>96</left>
-      <top>448</top>
-      <width>480</width>
-      <height>86</height>
-      <label>TV</label>
+    <control type="button" id="9101">
+      <left>384</left>
+      <top>776</top>
+      <width>288</width>
+      <height>116</height>
+      <label>Movies</label>
       <font>ApetureNav</font>
-      <textcolor>FFB7CBDC</textcolor>
-      <focusedcolor>FF0A2636</focusedcolor>
-      <disabledcolor>FF577185</disabledcolor>
-      <shadowcolor>00000000</shadowcolor>
-      <align>left</align>
+      <textcolor>FFD5DEDF</textcolor>
+      <focusedcolor>FFF4F8F8</focusedcolor>
+      <disabledcolor>FF738388</disabledcolor>
+      <shadowcolor>70000000</shadowcolor>
+      <align>center</align>
       <aligny>center</aligny>
-      <textoffsetx>38</textoffsetx>
+      <textoffsetx>0</textoffsetx>
       <textoffsety>0</textoffsety>
-      <texturefocus border="25">apeture/focus.png</texturefocus>
-      <texturenofocus border="25">apeture/quiet.png</texturenofocus>
       <pulseonselect>no</pulseonselect>
-      <onup>9101</onup>
-      <ondown>9103</ondown>
-      <onleft>9200</onleft>
-      <onright>9302</onright>
-      <onclick condition="Library.HasContent(tvshows)">ActivateWindow(Videos,videodb://tvshows/titles/,return)</onclick>
-      <onclick condition="!Library.HasContent(tvshows)">ActivateWindow(Videos,sources://video/,return)</onclick>
-    </control>
-    <control type="label">
-      <left>502</left>
-      <top>469</top>
-      <width>40</width>
-      <height>42</height>
-      <font>ApetureNav</font>
-      <textcolor>FF0A2636</textcolor>
-      <shadowcolor>00000000</shadowcolor>
-      <label>›</label>
-      <visible>Control.HasFocus(9102)</visible>
+      <texturefocus border="6">apeture/nav-focus.png</texturefocus>
+      <texturenofocus border="6">apeture/clear.png</texturenofocus>
+      <onleft>9100</onleft>
+      <onright>9102</onright>
+      <onup>9301</onup>
+      <ondown>9200</ondown>
+      <onclick condition="Library.HasContent(movies)">ActivateWindow(Videos,videodb://movies/titles/,return)</onclick>
+      <onclick condition="!Library.HasContent(movies)">ActivateWindow(Videos,sources://video/,return)</onclick>
     </control>
     <control type="group">
       <visible>Control.HasFocus(9102) | Control.HasFocus(9302)</visible>
-      <animation effect="fade" time="160">VisibleChange</animation>
-      <control type="image">
-        <left>1200</left>
-        <top>260</top>
-        <width>520</width>
-        <height>420</height>
-        <texture>apeture/tv.png</texture>
+      <animation effect="fade" time="120">VisibleChange</animation>
+      <control type="label">
+        <left>102</left>
+        <top>640</top>
+        <width>1090</width>
+        <height>44</height>
+        <font>ApetureSection</font>
+        <textcolor>FFF4F8F8</textcolor>
+        <shadowcolor>90000000</shadowcolor>
+        <aligny>center</aligny>
+        <label>TV library</label>
       </control>
       <control type="label">
-        <left>704</left>
-        <top>272</top>
-        <width>600</width>
-        <height>40</height>
-        <font>ApetureEyebrow</font>
-        <textcolor>FF9AF8EA</textcolor>
-        <shadowcolor>00000000</shadowcolor>
-        <label>YOUR SERIES</label>
-      </control>
-      <control type="label">
-        <left>696</left>
-        <top>335</top>
-        <width>1020</width>
-        <height>106</height>
-        <font>ApetureHero</font>
-        <textcolor>FFE7EFF5</textcolor>
-        <shadowcolor>00000000</shadowcolor>
-        <label>One more</label>
-      </control>
-      <control type="label">
-        <left>696</left>
-        <top>436</top>
-        <width>1020</width>
-        <height>106</height>
-        <font>ApetureHero</font>
-        <textcolor>FFE7EFF5</textcolor>
-        <shadowcolor>00000000</shadowcolor>
-        <label>episode.</label>
-      </control>
-      <control type="label">
-        <left>704</left>
-        <top>574</top>
-        <width>1040</width>
-        <height>50</height>
+        <left>102</left>
+        <top>695</top>
+        <width>1090</width>
+        <height>39</height>
         <font>ApetureBody</font>
-        <textcolor>FFB8CBD9</textcolor>
-        <shadowcolor>00000000</shadowcolor>
-        <label>Your shows. Your pace.</label>
-      </control>
-      <control type="textbox">
-        <left>704</left>
-        <top>651</top>
-        <width>970</width>
-        <height>95</height>
-        <font>ApetureBody</font>
-        <textcolor>FFB8CBD9</textcolor>
-        <label>Your library is ready to browse.[CR]Pick something good and settle in.</label>
-        <autoscroll>false</autoscroll>
+        <textcolor>FFD5DEDF</textcolor>
+        <shadowcolor>90000000</shadowcolor>
+        <aligny>center</aligny>
+        <label>Browse series in your Kodi library.</label>
         <visible>Library.HasContent(tvshows)</visible>
       </control>
-      <control type="textbox">
-        <left>704</left>
-        <top>651</top>
-        <width>970</width>
-        <height>95</height>
+      <control type="label">
+        <left>102</left>
+        <top>695</top>
+        <width>1090</width>
+        <height>39</height>
         <font>ApetureBody</font>
-        <textcolor>FFB8CBD9</textcolor>
-        <label>Your library is empty. Open this section to add a video[CR]source, then choose its content type and scan.</label>
-        <autoscroll>false</autoscroll>
+        <textcolor>FFD5DEDF</textcolor>
+        <shadowcolor>90000000</shadowcolor>
+        <aligny>center</aligny>
+        <label>No TV shows yet. Open video sources to add your series.</label>
         <visible>!Library.HasContent(tvshows)</visible>
       </control>
       <control type="button" id="9302">
-        <left>698</left>
-        <top>800</top>
-        <width>430</width>
-        <height>76</height>
+        <left>1364</left>
+        <top>663</top>
+        <width>454</width>
+        <height>72</height>
         <label>Browse TV shows</label>
         <font>ApetureSmall</font>
-        <textcolor>FFB7CBDC</textcolor>
-        <focusedcolor>FF0A2636</focusedcolor>
-        <disabledcolor>FF577185</disabledcolor>
-        <shadowcolor>00000000</shadowcolor>
-        <align>left</align>
+        <textcolor>FFD5DEDF</textcolor>
+        <focusedcolor>FFF4F8F8</focusedcolor>
+        <disabledcolor>FF738388</disabledcolor>
+        <shadowcolor>70000000</shadowcolor>
+        <align>center</align>
         <aligny>center</aligny>
-        <textoffsetx>24</textoffsetx>
+        <textoffsetx>0</textoffsetx>
         <textoffsety>0</textoffsety>
-        <texturefocus border="25">apeture/focus.png</texturefocus>
-        <texturenofocus border="25">apeture/quiet.png</texturenofocus>
         <pulseonselect>no</pulseonselect>
-        <onup>9101</onup>
-        <ondown>9103</ondown>
+        <texturefocus border="6">apeture/glass-focus.png</texturefocus>
+        <texturenofocus border="6">apeture/glass-quiet.png</texturenofocus>
         <onleft>9102</onleft>
         <onright>9102</onright>
+        <onup>9102</onup>
+        <ondown>9102</ondown>
+        <onback>9102</onback>
         <onclick condition="Library.HasContent(tvshows)">ActivateWindow(Videos,videodb://tvshows/titles/,return)</onclick>
         <onclick condition="!Library.HasContent(tvshows)">ActivateWindow(Videos,sources://video/,return)</onclick>
       </control>
+      <control type="image">
+        <left>672</left>
+        <top>776</top>
+        <width>288</width>
+        <height>116</height>
+        <texture>apeture/nav-focus.png</texture>
+        <visible>Control.HasFocus(9302)</visible>
+      </control>
     </control>
-    <control type="button" id="9103">
-      <left>96</left>
-      <top>546</top>
-      <width>480</width>
-      <height>86</height>
-      <label>Music</label>
+    <control type="button" id="9102">
+      <left>672</left>
+      <top>776</top>
+      <width>288</width>
+      <height>116</height>
+      <label>TV</label>
       <font>ApetureNav</font>
-      <textcolor>FFB7CBDC</textcolor>
-      <focusedcolor>FF0A2636</focusedcolor>
-      <disabledcolor>FF577185</disabledcolor>
-      <shadowcolor>00000000</shadowcolor>
-      <align>left</align>
+      <textcolor>FFD5DEDF</textcolor>
+      <focusedcolor>FFF4F8F8</focusedcolor>
+      <disabledcolor>FF738388</disabledcolor>
+      <shadowcolor>70000000</shadowcolor>
+      <align>center</align>
       <aligny>center</aligny>
-      <textoffsetx>38</textoffsetx>
+      <textoffsetx>0</textoffsetx>
       <textoffsety>0</textoffsety>
-      <texturefocus border="25">apeture/focus.png</texturefocus>
-      <texturenofocus border="25">apeture/quiet.png</texturenofocus>
       <pulseonselect>no</pulseonselect>
-      <onup>9102</onup>
-      <ondown>9104</ondown>
-      <onleft>9200</onleft>
-      <onright>9303</onright>
-      <onclick condition="Library.HasContent(music)">ActivateWindow(Music,musicdb://albums/,return)</onclick>
-      <onclick condition="!Library.HasContent(music)">ActivateWindow(Music,files,return)</onclick>
-    </control>
-    <control type="label">
-      <left>502</left>
-      <top>567</top>
-      <width>40</width>
-      <height>42</height>
-      <font>ApetureNav</font>
-      <textcolor>FF0A2636</textcolor>
-      <shadowcolor>00000000</shadowcolor>
-      <label>›</label>
-      <visible>Control.HasFocus(9103)</visible>
+      <texturefocus border="6">apeture/nav-focus.png</texturefocus>
+      <texturenofocus border="6">apeture/clear.png</texturenofocus>
+      <onleft>9101</onleft>
+      <onright>9103</onright>
+      <onup>9302</onup>
+      <ondown>9200</ondown>
+      <onclick condition="Library.HasContent(tvshows)">ActivateWindow(Videos,videodb://tvshows/titles/,return)</onclick>
+      <onclick condition="!Library.HasContent(tvshows)">ActivateWindow(Videos,sources://video/,return)</onclick>
     </control>
     <control type="group">
       <visible>Control.HasFocus(9103) | Control.HasFocus(9303)</visible>
-      <animation effect="fade" time="160">VisibleChange</animation>
-      <control type="image">
-        <left>1200</left>
-        <top>260</top>
-        <width>520</width>
-        <height>420</height>
-        <texture>apeture/music.png</texture>
+      <animation effect="fade" time="120">VisibleChange</animation>
+      <control type="label">
+        <left>102</left>
+        <top>640</top>
+        <width>1090</width>
+        <height>44</height>
+        <font>ApetureSection</font>
+        <textcolor>FFF4F8F8</textcolor>
+        <shadowcolor>90000000</shadowcolor>
+        <aligny>center</aligny>
+        <label>Music library</label>
       </control>
       <control type="label">
-        <left>704</left>
-        <top>272</top>
-        <width>600</width>
-        <height>40</height>
-        <font>ApetureEyebrow</font>
-        <textcolor>FF9AF8EA</textcolor>
-        <shadowcolor>00000000</shadowcolor>
-        <label>ON THE RECORD</label>
-      </control>
-      <control type="label">
-        <left>696</left>
-        <top>335</top>
-        <width>1020</width>
-        <height>106</height>
-        <font>ApetureHero</font>
-        <textcolor>FFE7EFF5</textcolor>
-        <shadowcolor>00000000</shadowcolor>
-        <label>Find your</label>
-      </control>
-      <control type="label">
-        <left>696</left>
-        <top>436</top>
-        <width>1020</width>
-        <height>106</height>
-        <font>ApetureHero</font>
-        <textcolor>FFE7EFF5</textcolor>
-        <shadowcolor>00000000</shadowcolor>
-        <label>rhythm.</label>
-      </control>
-      <control type="label">
-        <left>704</left>
-        <top>574</top>
-        <width>1040</width>
-        <height>50</height>
+        <left>102</left>
+        <top>695</top>
+        <width>1090</width>
+        <height>39</height>
         <font>ApetureBody</font>
-        <textcolor>FFB8CBD9</textcolor>
-        <shadowcolor>00000000</shadowcolor>
-        <label>Albums, artists and songs. All yours.</label>
-      </control>
-      <control type="textbox">
-        <left>704</left>
-        <top>651</top>
-        <width>970</width>
-        <height>95</height>
-        <font>ApetureBody</font>
-        <textcolor>FFB8CBD9</textcolor>
-        <label>Explore your albums in Kodi's native music browser.[CR]A proper record-shelf experience is next.</label>
-        <autoscroll>false</autoscroll>
+        <textcolor>FFD5DEDF</textcolor>
+        <shadowcolor>90000000</shadowcolor>
+        <aligny>center</aligny>
+        <label>Browse albums in your Kodi library.</label>
         <visible>Library.HasContent(music)</visible>
       </control>
-      <control type="textbox">
-        <left>704</left>
-        <top>651</top>
-        <width>970</width>
-        <height>95</height>
+      <control type="label">
+        <left>102</left>
+        <top>695</top>
+        <width>1090</width>
+        <height>39</height>
         <font>ApetureBody</font>
-        <textcolor>FFB8CBD9</textcolor>
-        <label>Add a music folder to get started.[CR]Kodi can browse files before you scan your library.</label>
-        <autoscroll>false</autoscroll>
+        <textcolor>FFD5DEDF</textcolor>
+        <shadowcolor>90000000</shadowcolor>
+        <aligny>center</aligny>
+        <label>No music yet. Open music files to add your collection.</label>
         <visible>!Library.HasContent(music)</visible>
       </control>
       <control type="button" id="9303">
-        <left>698</left>
-        <top>800</top>
-        <width>430</width>
-        <height>76</height>
-        <label>Browse your music</label>
+        <left>1364</left>
+        <top>663</top>
+        <width>454</width>
+        <height>72</height>
+        <label>Browse music</label>
         <font>ApetureSmall</font>
-        <textcolor>FFB7CBDC</textcolor>
-        <focusedcolor>FF0A2636</focusedcolor>
-        <disabledcolor>FF577185</disabledcolor>
-        <shadowcolor>00000000</shadowcolor>
-        <align>left</align>
+        <textcolor>FFD5DEDF</textcolor>
+        <focusedcolor>FFF4F8F8</focusedcolor>
+        <disabledcolor>FF738388</disabledcolor>
+        <shadowcolor>70000000</shadowcolor>
+        <align>center</align>
         <aligny>center</aligny>
-        <textoffsetx>24</textoffsetx>
+        <textoffsetx>0</textoffsetx>
         <textoffsety>0</textoffsety>
-        <texturefocus border="25">apeture/focus.png</texturefocus>
-        <texturenofocus border="25">apeture/quiet.png</texturenofocus>
         <pulseonselect>no</pulseonselect>
-        <onup>9102</onup>
-        <ondown>9104</ondown>
+        <texturefocus border="6">apeture/glass-focus.png</texturefocus>
+        <texturenofocus border="6">apeture/glass-quiet.png</texturenofocus>
         <onleft>9103</onleft>
         <onright>9103</onright>
+        <onup>9103</onup>
+        <ondown>9103</ondown>
+        <onback>9103</onback>
         <onclick condition="Library.HasContent(music)">ActivateWindow(Music,musicdb://albums/,return)</onclick>
         <onclick condition="!Library.HasContent(music)">ActivateWindow(Music,files,return)</onclick>
       </control>
+      <control type="image">
+        <left>960</left>
+        <top>776</top>
+        <width>288</width>
+        <height>116</height>
+        <texture>apeture/nav-focus.png</texture>
+        <visible>Control.HasFocus(9303)</visible>
+      </control>
     </control>
-    <control type="button" id="9104">
-      <left>96</left>
-      <top>644</top>
-      <width>480</width>
-      <height>86</height>
-      <label>Files</label>
+    <control type="button" id="9103">
+      <left>960</left>
+      <top>776</top>
+      <width>288</width>
+      <height>116</height>
+      <label>Music</label>
       <font>ApetureNav</font>
-      <textcolor>FFB7CBDC</textcolor>
-      <focusedcolor>FF0A2636</focusedcolor>
-      <disabledcolor>FF577185</disabledcolor>
-      <shadowcolor>00000000</shadowcolor>
-      <align>left</align>
+      <textcolor>FFD5DEDF</textcolor>
+      <focusedcolor>FFF4F8F8</focusedcolor>
+      <disabledcolor>FF738388</disabledcolor>
+      <shadowcolor>70000000</shadowcolor>
+      <align>center</align>
       <aligny>center</aligny>
-      <textoffsetx>38</textoffsetx>
+      <textoffsetx>0</textoffsetx>
       <textoffsety>0</textoffsety>
-      <texturefocus border="25">apeture/focus.png</texturefocus>
-      <texturenofocus border="25">apeture/quiet.png</texturenofocus>
       <pulseonselect>no</pulseonselect>
-      <onup>9103</onup>
-      <ondown>9105</ondown>
-      <onleft>9200</onleft>
-      <onright>9304</onright>
-      <onclick>ActivateWindow(FileManager)</onclick>
-    </control>
-    <control type="label">
-      <left>502</left>
-      <top>665</top>
-      <width>40</width>
-      <height>42</height>
-      <font>ApetureNav</font>
-      <textcolor>FF0A2636</textcolor>
-      <shadowcolor>00000000</shadowcolor>
-      <label>›</label>
-      <visible>Control.HasFocus(9104)</visible>
+      <texturefocus border="6">apeture/nav-focus.png</texturefocus>
+      <texturenofocus border="6">apeture/clear.png</texturenofocus>
+      <onleft>9102</onleft>
+      <onright>9104</onright>
+      <onup>9303</onup>
+      <ondown>9200</ondown>
+      <onclick condition="Library.HasContent(music)">ActivateWindow(Music,musicdb://albums/,return)</onclick>
+      <onclick condition="!Library.HasContent(music)">ActivateWindow(Music,files,return)</onclick>
     </control>
     <control type="group">
       <visible>Control.HasFocus(9104) | Control.HasFocus(9304)</visible>
-      <animation effect="fade" time="160">VisibleChange</animation>
-      <control type="image">
-        <left>1200</left>
-        <top>260</top>
-        <width>520</width>
-        <height>420</height>
-        <texture>apeture/folder.png</texture>
+      <animation effect="fade" time="120">VisibleChange</animation>
+      <control type="label">
+        <left>102</left>
+        <top>640</top>
+        <width>1090</width>
+        <height>44</height>
+        <font>ApetureSection</font>
+        <textcolor>FFF4F8F8</textcolor>
+        <shadowcolor>90000000</shadowcolor>
+        <aligny>center</aligny>
+        <label>Files and sources</label>
       </control>
       <control type="label">
-        <left>704</left>
-        <top>272</top>
-        <width>600</width>
-        <height>40</height>
-        <font>ApetureEyebrow</font>
-        <textcolor>FF9AF8EA</textcolor>
-        <shadowcolor>00000000</shadowcolor>
-        <label>A PLACE FOR IT ALL</label>
-      </control>
-      <control type="label">
-        <left>696</left>
-        <top>335</top>
-        <width>1020</width>
-        <height>106</height>
-        <font>ApetureHero</font>
-        <textcolor>FFE7EFF5</textcolor>
-        <shadowcolor>00000000</shadowcolor>
-        <label>Make room.</label>
-      </control>
-      <control type="label">
-        <left>696</left>
-        <top>436</top>
-        <width>1020</width>
-        <height>106</height>
-        <font>ApetureHero</font>
-        <textcolor>FFE7EFF5</textcolor>
-        <shadowcolor>00000000</shadowcolor>
-        <label>For everything.</label>
-      </control>
-      <control type="label">
-        <left>704</left>
-        <top>574</top>
-        <width>1040</width>
-        <height>50</height>
+        <left>102</left>
+        <top>695</top>
+        <width>1090</width>
+        <height>39</height>
         <font>ApetureBody</font>
-        <textcolor>FFB8CBD9</textcolor>
-        <shadowcolor>00000000</shadowcolor>
-        <label>Browse drives, folders and connected shares.</label>
-      </control>
-      <control type="textbox">
-        <left>704</left>
-        <top>651</top>
-        <width>970</width>
-        <height>95</height>
-        <font>ApetureBody</font>
-        <textcolor>FFB8CBD9</textcolor>
-        <label>Manage sources and explore your local network.[CR]Nothing is moved or scanned without your say-so.</label>
-        <autoscroll>false</autoscroll>
+        <textcolor>FFD5DEDF</textcolor>
+        <shadowcolor>90000000</shadowcolor>
+        <aligny>center</aligny>
+        <label>Browse drives, folders and network shares.</label>
       </control>
       <control type="button" id="9304">
-        <left>698</left>
-        <top>800</top>
-        <width>430</width>
-        <height>76</height>
+        <left>1364</left>
+        <top>663</top>
+        <width>454</width>
+        <height>72</height>
         <label>Open file manager</label>
         <font>ApetureSmall</font>
-        <textcolor>FFB7CBDC</textcolor>
-        <focusedcolor>FF0A2636</focusedcolor>
-        <disabledcolor>FF577185</disabledcolor>
-        <shadowcolor>00000000</shadowcolor>
-        <align>left</align>
+        <textcolor>FFD5DEDF</textcolor>
+        <focusedcolor>FFF4F8F8</focusedcolor>
+        <disabledcolor>FF738388</disabledcolor>
+        <shadowcolor>70000000</shadowcolor>
+        <align>center</align>
         <aligny>center</aligny>
-        <textoffsetx>24</textoffsetx>
+        <textoffsetx>0</textoffsetx>
         <textoffsety>0</textoffsety>
-        <texturefocus border="25">apeture/focus.png</texturefocus>
-        <texturenofocus border="25">apeture/quiet.png</texturenofocus>
         <pulseonselect>no</pulseonselect>
-        <onup>9103</onup>
-        <ondown>9105</ondown>
+        <texturefocus border="6">apeture/glass-focus.png</texturefocus>
+        <texturenofocus border="6">apeture/glass-quiet.png</texturenofocus>
         <onleft>9104</onleft>
         <onright>9104</onright>
+        <onup>9104</onup>
+        <ondown>9104</ondown>
+        <onback>9104</onback>
         <onclick>ActivateWindow(FileManager)</onclick>
       </control>
+      <control type="image">
+        <left>1248</left>
+        <top>776</top>
+        <width>288</width>
+        <height>116</height>
+        <texture>apeture/nav-focus.png</texture>
+        <visible>Control.HasFocus(9304)</visible>
+      </control>
     </control>
-    <control type="button" id="9105">
-      <left>96</left>
-      <top>742</top>
-      <width>480</width>
-      <height>86</height>
-      <label>Settings</label>
+    <control type="button" id="9104">
+      <left>1248</left>
+      <top>776</top>
+      <width>288</width>
+      <height>116</height>
+      <label>Files</label>
       <font>ApetureNav</font>
-      <textcolor>FFB7CBDC</textcolor>
-      <focusedcolor>FF0A2636</focusedcolor>
-      <disabledcolor>FF577185</disabledcolor>
-      <shadowcolor>00000000</shadowcolor>
-      <align>left</align>
+      <textcolor>FFD5DEDF</textcolor>
+      <focusedcolor>FFF4F8F8</focusedcolor>
+      <disabledcolor>FF738388</disabledcolor>
+      <shadowcolor>70000000</shadowcolor>
+      <align>center</align>
       <aligny>center</aligny>
-      <textoffsetx>38</textoffsetx>
+      <textoffsetx>0</textoffsetx>
       <textoffsety>0</textoffsety>
-      <texturefocus border="25">apeture/focus.png</texturefocus>
-      <texturenofocus border="25">apeture/quiet.png</texturenofocus>
       <pulseonselect>no</pulseonselect>
-      <onup>9104</onup>
-      <ondown>9100</ondown>
-      <onleft>9200</onleft>
-      <onright>9305</onright>
-      <onclick>ActivateWindow(Settings)</onclick>
-    </control>
-    <control type="label">
-      <left>502</left>
-      <top>763</top>
-      <width>40</width>
-      <height>42</height>
-      <font>ApetureNav</font>
-      <textcolor>FF0A2636</textcolor>
-      <shadowcolor>00000000</shadowcolor>
-      <label>›</label>
-      <visible>Control.HasFocus(9105)</visible>
+      <texturefocus border="6">apeture/nav-focus.png</texturefocus>
+      <texturenofocus border="6">apeture/clear.png</texturenofocus>
+      <onleft>9103</onleft>
+      <onright>9105</onright>
+      <onup>9304</onup>
+      <ondown>9200</ondown>
+      <onclick>ActivateWindow(FileManager)</onclick>
     </control>
     <control type="group">
       <visible>Control.HasFocus(9105) | Control.HasFocus(9305)</visible>
-      <animation effect="fade" time="160">VisibleChange</animation>
-      <control type="image">
-        <left>1200</left>
-        <top>260</top>
-        <width>520</width>
-        <height>420</height>
-        <texture>apeture/settings.png</texture>
+      <animation effect="fade" time="120">VisibleChange</animation>
+      <control type="label">
+        <left>102</left>
+        <top>640</top>
+        <width>1090</width>
+        <height>44</height>
+        <font>ApetureSection</font>
+        <textcolor>FFF4F8F8</textcolor>
+        <shadowcolor>90000000</shadowcolor>
+        <aligny>center</aligny>
+        <label>Kodi settings</label>
       </control>
       <control type="label">
-        <left>704</left>
-        <top>272</top>
-        <width>600</width>
-        <height>40</height>
-        <font>ApetureEyebrow</font>
-        <textcolor>FF9AF8EA</textcolor>
-        <shadowcolor>00000000</shadowcolor>
-        <label>MAKE IT YOURS</label>
-      </control>
-      <control type="label">
-        <left>696</left>
-        <top>335</top>
-        <width>1020</width>
-        <height>106</height>
-        <font>ApetureHero</font>
-        <textcolor>FFE7EFF5</textcolor>
-        <shadowcolor>00000000</shadowcolor>
-        <label>Just your</label>
-      </control>
-      <control type="label">
-        <left>696</left>
-        <top>436</top>
-        <width>1020</width>
-        <height>106</height>
-        <font>ApetureHero</font>
-        <textcolor>FFE7EFF5</textcolor>
-        <shadowcolor>00000000</shadowcolor>
-        <label>kind of place.</label>
-      </control>
-      <control type="label">
-        <left>704</left>
-        <top>574</top>
-        <width>1040</width>
-        <height>50</height>
+        <left>102</left>
+        <top>695</top>
+        <width>1090</width>
+        <height>39</height>
         <font>ApetureBody</font>
-        <textcolor>FFB8CBD9</textcolor>
-        <shadowcolor>00000000</shadowcolor>
-        <label>Picture, sound, controllers and the details.</label>
-      </control>
-      <control type="textbox">
-        <left>704</left>
-        <top>651</top>
-        <width>970</width>
-        <height>95</height>
-        <font>ApetureBody</font>
-        <textcolor>FFB8CBD9</textcolor>
-        <label>All of Kodi's settings, within easy reach.[CR]Change skins any time in Interface settings.</label>
-        <autoscroll>false</autoscroll>
+        <textcolor>FFD5DEDF</textcolor>
+        <shadowcolor>90000000</shadowcolor>
+        <aligny>center</aligny>
+        <label>Picture, sound, controllers and interface.</label>
       </control>
       <control type="button" id="9305">
-        <left>698</left>
-        <top>800</top>
-        <width>430</width>
-        <height>76</height>
+        <left>1364</left>
+        <top>663</top>
+        <width>454</width>
+        <height>72</height>
         <label>Open settings</label>
         <font>ApetureSmall</font>
-        <textcolor>FFB7CBDC</textcolor>
-        <focusedcolor>FF0A2636</focusedcolor>
-        <disabledcolor>FF577185</disabledcolor>
-        <shadowcolor>00000000</shadowcolor>
-        <align>left</align>
+        <textcolor>FFD5DEDF</textcolor>
+        <focusedcolor>FFF4F8F8</focusedcolor>
+        <disabledcolor>FF738388</disabledcolor>
+        <shadowcolor>70000000</shadowcolor>
+        <align>center</align>
         <aligny>center</aligny>
-        <textoffsetx>24</textoffsetx>
+        <textoffsetx>0</textoffsetx>
         <textoffsety>0</textoffsety>
-        <texturefocus border="25">apeture/focus.png</texturefocus>
-        <texturenofocus border="25">apeture/quiet.png</texturenofocus>
         <pulseonselect>no</pulseonselect>
-        <onup>9104</onup>
-        <ondown>9100</ondown>
+        <texturefocus border="6">apeture/glass-focus.png</texturefocus>
+        <texturenofocus border="6">apeture/glass-quiet.png</texturenofocus>
         <onleft>9105</onleft>
         <onright>9105</onright>
+        <onup>9105</onup>
+        <ondown>9105</ondown>
+        <onback>9105</onback>
         <onclick>ActivateWindow(Settings)</onclick>
       </control>
+      <control type="image">
+        <left>1536</left>
+        <top>776</top>
+        <width>288</width>
+        <height>116</height>
+        <texture>apeture/nav-focus.png</texture>
+        <visible>Control.HasFocus(9305)</visible>
+      </control>
+    </control>
+    <control type="button" id="9105">
+      <left>1536</left>
+      <top>776</top>
+      <width>288</width>
+      <height>116</height>
+      <label>Settings</label>
+      <font>ApetureNav</font>
+      <textcolor>FFD5DEDF</textcolor>
+      <focusedcolor>FFF4F8F8</focusedcolor>
+      <disabledcolor>FF738388</disabledcolor>
+      <shadowcolor>70000000</shadowcolor>
+      <align>center</align>
+      <aligny>center</aligny>
+      <textoffsetx>0</textoffsetx>
+      <textoffsety>0</textoffsety>
+      <pulseonselect>no</pulseonselect>
+      <texturefocus border="6">apeture/nav-focus.png</texturefocus>
+      <texturenofocus border="6">apeture/clear.png</texturenofocus>
+      <onleft>9104</onleft>
+      <onright>9100</onright>
+      <onup>9305</onup>
+      <ondown>9200</ondown>
+      <onclick>ActivateWindow(Settings)</onclick>
     </control>
     <control type="button" id="9200">
       <left>96</left>
-      <top>920</top>
-      <width>226</width>
+      <top>958</top>
+      <width>164</width>
       <height>62</height>
       <label>Power</label>
       <font>ApetureSmall</font>
-      <textcolor>FFB7CBDC</textcolor>
-      <focusedcolor>FF0A2636</focusedcolor>
-      <disabledcolor>FF577185</disabledcolor>
-      <shadowcolor>00000000</shadowcolor>
-      <align>left</align>
+      <textcolor>FFD5DEDF</textcolor>
+      <focusedcolor>FFF4F8F8</focusedcolor>
+      <disabledcolor>FF738388</disabledcolor>
+      <shadowcolor>70000000</shadowcolor>
+      <align>center</align>
       <aligny>center</aligny>
-      <textoffsetx>24</textoffsetx>
+      <textoffsetx>0</textoffsetx>
       <textoffsety>0</textoffsety>
-      <texturefocus border="25">apeture/focus.png</texturefocus>
-      <texturenofocus border="25">apeture/quiet.png</texturenofocus>
       <pulseonselect>no</pulseonselect>
-      <onup>9105</onup>
-      <ondown>9100</ondown>
+      <texturefocus border="6">apeture/glass-focus.png</texturefocus>
+      <texturenofocus border="6">apeture/glass-quiet.png</texturenofocus>
       <onleft>9202</onleft>
       <onright>9201</onright>
+      <onup>9100</onup>
+      <ondown>9100</ondown>
+      <onback>9100</onback>
       <onclick>ActivateWindow(shutdownmenu)</onclick>
     </control>
     <control type="button" id="9201">
-      <left>338</left>
-      <top>920</top>
-      <width>238</width>
+      <left>276</left>
+      <top>958</top>
+      <width>218</width>
       <height>62</height>
       <label>Favourites</label>
       <font>ApetureSmall</font>
-      <textcolor>FFB7CBDC</textcolor>
-      <focusedcolor>FF0A2636</focusedcolor>
-      <disabledcolor>FF577185</disabledcolor>
-      <shadowcolor>00000000</shadowcolor>
-      <align>left</align>
+      <textcolor>FFD5DEDF</textcolor>
+      <focusedcolor>FFF4F8F8</focusedcolor>
+      <disabledcolor>FF738388</disabledcolor>
+      <shadowcolor>70000000</shadowcolor>
+      <align>center</align>
       <aligny>center</aligny>
-      <textoffsetx>24</textoffsetx>
+      <textoffsetx>0</textoffsetx>
       <textoffsety>0</textoffsety>
-      <texturefocus border="25">apeture/focus.png</texturefocus>
-      <texturenofocus border="25">apeture/quiet.png</texturenofocus>
       <pulseonselect>no</pulseonselect>
-      <onup>9105</onup>
-      <ondown>9100</ondown>
+      <texturefocus border="6">apeture/glass-focus.png</texturefocus>
+      <texturenofocus border="6">apeture/glass-quiet.png</texturenofocus>
       <onleft>9200</onleft>
       <onright>9202</onright>
+      <onup>9102</onup>
+      <ondown>9102</ondown>
+      <onback>9102</onback>
       <onclick>ActivateWindow(favouritesbrowser)</onclick>
     </control>
     <control type="button" id="9202">
-      <left>1398</left>
-      <top>920</top>
-      <width>422</width>
+      <left>510</left>
+      <top>958</top>
+      <width>274</width>
       <height>62</height>
       <label>Playback controls</label>
       <font>ApetureSmall</font>
-      <textcolor>FFB7CBDC</textcolor>
-      <focusedcolor>FF0A2636</focusedcolor>
-      <disabledcolor>FF577185</disabledcolor>
-      <shadowcolor>00000000</shadowcolor>
-      <align>left</align>
+      <textcolor>FFD5DEDF</textcolor>
+      <focusedcolor>FFF4F8F8</focusedcolor>
+      <disabledcolor>FF738388</disabledcolor>
+      <shadowcolor>70000000</shadowcolor>
+      <align>center</align>
       <aligny>center</aligny>
-      <textoffsetx>24</textoffsetx>
+      <textoffsetx>0</textoffsetx>
       <textoffsety>0</textoffsety>
-      <texturefocus border="25">apeture/focus.png</texturefocus>
-      <texturenofocus border="25">apeture/quiet.png</texturenofocus>
       <pulseonselect>no</pulseonselect>
-      <onup>9105</onup>
-      <ondown>9100</ondown>
+      <texturefocus border="6">apeture/glass-focus.png</texturefocus>
+      <texturenofocus border="6">apeture/glass-quiet.png</texturenofocus>
       <onleft>9201</onleft>
       <onright>9200</onright>
+      <onup>9103</onup>
+      <ondown>9103</ondown>
+      <onback>9103</onback>
       <onclick>ActivateWindow(playercontrols)</onclick>
     </control>
     <control type="label">
-      <left>704</left>
-      <top>943</top>
-      <width>650</width>
-      <height>35</height>
+      <left>1000</left>
+      <top>967</top>
+      <width>824</width>
+      <height>40</height>
       <font>ApetureSmall</font>
-      <textcolor>FF7C9EB4</textcolor>
-      <shadowcolor>00000000</shadowcolor>
-      <label>↑ ↓  Browse     →  Details     OK  Open</label>
+      <textcolor>FFAEBFC1</textcolor>
+      <shadowcolor>90000000</shadowcolor>
+      <aligny>center</aligny>
+      <label>← →  Browse     ↑  Action     ↓  Utilities     OK  Select</label>
+      <align>right</align>
     </control>
     <control type="label">
-      <left>101</left>
-      <top>1006</top>
-      <width>1200</width>
-      <height>28</height>
+      <left>102</left>
+      <top>905</top>
+      <width>1720</width>
+      <height>36</height>
       <font>ApetureSmall</font>
-      <textcolor>FF9AF8EA</textcolor>
-      <shadowcolor>00000000</shadowcolor>
+      <textcolor>FFB6E5E5</textcolor>
+      <shadowcolor>90000000</shadowcolor>
+      <aligny>center</aligny>
       <label>$INFO[Player.Title,PLAYING  ·  ]</label>
       <visible>Player.HasMedia</visible>
-    </control>
-    <control type="group">
-      <visible>Control.HasFocus(9200) | Control.HasFocus(9201) | Control.HasFocus(9202)</visible>
-      <control type="label">
-        <left>704</left>
-        <top>336</top>
-        <width>1040</width>
-        <height>104</height>
-        <font>ApetureHero</font>
-        <textcolor>FFE7EFF5</textcolor>
-        <shadowcolor>00000000</shadowcolor>
-        <label>Stay a while.</label>
-      </control>
-      <control type="label">
-        <left>704</left>
-        <top>480</top>
-        <width>1040</width>
-        <height>60</height>
-        <font>ApetureBody</font>
-        <textcolor>FFB8CBD9</textcolor>
-        <shadowcolor>00000000</shadowcolor>
-        <label>Everything you need, a little closer.</label>
-      </control>
-      <control type="image">
-        <left>1230</left>
-        <top>255</top>
-        <width>520</width>
-        <height>420</height>
-        <texture>apeture/gamepad.png</texture>
-      </control>
     </control>
   </controls>
 </window>

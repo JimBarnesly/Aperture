@@ -1,0 +1,58 @@
+name: Kodi 21 GUI smoke test
+
+# Opt-in experiment branch only. Does not run on main or unrelated branches.
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - experiment/scenic-bridge
+
+permissions:
+  contents: read
+
+jobs:
+  kodi-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    container:
+      image: debian:13-slim
+    defaults:
+      run:
+        shell: bash
+    env:
+      DEBIAN_FRONTEND: noninteractive
+    steps:
+      - name: Install dependencies in disposable CI container
+        run: |
+          apt-get update
+          apt-get install --yes --no-install-recommends \
+            ca-certificates git python3 python3-pil \
+            kodi kodi-bin kodi-data xvfb xauth xdotool x11-utils x11-apps \
+            mesa-utils libgl1-mesa-dri imagemagick \
+            fonts-noto-core fonts-noto-mono fonts-roboto-unhinted
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Build exact checked-out skin and run static tests
+        run: |
+          python3 -m unittest discover -s tests -v
+          python3 tools/build.py
+      - name: Exercise real Kodi GUI with private software-rendered display
+        run: bash tools/ci_kodi_smoke.sh
+      - name: Publish scope and result
+        if: always()
+        run: |
+          if test -f build/kodi-smoke/result.json; then
+            printf '## Kodi 21 GUI smoke test\n\n```json\n' >> "$GITHUB_STEP_SUMMARY"
+            cat build/kodi-smoke/result.json >> "$GITHUB_STEP_SUMMARY"
+            printf '\n```\n\nScreenshots and logs are in the artifact. A desktop smoke pass is not Pi acceptance.\n' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'Kodi GUI test never reached its runner. Inspect the dependency/build failure; no GUI pass is implied.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: kodi21-gui-smoke-${{ github.sha }}
+          path: build/kodi-smoke/
+          if-no-files-found: warn
+          retention-days: 7

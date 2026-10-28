@@ -102,6 +102,7 @@ def materialize(output: Path, cache: Path):
         shutil.copytree(overrides,staged,dirs_exist_ok=True)
         generate(staged)
         shutil.copy2(ROOT/'docs'/'UPSTREAM.md',staged/'UPSTREAM.md')
+        shutil.copy2(ROOT/'docs'/'DESIGN.md',staged/'DESIGN.md')
         # Preserve upstream's original LICENSE.txt and every font license verbatim.
         licenses=staged/'licenses';licenses.mkdir(exist_ok=True)
         for license_name in ('GPL-2.0-only','GPL-2.0-or-later'):
@@ -109,9 +110,10 @@ def materialize(output: Path, cache: Path):
             if len(license_bytes) < 10000: raise RuntimeError('Incomplete upstream GPL license text')
             (licenses/f'{license_name}.txt').write_bytes(license_bytes)
         # Remove source-only metadata that could be confused with a new release.
-        (staged/'changelog.txt').write_text('Apeture 0.1.0: original home on pinned Kodi Omega Estuary. See UPSTREAM.md.\n',encoding='utf-8')
+        version = ET.parse(staged/'addon.xml').getroot().attrib['version']
+        (staged/'changelog.txt').write_text(f'Apeture {version}: original home on pinned Kodi Omega Estuary. See UPSTREAM.md and DESIGN.md.\n',encoding='utf-8')
         manifest={'upstream':UPSTREAM,'revision':REVISION,'skin_tree':SKIN_TREE,
-                  'addon':'skin.apeture','version':'0.1.0','baseline_file_count':baseline_file_count,
+                  'addon':'skin.apeture','version':version,'baseline_file_count':baseline_file_count,
                   'overrides':sorted(str(p.relative_to(overrides)) for p in overrides.rglob('*') if p.is_file())}
         (staged/'APETURE_BUILD.json').write_text(json.dumps(manifest,indent=2)+'\n',encoding='utf-8')
         for xml in staged.rglob('*.xml'):
