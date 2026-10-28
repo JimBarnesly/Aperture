@@ -32,6 +32,24 @@ def atomic(path, payload):
     temporary.replace(path)
 
 
+def player_identity_ready(item, fixture, album_ids, song_ids):
+    """Refuse foreign media, but don't mistake absent startup tags for media.
+
+    GetActivePlayers can report audio before GetItem has been populated. Pending
+    identity is never exposed as a verified player and cannot authorize Stop.
+    The driver's album/track/queue/advancing-clock assertions remain mandatory.
+    """
+    path = item.get("file", "")
+    album_id, song_id = item.get("albumid", -1), item.get("id", -1)
+    if path and not Path(path).resolve().is_relative_to(Path(fixture).resolve()):
+        raise RuntimeError("Nonfixture audio path; observer refuses further actions")
+    if isinstance(album_id, int) and album_id > 0 and album_id not in album_ids:
+        raise RuntimeError("Nonfixture audio album; observer refuses further actions")
+    if isinstance(song_id, int) and song_id > 0 and song_id not in song_ids:
+        raise RuntimeError("Nonfixture audio song; observer refuses further actions")
+    return bool(path) or album_id in album_ids or song_id in song_ids
+
+
 def verified_config():
     addon_path = Path(xbmcaddon.Addon(SERVICE_ID).getAddonInfo("path")).resolve()
     config = json.loads((addon_path / "config.json").read_text(encoding="utf-8"))
@@ -82,14 +100,16 @@ def snapshot(config, sequence, last_command):
     active = rpc("Player.GetActivePlayers")
     audio = next((player for player in active if player.get("type") == "audio"), None)
     player = None
+    pending_item = None
     if audio is not None:
         item = rpc("Player.GetItem", playerid=audio["playerid"],
                    properties=["title", "album", "albumid", "disc", "track", "file"])["item"]
-        if item.get("albumid") not in album_ids and not fixture_file(item.get("file", "")):
-            raise RuntimeError("Nonfixture audio is playing; observer refuses further actions")
-        player = {"id": audio["playerid"], "item": item,
-                  "properties": rpc("Player.GetProperties", playerid=audio["playerid"],
-                                    properties=["speed", "position", "playlistid", "shuffled", "time"])}
+        if player_identity_ready(item, config["fixture"], album_ids, {song["songid"] for song in songs}):
+            player = {"id": audio["playerid"], "item": item,
+                      "properties": rpc("Player.GetProperties", playerid=audio["playerid"],
+                                        properties=["speed", "position", "playlistid", "shuffled", "time"])}
+        else:
+            pending_item = item
     queue = rpc("Playlist.GetItems", playlistid=0,
                 properties=["title", "album", "albumid", "disc", "track", "file"]).get("items", [])
     for item in queue:
@@ -102,7 +122,8 @@ def snapshot(config, sequence, last_command):
             "shelf_open": xbmcgui.Window(10000).getProperty("Apeture.Music.Open"),
             "music_enabled": bool(xbmc.getCondVisibility("System.AddonIsEnabled(script.apeture.music)")),
             "scanning": bool(xbmc.getCondVisibility("Library.IsScanningMusic")),
-            "albums": albums, "songs": songs, "player": player, "queue": queue, "last_command": last_command}
+            "albums": albums, "songs": songs, "player": player, "active_audio": audio is not None,
+            "player_pending": pending_item, "queue": queue, "last_command": last_command}
 
 
 def main():

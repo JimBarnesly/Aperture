@@ -25,7 +25,7 @@ chmod 700 "$RUNTIME" "$XDG_RUNTIME_DIR"
 # This is a brand-new HOME and no real credentials or personal media are used.
 printf '%s\n' "$RUNTIME" > "$OUT/runtime-path.txt"
 printf '{"status":"not_run","reason":"GUI checks have not completed"}\n' > "$OUT/result.json"
-KODI_PID=""; XVFB_PID=""
+KODI_PID=""; XVFB_PID=""; PULSE_PID=""
 cleanup() {
   local rc=$?
   trap - EXIT
@@ -36,6 +36,7 @@ cleanup() {
     wait "$KODI_PID" 2>/dev/null || true
   fi
   if [[ -n "$XVFB_PID" ]]; then kill -TERM "$XVFB_PID" 2>/dev/null || true; wait "$XVFB_PID" 2>/dev/null || true; fi
+  if [[ -n "$PULSE_PID" ]]; then kill -TERM "$PULSE_PID" 2>/dev/null || true; wait "$PULSE_PID" 2>/dev/null || true; fi
   [[ ! -f "$KODI_DATA/userdata/guisettings.xml" ]] || cp "$KODI_DATA/userdata/guisettings.xml" "$OUT/guisettings.xml"
   if [[ "$rc" -ne 0 ]]; then
     printf '\nKodi GUI smoke test FAILED (exit %s). See logs/result.json; no GUI pass is implied.\n' "$rc" >&2
@@ -52,7 +53,7 @@ PY
 }
 trap cleanup EXIT
 
-for command in python3 Xvfb xauth xdotool xdpyinfo xprop xwininfo glxinfo xwd import dpkg git; do
+for command in python3 Xvfb xauth xdotool xdpyinfo xprop xwininfo glxinfo xwd import dpkg git pulseaudio pactl; do
   command -v "$command" >/dev/null || { echo "Missing prerequisite: $command" >&2; exit 2; }
 done
 KODI_BIN="$(dpkg -L kodi-bin | grep '/kodi\.bin$' | head -1)"
@@ -61,7 +62,7 @@ export KODI_BIN_HOME="$(dirname -- "$KODI_BIN")"
 export KODI_BINADDON_PATH="$KODI_BIN_HOME/addons"
 "$KODI_BIN" --version | tee "$OUT/kodi-version.txt"
 printf '%s\n' "$COMMIT" > "$OUT/commit.txt"
-dpkg-query -W kodi kodi-bin kodi-data xvfb libgl1-mesa-dri > "$OUT/runtime-packages.txt"
+dpkg-query -W kodi kodi-bin kodi-data xvfb libgl1-mesa-dri pulseaudio > "$OUT/runtime-packages.txt"
 [[ ! -f "$ROOT/dist/checksums.json" ]] || cp "$ROOT/dist/checksums.json" "$OUT/package-checksums.json"
 grep -Eq 'Center 21\.' "$OUT/kodi-version.txt" || { echo 'This test requires Kodi 21, not another major version' >&2; exit 2; }
 [[ -f "$ROOT/build/skin.apeture/xml/Home.xml" ]] || { echo 'Run python3 tools/build.py first' >&2; exit 2; }
@@ -190,6 +191,31 @@ XML
 # are installed in this disposable profile, never a user profile or release ZIP.
 python3 "$ROOT/tools/music_smoke_fixture.py" prepare --runtime "$RUNTIME" --out "$OUT"
 export APETURE_MUSIC_DRIVER="$ROOT/tools/music_smoke_driver.py"
+# Private, clocked discard audio; never use a host server, TCP or hardware sink.
+export PULSE_RUNTIME_PATH="$RUNTIME/pulse" PULSE_STATE_PATH="$RUNTIME/pulse-state"
+export PULSE_SERVER="unix:$RUNTIME/pulse/native" PULSE_COOKIE="$RUNTIME/pulse/cookie"
+export PULSE_CLIENTCONFIG="$RUNTIME/pulse/client.conf" PULSE_SINK=apeture_qa
+mkdir -m 700 "$PULSE_STATE_PATH"
+pulseaudio --daemonize=no --system=no --use-pid-file=no --exit-idle-time=-1 \
+  --high-priority=no --realtime=no --disable-shm=yes --disallow-module-loading=yes \
+  --log-target=stderr --log-level=info -n --file="$RUNTIME/pulse/default.pa" \
+  > "$KODI_TEMP/pulseaudio.log" 2>&1 &
+PULSE_PID=$!
+for _ in {1..100}; do
+  pactl info > "$OUT/pulse-info.txt" 2>/dev/null && break
+  kill -0 "$PULSE_PID" 2>/dev/null || { cat "$KODI_TEMP/pulseaudio.log"; exit 3; }
+  sleep 0.1
+done
+pactl --format=json list sinks > "$OUT/pulse-sinks.json"
+pactl --format=json list modules > "$OUT/pulse-modules.json"
+python3 - "$OUT" <<'PY'
+import json, pathlib, sys
+out=pathlib.Path(sys.argv[1])
+sinks=json.loads((out/'pulse-sinks.json').read_text())
+modules=json.loads((out/'pulse-modules.json').read_text())
+assert len(sinks)==1 and sinks[0]['name']=='apeture_qa', 'Expected only the private discard sink'
+assert {m['name'] for m in modules}=={'module-native-protocol-unix','module-null-sink'}, 'Unexpected PulseAudio module'
+PY
 # Do not relax X authentication or expose X11 on TCP.
 touch "$XAUTHORITY"
 xauth -f "$XAUTHORITY" add "$DISPLAY" . "$(python3 -c 'import secrets; print(secrets.token_hex(16))')"
@@ -203,7 +229,7 @@ done
 xdpyinfo > "$OUT/xdpyinfo.txt"
 glxinfo -B | tee "$OUT/glxinfo.txt"
 grep -qi 'llvmpipe\|softpipe' "$OUT/glxinfo.txt" || { echo 'Software GL renderer was not established' >&2; exit 3; }
-"$KODI_BIN" --windowing=x11 --gl-interface=glx --audio-backend=alsa --debug -fs > "$KODI_TEMP/kodi-stdout.log" 2>&1 &
+"$KODI_BIN" --windowing=x11 --gl-interface=glx --audio-backend=pulseaudio --debug -fs > "$KODI_TEMP/kodi-stdout.log" 2>&1 &
 KODI_PID=$!
 export APETURE_KODI_PID="$KODI_PID" APETURE_SKIN_HOME="$ROOT/build/skin.apeture/xml/Home.xml"
 

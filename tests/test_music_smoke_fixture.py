@@ -56,12 +56,19 @@ class SyntheticFixtureTests(unittest.TestCase):
             settings = ET.parse(runtime / 'data/userdata/guisettings.xml')
             self.assertEqual(settings.findtext("./setting[@id='musiclibrary.downloadinfo']"), 'false')
             self.assertEqual(settings.findtext("./setting[@id='services.webserver']"), 'false')
-            self.assertEqual(settings.findtext("./setting[@id='audiooutput.audiodevice']"), 'ALSA:default')
-            alsa = (runtime / 'home/.asoundrc').read_text()
-            self.assertIn('pcm.!default', alsa)
-            self.assertIn('type null', alsa)
-            self.assertIn('show on', alsa)
-            self.assertIn('SYNTHETIC QA', alsa)
+            self.assertEqual(settings.findtext("./setting[@id='audiooutput.audiodevice']"), 'PULSE:apeture_qa')
+            self.assertFalse((runtime / 'home/.asoundrc').exists())
+            pulse = runtime / 'pulse'
+            script = (pulse / 'default.pa').read_text()
+            self.assertIn('module-null-sink', script)
+            self.assertIn('module-native-protocol-unix', script)
+            self.assertIn('auth-anonymous=no', script)
+            self.assertNotIn('tcp', script)
+            self.assertNotIn('module-udev', script)
+            self.assertEqual(len((pulse / 'cookie').read_bytes()), 256)
+            self.assertEqual((pulse / 'cookie').stat().st_mode & 0o777, 0o600)
+            self.assertEqual(pulse.stat().st_mode & 0o777, 0o700)
+            self.assertIn('autospawn = no', (pulse / 'client.conf').read_text())
             self.assertIn('not audible output', (out / 'music-audio-sink.txt').read_text())
             self.assertFalse((runtime / 'data/userdata/Database').exists())  # No SQLite seeding.
             self.assertEqual(json.loads((out / 'music-result.json').read_text())['status'], 'not_run')
@@ -80,6 +87,20 @@ class SyntheticFixtureTests(unittest.TestCase):
                     'KODI_DATA': str(runtime / 'data'), 'HOME': str(runtime / 'home')}):
                 with self.assertRaises(ValueError): fixture.prepare(runtime, runtime / 'out')
             self.assertEqual(config.read_text(), 'existing configuration')
+            self.assertFalse((runtime / 'synthetic-music').exists())
+
+    def test_existing_pulse_runtime_is_rejected(self):
+        with tempfile.TemporaryDirectory(prefix="apeture-kodi-smoke.") as temp:
+            runtime = Path(temp)
+            (runtime / 'system/system').mkdir(parents=True)
+            (runtime / 'data/userdata').mkdir(parents=True)
+            (runtime / 'home').mkdir()
+            (runtime / 'pulse').mkdir()
+            (runtime / 'system/system/addon-manifest.xml').write_text('<addons/>')
+            (runtime / 'data/userdata/guisettings.xml').write_text('<settings/>')
+            with patch.dict(os.environ, {'KODI_HOME': str(runtime / 'system'),
+                    'KODI_DATA': str(runtime / 'data'), 'HOME': str(runtime / 'home')}):
+                with self.assertRaises(ValueError): fixture.prepare(runtime, runtime / 'out')
             self.assertFalse((runtime / 'synthetic-music').exists())
 
     def test_regular_folder_and_mismatched_runtime_environment_rejected(self):

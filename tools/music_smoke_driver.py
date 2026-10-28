@@ -90,7 +90,7 @@ def run(out, focus, press, wait_for, screenshot, state):
 
     try:
         initial = wait("music observer in empty fixture", lambda s: s.get("music_enabled") and s.get("window") == HOME)
-        if initial["albums"] or initial["queue"] or initial["player"]:
+        if initial["albums"] or initial["queue"] or initial["player"] or initial.get("active_audio"):
             raise AssertionError("Music test must begin with a genuine empty disposable library and queue")
         open_shelf(False)
         record("music-01-empty", capture=True)
@@ -130,7 +130,7 @@ def run(out, focus, press, wait_for, screenshot, state):
             key("Right", "ordered album {}".format(index + 1), at(index))
             record("music-album-order-{}".format(index + 1), capture=(index == 3))
         key("Right", "last album clamps rather than wraps", at(6))
-        if read()["player"] or read()["queue"]:
+        if read()["player"] or read()["queue"] or read().get("active_audio"):
             raise AssertionError("Browsing changed playback before an explicit Play action")
         for index in range(5, 2, -1):
             key("Left", "return to two-disc album", at(index))
@@ -178,11 +178,11 @@ def run(out, focus, press, wait_for, screenshot, state):
         record("music-05-current-album-focus", capture=True)
         close_shelf()
         command("stop")
-        wait("test playback stopped", lambda s: s.get("player") is None)
+        wait("test playback stopped", lambda s: s.get("player") is None and not s.get("active_audio"))
         result = {"status": "passed", "label": "SYNTHETIC QA", "checks": checks,
                   "random_initial_positions": random_positions, "playback_progress_ms": playback_progress_ms,
-                  "scope": "Actual Kodi 21 WindowXML, fixture library, ordered queue and advancing decoder/player clock against private ALSA null sink",
-                  "audio_sink": "ALSA:default; disposable HOME/.asoundrc type null; discard-only",
+                  "scope": "Actual Kodi 21 WindowXML, fixture library, ordered queue and advancing decoder/player clock against private clocked PulseAudio null sink",
+                  "audio_sink": "PULSE:apeture_qa; disposable authenticated Unix socket; clocked null sink; discard-only",
                   "limitations": ["Not user media", "Null sink: no audible output, Pi audio or hardware audio-output assertion", "No controller/CEC assertion", "No ZIP-install or Pi acceptance", "Randomness distribution not a runtime statistical test"]}
         (out / "music-result.json").write_text(json.dumps(result, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
         return checks

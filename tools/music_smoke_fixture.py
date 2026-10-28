@@ -169,7 +169,7 @@ def prepare(runtime: Path, out: Path, root: Path = ROOT) -> dict:
         raise ValueError("Refusing to replace an existing ALSA configuration")
     marker = runtime / ".apeture-music-smoke.json"
     fixture = runtime / "synthetic-music"
-    if marker.exists() or fixture.exists():
+    if marker.exists() or fixture.exists() or (runtime / "pulse").exists():
         raise ValueError("Refusing to replace an existing fixture run")
     expected = verify(root / "tests/fixtures/music")
     out.mkdir(parents=True, exist_ok=True)
@@ -188,21 +188,20 @@ def prepare(runtime: Path, out: Path, root: Path = ROOT) -> dict:
   <extension point="xbmc.addon.metadata"><summary lang="en_GB">Disposable synthetic music test only</summary><platform>all</platform><license>GPL-3.0-or-later</license></extension>
 </addon>
 ''', encoding="utf-8")
-    # Kodi 21 explicitly enumerates the device named default while filtering a
-    # raw device named null. This override is confined to the disposable HOME;
-    # it discards output and does not start an audio server or touch /etc/asound.conf.
-    alsa_config.write_text('''# Disposable Apeture SYNTHETIC QA ONLY; no audible output.
-pcm.!default {
-    type null
-    hint {
-        show on
-        description "Apeture SYNTHETIC QA discard-only audio"
-        ioid "Output"
-    }
-}
-''', encoding="utf-8")
+    # Only the CI runner starts this clocked discard sink. No TCP, hardware
+    # modules, default system script or user's PulseAudio instance are used.
+    pulse = runtime / "pulse"
+    pulse.mkdir(mode=0o700)
+    cookie = pulse / "cookie"
+    cookie.write_bytes(os.urandom(256))
+    cookie.chmod(0o600)
+    (pulse / "client.conf").write_text("autospawn = no\nenable-shm = no\n", encoding="utf-8")
+    (pulse / "default.pa").write_text(
+        "load-module module-native-protocol-unix socket={0}/native auth-cookie={0}/cookie auth-anonymous=no\n"
+        "load-module module-null-sink sink_name=apeture_qa rate=44100 channels=2 sink_properties=device.description=Apeture_SYNTHETIC_QA_discard_only\n"
+        "set-default-sink apeture_qa\n".format(pulse), encoding="utf-8")
     (out / "music-audio-sink.txt").write_text(
-        "ALSA:default from disposable HOME/.asoundrc; type null; discard-only.\n"
+        "PULSE:apeture_qa; private authenticated Unix socket; clocked module-null-sink; discard-only.\n"
         "Acceptance is native decoder/player-clock progression and queue state, not audible output.\n", encoding="utf-8")
     config = {"label": LABEL, "token": uuid.uuid4().hex, "runtime": str(runtime),
               "system": str(system), "data": str(data), "fixture": str(fixture), "out": str(out),
@@ -216,7 +215,7 @@ pcm.!default {
     tree.write(system / "system/addon-manifest.xml", encoding="utf-8", xml_declaration=True)
     settings = ET.parse(data / "userdata/guisettings.xml")
     for identifier, value in (("musiclibrary.downloadinfo", "false"),
-                              ("audiooutput.audiodevice", "ALSA:default")):
+                              ("audiooutput.audiodevice", "PULSE:apeture_qa")):
         setting = settings.find("./setting[@id='{}']".format(identifier))
         if setting is None:
             setting = ET.SubElement(settings.getroot(), "setting", id=identifier)

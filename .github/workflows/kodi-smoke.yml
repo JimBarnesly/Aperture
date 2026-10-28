@@ -28,7 +28,7 @@ jobs:
           apt-get install --yes --no-install-recommends \
             ca-certificates git python3 python3-pil \
             kodi kodi-bin kodi-data xvfb xauth xdotool x11-utils x11-apps \
-            mesa-utils libgl1-mesa-dri imagemagick \
+            mesa-utils libgl1-mesa-dri imagemagick pulseaudio pulseaudio-utils \
             fonts-noto-core fonts-noto-mono fonts-roboto-unhinted
       - uses: actions/checkout@v4
         with:

@@ -6,7 +6,8 @@ below. The baseline Movies/TV/Files, dialogs, idle notice, game settings Cancel
 and skin rollback assertions are retained; the former direct-Music assertion
 now checks the new shelf route and its action into native Kodi Music. Its status
 remains `not_run` until the resulting runner actually passes in Kodi 21.
-No RPC server, socket listener, media download or user profile is involved.
+No Kodi network RPC server, TCP audio listener, media download or user profile is involved.
+The CI audio sink uses a private authenticated Unix socket only.
 
 ## 1. Prepare after guisettings, before starting Kodi
 
@@ -23,11 +24,16 @@ checks the exact `system`/`data` relationships, validates actual fixture audio
 metadata/hashes, copies the optional helper and labelled fixtures, and installs a
 **test-only** in-process observer in that ephemeral system's add-on manifest.
 It sets `musiclibrary.downloadinfo=false` only in the isolated fixture settings
-to prevent metadata scraping. Existing network-service-off settings stay intact. It also writes an explicitly
-labelled `pcm.!default { type null ... }` with a visible output hint to the fresh
-`$RUNTIME/home/.asoundrc` and selects `ALSA:default` only in that temporary
-profile. An existing ALSA config or a mismatched HOME is rejected; no systemwide
-configuration or new audio server is involved.
+to prevent metadata scraping. Existing network-service-off settings stay intact.
+It prepares a clocked PulseAudio null sink with a fresh mode-600 authentication
+cookie in a mode-700 directory under `$RUNTIME/pulse`, and selects
+`PULSE:apeture_qa` only in that temporary Kodi profile. The main CI runner starts
+an owned foreground PulseAudio process from the official Debian package, using
+`-n` and only its private script: one authenticated Unix protocol module and one
+clocked null sink. No TCP, hardware discovery modules, host instance, system
+configuration or real output is involved; extra modules/sinks fail startup checks.
+Client autospawn is disabled, and cleanup terminates only the saved process PID.
+An existing audio configuration or mismatched HOME/runtime is rejected.
 The initial music library remains empty; only an explicit test command scans the
 fixture later. No production add-on service is introduced.
 
@@ -81,17 +87,21 @@ passed. No random-distribution assertion is made from a handful of openings.
 
 ## Audio and runtime limits
 
-The configured sink is **discard-only ALSA null**, named `default` inside the
-private CI HOME. [Kodi 21 explicitly enumerates `default` but filters raw `null`](https://github.com/xbmc/xbmc/blob/Omega/xbmc/cores/AudioEngine/Sinks/AESinkALSA.cpp#L1052-L1082),
-and recognizes virtual PCM devices without a hardware card. The result therefore
-establishes **native decoding/player-clock progression and ordered queue state**,
-not audible output or Pi audio. `music-audio-sink.txt` records this boundary.
+The configured sink is **discard-only clocked PulseAudio null**, named
+`apeture_qa` on the private authenticated Unix socket. PulseAudio's official
+[module-null-sink implementation](https://github.com/pulseaudio/pulseaudio/blob/v17.0/src/modules/module-null-sink.c)
+uses the monotonic clock and timer pacing; the previous ALSA null fixture was
+observed consuming four 20-second tracks in about two seconds and was rejected.
+This test establishes **native decoding/player-clock progression and ordered
+queue state**, not audible output or Pi audio. `music-audio-sink.txt`,
+`pulse-sinks.json`, `pulse-modules.json` and the PulseAudio log record this boundary.
 
 The playback assertion **must fail** if Kodi cannot create the player or its
-clock does not advance on the first fixture track. ALSA's [null PCM returns zero
-delay](https://github.com/alsa-project/alsa-lib/blob/master/src/pcm/pcm_null.c#L110-L114),
-so this sink may consume frames without normal hardware pacing; the actual CI
-run must establish behavior. Do not weaken the progress or first-track/current-
-focus predicates to manufacture a pass. Source tests and fixtures verify neither
-Kodi rendering nor physical sound. This test is not Pi, gamepad/CEC, ZIP-install/skin-revert or network
-media-source acceptance. No local native GUI run is claimed by these files.
+clock does not advance by at least 500 ms on the first fixture track. The observer
+records briefly absent startup item metadata as pending, not successful playback;
+foreign paths/IDs still fail, and pending identity cannot authorize Stop. No
+clock, queue, first-track or current-album focus assertion is relaxed.
+Source tests and fixtures verify neither Kodi rendering nor physical sound.
+This music extension is not Pi, gamepad/CEC, ZIP-install or network media-source
+acceptance. The separate baseline checks still exercise automatic skin rollback.
+No local native GUI run is claimed by these files.

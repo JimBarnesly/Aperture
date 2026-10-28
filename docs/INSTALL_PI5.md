@@ -25,18 +25,53 @@ Checked 28 October 2026. Use a test card/profile first; keep the original skin.
 
 1. Confirm the stock Kodi interface works and reports Kodi 21.x. Back up the new
    profile before experimenting. Keep Estuary installed for recovery.
-2. Transfer the supplied add-on ZIP files to storage Kodi can browse. Leave them
-   zipped. In **Add-ons → Add-on browser → Install from ZIP file**, install the
-   game-library ZIP first. For the music-shelf build, also install its script ZIP.
-   Install the selected skin ZIP last.
+2. If the download is an outer kit/GitHub artifact ZIP, extract that wrapper on
+   your computer first. Transfer the **three inner add-on ZIPs** to storage Kodi
+   can browse, such as a USB drive; leave those inner ZIPs zipped. This music-shelf
+   build contains:
+   - `plugin.games.apeture-0.1.0.zip` — optional game library.
+   - `script.apeture.music-0.1.0.zip` — optional native album shelf.
+   - `skin.apeture-0.3.0.zip` — complete skin, installed/selected last.
+
+   In **Add-ons → Add-on browser → Install from ZIP file**, install each desired
+   companion, wait for its notification, then install the skin. Neither companion
+   is a hard dependency of the skin: missing Music helper falls back to Kodi
+   Music; missing Games helper shows setup guidance. If a companion is disabled,
+   review it under **Add-ons → My add-ons** before expecting its Home integration.
 3. Kodi may ask you to review its Unknown sources setting for ZIP installation.
    Decide on that warning yourself after reviewing the package/source. Apeture
    does not enable it automatically.
 4. Select **Settings → Interface → Skin → Apeture**. Confirm the change only if
    the screen is readable and controls respond. If not, let Kodi's timer revert.
-5. Test all six Home destinations and Back. Configure a ROM root only when ready;
-   add music/video sources through Kodi. Missing libraries should show setup
-   guidance rather than invented content.
+5. Test all six Home destinations and Back. Start at a readable 16:9 display mode
+   (1080p is the authored layout). Verify the actual controller or TV remote/CEC
+   independently; desktop keyboard tests do not establish either one.
+
+The ZIPs already contain their code, required skin windows and default fonts.
+Kodi 21 supplies their `xbmc.python` and `xbmc.gui` APIs. Do **not** install Python,
+Node/npm, run a Format server, enable SSH, or copy build directories merely to
+install this kit. The GitHub source ZIP and `addons/skin.apeture` source folder
+are not installable skin packages. Keep `checksums.json` with the matching ZIPs.
+
+## 3. Populate your own library
+
+**Music:** from the shelf select **Kodi Music**, then **Files → Add music**.
+Choose a folder containing correctly tagged music and agree to scan the source
+into Kodi's library. Wait for the scan to finish, then reopen or Refresh the
+shelf. Adding a file-browser source without scanning does not populate albums.
+Additional online metadata/art scraping is optional, not a shelf requirement;
+Kodi's guide recommends leaving it off for the first scan. Apeture does not turn
+it on. [Official scanning guide](https://kodi.wiki/view/Adding_music_to_the_library).
+
+The shelf uses album tags already indexed by Kodi. Missing/unreadable or remote
+artwork may show its original record placeholder. **Play album replaces the
+current music queue and disables shuffle** for disc/track order. Cue/shared-file
+albums remain playable through native Kodi Music, not this first shelf slice.
+
+**Games:** configure a ROM root containing supported system subfolders, not an
+individual game file. The companion's bundled README describes folder names.
+Configure a root only when ready; unconfigured/empty states should show guidance,
+not invented games. Add movie/TV sources through Kodi separately.
 
 Game/emulator cores, BIOS requirements and controller mapping are separate from
 the skin. A detected game file does not guarantee a compatible Pi core exists.

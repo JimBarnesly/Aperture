@@ -10,6 +10,31 @@ spec.loader.exec_module(build)
 
 
 class PackagingTests(unittest.TestCase):
+    def test_install_guide_uses_actual_package_names_and_distinguishes_outer_zip(self):
+        packages = [
+            {"addon": "plugin.games.apeture", "file": "plugin.games.apeture-7.2.1.zip"},
+            {"addon": "script.apeture.music", "file": "script.apeture.music-4.3.2.zip"},
+            {"addon": "skin.apeture", "file": "skin.apeture-9.8.7.zip"},
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            destination = Path(directory)
+            build.write_install_guide(packages, destination)
+            guide = (destination / "README-INSTALL.txt").read_text(encoding="utf-8")
+            for item in packages:
+                self.assertIn(item["file"], guide)
+            self.assertIn("OUTER wrapper", guide)
+            self.assertIn("INNER add-on ZIPs", guide)
+            self.assertIn("scanning it into the library", guide)
+            self.assertIn("HDMI-CEC", guide)
+            self.assertEqual((destination / "INSTALL_PI5.md").read_bytes(),
+                             (build.ROOT / "docs/INSTALL_PI5.md").read_bytes())
+
+    def test_incomplete_install_kit_is_not_described_as_complete(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with self.assertRaises(ValueError):
+                build.write_install_guide([], Path(directory))
+            self.assertFalse((Path(directory) / "README-INSTALL.txt").exists())
+
     def test_zip_is_deterministic_and_uses_addon_root(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
