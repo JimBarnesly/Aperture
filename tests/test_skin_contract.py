@@ -40,6 +40,11 @@ class HomeContractTests(unittest.TestCase):
                     self.assertTrue(node.findtext("texturefocus"))
                     self.assertTrue(node.findtext("label"))
 
+    def test_playback_controls_have_no_media_feedback(self):
+        actions = self.controls["9202"].findall("onclick")
+        self.assertTrue(any(node.get("condition") == "Player.HasMedia" and node.text == "ActivateWindow(playercontrols)" for node in actions))
+        self.assertTrue(any(node.get("condition") == "!Player.HasMedia" and (node.text or "").startswith("Notification(") for node in actions))
+
 
 if __name__ == "__main__":
     unittest.main()

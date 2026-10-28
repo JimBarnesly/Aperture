@@ -11,7 +11,10 @@ artwork under CC BY-SA 4.0. The original font license files remain in `fonts/`.
 `Font.xml`, `SkinSettings.xml` and `colors/defaults.xml` are modified Estuary files and retain that
 upstream GPL version 2 license. The original Apeture `Home.xml`, addon metadata
 and companion setup dialog are additionally offered under GPL-2.0-or-later to
-remain compatible with the skin foundation. Original Apeture art is CC-BY-SA-4.0.
+remain compatible with the skin foundation. Original Apeture art is offered under
+CC-BY-SA-4.0 to the extent rights apply. The scenic background is original
+AI-generated artwork, not an identified historical photograph. Its unchanged
+repository source and provenance are documented in DESIGN.md.
 Build and asset-generator Python code is GPL-3.0-or-later under the root license.
 The root project's license does not replace third-party licenses.
 

@@ -1,5 +1,16 @@
 # Apeture
 
+## Scenic experiment (0.2.0)
+
+This branch explores a misty stone-bridge backdrop and a quiet horizontal Home
+menu. The baseline design remains on `feat/native-kodi-foundation`. Both use the
+same native media routes and game-library add-on. See [design notes](docs/DESIGN.md).
+The bridge is original generated artwork, not a recovered historical wallpaper.
+
+An opt-in GitHub Actions smoke test on `experiment/scenic-bridge` runs actual
+Kodi 21 with an isolated profile and software display. Its result is separate
+from static tests and still does not establish Pi/controller/core compatibility.
+
 A modern XBMC-original-inspired Kodi skin. One living-room interface for games,
 music and video, with an optimistic early-2000s character and native controller
 navigation. **Apeture** is the intentional spelling.
