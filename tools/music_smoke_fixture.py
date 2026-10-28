@@ -67,7 +67,7 @@ def flac_tags(path: Path) -> dict[str, str]:
 
 
 def verify(source: Path = FIXTURES) -> dict:
-    manifest = json.loads((source / "expected.json").read_text())
+    manifest = json.loads((source / "expected.json").read_text(encoding="utf-8"))
     if manifest.get("label") != LABEL or len(manifest.get("albums", [])) != 7:
         raise ValueError("Not the explicit seven-album synthetic fixture")
     for album in manifest["albums"]:
@@ -141,7 +141,7 @@ def generate(destination: Path = FIXTURES):
                                     "title": track_title, "disc": disc, "track": track,
                                     "sha256": hashlib.sha256(output.read_bytes()).hexdigest()})
         manifest["albums"].append(entry)
-    (destination / "expected.json").write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n")
+    (destination / "expected.json").write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     verify(destination)
 
 
@@ -187,7 +187,7 @@ def prepare(runtime: Path, out: Path, root: Path = ROOT) -> dict:
   <extension point="xbmc.service" library="service.py"/>
   <extension point="xbmc.addon.metadata"><summary lang="en_GB">Disposable synthetic music test only</summary><platform>all</platform><license>GPL-3.0-or-later</license></extension>
 </addon>
-''')
+''', encoding="utf-8")
     # Kodi 21 explicitly enumerates the device named default while filtering a
     # raw device named null. This override is confined to the disposable HOME;
     # it discards output and does not start an audio server or touch /etc/asound.conf.
@@ -200,15 +200,15 @@ pcm.!default {
         ioid "Output"
     }
 }
-''')
+''', encoding="utf-8")
     (out / "music-audio-sink.txt").write_text(
         "ALSA:default from disposable HOME/.asoundrc; type null; discard-only.\n"
-        "Acceptance is native decoder/player-clock progression and queue state, not audible output.\n")
+        "Acceptance is native decoder/player-clock progression and queue state, not audible output.\n", encoding="utf-8")
     config = {"label": LABEL, "token": uuid.uuid4().hex, "runtime": str(runtime),
               "system": str(system), "data": str(data), "fixture": str(fixture), "out": str(out),
               "expected": expected}
-    marker.write_text(json.dumps(config))
-    (observer / "config.json").write_text(json.dumps(config))
+    marker.write_text(json.dumps(config), encoding="utf-8")
+    (observer / "config.json").write_text(json.dumps(config), encoding="utf-8")
     tree = ET.parse(system / "system/addon-manifest.xml")
     for identifier in ("script.apeture.music", SERVICE_ID):
         if not any(item.text == identifier for item in tree.getroot().findall("addon")):
@@ -222,8 +222,8 @@ pcm.!default {
             setting = ET.SubElement(settings.getroot(), "setting", id=identifier)
         setting.text = value
     settings.write(data / "userdata/guisettings.xml", encoding="utf-8", xml_declaration=True)
-    (out / "music-expected.json").write_text(json.dumps(expected, indent=2, ensure_ascii=False) + "\n")
-    (out / "music-result.json").write_text(json.dumps({"status": "not_run", "label": LABEL}) + "\n")
+    (out / "music-expected.json").write_text(json.dumps(expected, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    (out / "music-result.json").write_text(json.dumps({"status": "not_run", "label": LABEL}) + "\n", encoding="utf-8")
     return config
 
 

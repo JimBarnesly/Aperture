@@ -28,13 +28,13 @@ def rpc(method, **params):
 
 def atomic(path, payload):
     temporary = path.with_suffix(path.suffix + ".tmp")
-    temporary.write_text(json.dumps(payload, ensure_ascii=False))
+    temporary.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
     temporary.replace(path)
 
 
 def verified_config():
     addon_path = Path(xbmcaddon.Addon(SERVICE_ID).getAddonInfo("path")).resolve()
-    config = json.loads((addon_path / "config.json").read_text())
+    config = json.loads((addon_path / "config.json").read_text(encoding="utf-8"))
     runtime = Path(config["runtime"]).resolve()
     if not runtime.name.startswith("apeture-kodi-smoke.") or config.get("label") != LABEL:
         raise RuntimeError("Not an explicit disposable music fixture")
@@ -46,7 +46,7 @@ def verified_config():
         raise RuntimeError("Refusing a nonfixture Kodi profile")
     if Path(config["fixture"]).resolve() != runtime / "synthetic-music":
         raise RuntimeError("Refusing a nonfixture media path")
-    marker = json.loads((runtime / ".apeture-music-smoke.json").read_text())
+    marker = json.loads((runtime / ".apeture-music-smoke.json").read_text(encoding="utf-8"))
     if marker != config or not config.get("token"):
         raise RuntimeError("Music fixture marker mismatch")
     if rpc("Settings.GetSettingValue", setting="musiclibrary.downloadinfo").get("value") is not False:
@@ -113,7 +113,7 @@ def main():
     last_command = None
     seen = set()
     scanned = False
-    with (out / "music-states.jsonl").open("a", buffering=1) as history:
+    with (out / "music-states.jsonl").open("a", buffering=1, encoding="utf-8") as history:
         while not monitor.abortRequested():
             sequence += 1
             current = snapshot(config, sequence, last_command)
@@ -121,7 +121,7 @@ def main():
             atomic(out / "music-state.json", current)
             command_path = out / "music-command.json"
             if command_path.exists():
-                command = json.loads(command_path.read_text())
+                command = json.loads(command_path.read_text(encoding="utf-8"))
                 identifier, action = command.get("id"), command.get("action")
                 if not isinstance(identifier, str) or not identifier or len(identifier) > 80:
                     raise RuntimeError("Invalid synthetic test command identity")
@@ -147,7 +147,7 @@ if __name__ == "__main__":
     except Exception as exc:
         # Only the isolated CI observer writes this; never include private payloads.
         path = Path(xbmcaddon.Addon(SERVICE_ID).getAddonInfo("path")) / "config.json"
-        config = json.loads(path.read_text())
+        config = json.loads(path.read_text(encoding="utf-8"))
         out = Path(config["out"])
         atomic(out / "music-error.json", {"error": type(exc).__name__, "reason": str(exc), "label": LABEL})
         raise

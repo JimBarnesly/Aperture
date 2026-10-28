@@ -20,7 +20,7 @@ def run(out, focus, press, wait_for, screenshot, state):
     runner functions. This function raises on any failure so baseline CI fails.
     """
     out = Path(out)
-    expected = json.loads((out / "music-expected.json").read_text())
+    expected = json.loads((out / "music-expected.json").read_text(encoding="utf-8"))
     checks = []
     latest = {}
     expected_pid = int(os.environ["APETURE_KODI_PID"])
@@ -29,9 +29,9 @@ def run(out, focus, press, wait_for, screenshot, state):
         nonlocal latest
         error = out / "music-error.json"
         if error.exists():
-            raise AssertionError("Music fixture observer failed: " + error.read_text())
+            raise AssertionError("Music fixture observer failed: " + error.read_text(encoding="utf-8"))
         try:
-            latest = json.loads((out / "music-state.json").read_text())
+            latest = json.loads((out / "music-state.json").read_text(encoding="utf-8"))
         except (FileNotFoundError, json.JSONDecodeError):
             pass
         return latest
@@ -54,7 +54,7 @@ def run(out, focus, press, wait_for, screenshot, state):
     def command(action):
         identifier = uuid.uuid4().hex
         temporary = out / "music-command.tmp"
-        temporary.write_text(json.dumps({"id": identifier, "action": action}))
+        temporary.write_text(json.dumps({"id": identifier, "action": action}), encoding="utf-8")
         temporary.replace(out / "music-command.json")
         return wait("fixture command " + action,
                     lambda s: (s.get("last_command") or {}).get("id") == identifier)
@@ -184,9 +184,9 @@ def run(out, focus, press, wait_for, screenshot, state):
                   "scope": "Actual Kodi 21 WindowXML, fixture library, ordered queue and advancing decoder/player clock against private ALSA null sink",
                   "audio_sink": "ALSA:default; disposable HOME/.asoundrc type null; discard-only",
                   "limitations": ["Not user media", "Null sink: no audible output, Pi audio or hardware audio-output assertion", "No controller/CEC assertion", "No ZIP-install or Pi acceptance", "Randomness distribution not a runtime statistical test"]}
-        (out / "music-result.json").write_text(json.dumps(result, indent=2, ensure_ascii=False) + "\n")
+        (out / "music-result.json").write_text(json.dumps(result, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
         return checks
     except Exception as exc:
         (out / "music-result.json").write_text(json.dumps({"status": "failed", "label": "SYNTHETIC QA",
-            "reason": str(exc), "checks": checks, "last_state": latest}, indent=2, ensure_ascii=False) + "\n")
+            "reason": str(exc), "checks": checks, "last_state": latest}, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
         raise
