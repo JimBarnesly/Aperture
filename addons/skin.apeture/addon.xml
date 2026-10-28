@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<addon id="skin.apeture" name="Apeture" version="0.1.0" provider-name="Apeture contributors; Estuary foundation by Team Kodi">
+  <requires>
+    <import addon="xbmc.gui" version="5.17.0"/>
+  </requires>
+  <extension point="xbmc.gui.skin" debugging="false">
+    <res width="1920" height="1080" aspect="16:9" default="true" folder="xml"/>
+  </extension>
+  <extension point="xbmc.addon.metadata">
+    <summary lang="en_GB">A luminous home for your games, films and music.</summary>
+    <description lang="en_GB">Apeture is a controller-first Kodi 21 skin with an original midnight-and-cyan home, six straightforward destinations and Kodi-native media browsing. Install the companion Apeture Games add-on for local game browsing and in-Kodi libretro play. Complete settings, playback and dialogs use the attributed Estuary foundation. No external launcher or background service.</description>
+    <platform>all</platform>
+    <license>GPL-2.0, GPL-2.0-or-later, CC-BY-SA-4.0; bundled font licenses in fonts/</license>
+    <assets>
+      <icon>resources/icon.png</icon>
+      <fanart>resources/fanart.jpg</fanart>
+    </assets>
+    <disclaimer>Development foundation for Kodi 21 Omega. Native runtime verification is still required. Original Home layout; remaining windows are based on Estuary. See UPSTREAM.md.</disclaimer>
+    <news>0.1.0: original Apeture home; full pinned Omega Estuary window foundation; native media and games routes.</news>
+  </extension>
+</addon>

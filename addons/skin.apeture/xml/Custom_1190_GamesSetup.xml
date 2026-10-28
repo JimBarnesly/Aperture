@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Original Apeture companion setup dialog. GPL-2.0-or-later. -->
+<window type="dialog" id="1190">
+  <defaultcontrol always="true">11901</defaultcontrol>
+  <controls>
+    <control type="image">
+      <left>0</left><top>0</top><width>1920</width><height>1080</height>
+      <texture colordiffuse="E6061522">colors/white.png</texture>
+    </control>
+    <control type="label">
+      <left>370</left><top>290</top><width>1180</width><height>100</height>
+      <font>ApetureHero</font><textcolor>FFE7EFF5</textcolor><label>Let's get you playing.</label>
+    </control>
+    <control type="textbox">
+      <left>376</left><top>432</top><width>1160</width><height>190</height>
+      <font>ApetureBody</font><textcolor>FFB8CBD9</textcolor>
+      <label>Install the companion plugin.games.apeture ZIP from Add-ons, then enable it if needed.[CR][CR]Games open inside Kodi using compatible libretro game clients. A standalone RetroArch executable is not required. Use only game files you have the right to use.</label>
+    </control>
+    <control type="button" id="11901">
+      <left>370</left><top>680</top><width>390</width><height>80</height>
+      <font>ApetureBody</font><label>Open Add-ons</label>
+      <textcolor>FFB8CBD9</textcolor><focusedcolor>FF0A2636</focusedcolor>
+      <texturefocus border="25">apeture/focus.png</texturefocus><texturenofocus border="25">apeture/quiet.png</texturenofocus>
+      <onleft>11902</onleft><onright>11902</onright><onup>11902</onup><ondown>11902</ondown>
+      <onclick>Dialog.Close(1190)</onclick><onclick>ActivateWindow(addonbrowser)</onclick>
+    </control>
+    <control type="button" id="11902">
+      <left>794</left><top>680</top><width>300</width><height>80</height>
+      <font>ApetureBody</font><label>Not now</label>
+      <textcolor>FFB8CBD9</textcolor><focusedcolor>FF0A2636</focusedcolor>
+      <texturefocus border="25">apeture/focus.png</texturefocus><texturenofocus border="25">apeture/quiet.png</texturenofocus>
+      <onleft>11901</onleft><onright>11901</onright><onup>11901</onup><ondown>11901</ondown>
+      <onclick>Dialog.Close(1190)</onclick>
+    </control>
+  </controls>
+</window>
