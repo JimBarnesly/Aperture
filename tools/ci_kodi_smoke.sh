@@ -67,10 +67,29 @@ grep -Eq 'Center 21\.' "$OUT/kodi-version.txt" || { echo 'This test requires Kod
 [[ -f "$ROOT/build/skin.apeture/xml/Home.xml" ]] || { echo 'Run python3 tools/build.py first' >&2; exit 2; }
 [[ -f "$ROOT/build/skin.apeture/APETURE_BUILD.json" && -f "$ROOT/build/skin.apeture/xml/DialogConfirm.xml" && -f "$ROOT/build/skin.apeture/fonts/NotoSans-Regular.ttf" ]] || { echo 'A complete materialized skin is required' >&2; exit 2; }
 
-# Copy the distro data, following its font symlinks while it is still at /usr/share.
+# Copy distro data into the fixture, materializing its external font/JS links.
 # Bundle the two test subjects and a read-only observer in this ephemeral KODI_HOME.
 # This tests rendering/navigation, NOT the ZIP-install or keep/revert experience.
-cp -aL /usr/share/kodi "$KODI_HOME"
+APETURE_SOURCE_ROOT="$ROOT" python3 - <<'PY_COPY'
+import os
+from pathlib import Path
+import shutil
+source=Path('/usr/share/kodi'); destination=Path(os.environ['KODI_HOME'])
+shutil.copytree(source, destination, symlinks=True)
+for original in source.rglob('*'):
+    if not original.is_symlink():
+        continue
+    target=original.resolve()
+    # Debian 13's Kodi data may point at a removed Roboto-Thin package path.
+    # Use the same genuine font already present in our pinned Estuary baseline.
+    if not target.is_file() and original.relative_to(source).as_posix() == 'addons/skin.estuary/fonts/Roboto-Thin.ttf':
+        target=Path(os.environ['APETURE_SOURCE_ROOT'])/'build/skin.apeture/fonts/Roboto-Thin.ttf'
+    if not target.is_file():
+        raise RuntimeError(f'Unresolved distro data link: {original} -> {target}')
+    copied=destination/original.relative_to(source)
+    copied.unlink()
+    shutil.copy2(target, copied)
+PY_COPY
 cp -a "$ROOT/build/skin.apeture" "$KODI_HOME/addons/skin.apeture"
 cp -a "$ROOT/addons/plugin.games.apeture" "$KODI_HOME/addons/plugin.games.apeture"
 mkdir -p "$KODI_HOME/addons/service.apeture.cismoke"
