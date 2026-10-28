@@ -1,0 +1,330 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Original native Apeture shelf. GPL-3.0-or-later. -->
+<window>
+  <defaultcontrol always="true">100</defaultcontrol>
+  <backgroundcolor>FF0C1416</backgroundcolor>
+  <controls>
+    <control type="image">
+      <left>0</left>
+      <top>0</top>
+      <width>1920</width>
+      <height>1080</height>
+      <texture>$INFO[Window.Property(Shelf.Backdrop)]</texture>
+      <aspectratio>stretch</aspectratio>
+    </control>
+    <control type="image">
+      <left>0</left>
+      <top>0</top>
+      <width>1920</width>
+      <height>1080</height>
+      <texture colordiffuse="ECFFFFFF">shelf/background.png</texture>
+      <aspectratio>stretch</aspectratio>
+    </control>
+    <control type="label">
+      <left>96</left>
+      <top>58</top>
+      <width>1100</width>
+      <height>66</height>
+      <font>font45</font>
+      <textcolor>FFF4F8F8</textcolor>
+      <shadowcolor>90000000</shadowcolor>
+      <label>Music</label>
+    </control>
+    <control type="label">
+      <left>100</left>
+      <top>133</top>
+      <width>1400</width>
+      <height>45</height>
+      <font>font14</font>
+      <textcolor>FFB6C8CA</textcolor>
+      <shadowcolor>90000000</shadowcolor>
+      <label>One record at a time.</label>
+    </control>
+    <control type="label">
+      <left>1540</left>
+      <top>64</top>
+      <width>284</width>
+      <height>55</height>
+      <font>font30_title</font>
+      <textcolor>FFF4F8F8</textcolor>
+      <shadowcolor>90000000</shadowcolor>
+      <label>$INFO[System.Time]</label>
+      <align>right</align>
+    </control>
+    <control type="image">
+      <left>12</left>
+      <top>365</top>
+      <width>290</width>
+      <height>290</height>
+      <texture colordiffuse="557B9295" fallback="shelf/placeholder.png">$INFO[Window.Property(Shelf.Cover0.Art)]</texture>
+      <aspectratio>keep</aspectratio>
+      <visible>String.IsEqual(Window.Property(Shelf.Ready),true) + String.IsEqual(Window.Property(Shelf.Cover0.Visible),true)</visible>
+      <animation effect="rotatey" start="68" end="68" center="auto" time="0" condition="true">Conditional</animation>
+    </control>
+    <control type="image">
+      <left>1618</left>
+      <top>365</top>
+      <width>290</width>
+      <height>290</height>
+      <texture colordiffuse="557B9295" fallback="shelf/placeholder.png">$INFO[Window.Property(Shelf.Cover6.Art)]</texture>
+      <aspectratio>keep</aspectratio>
+      <visible>String.IsEqual(Window.Property(Shelf.Ready),true) + String.IsEqual(Window.Property(Shelf.Cover6.Visible),true)</visible>
+      <animation effect="rotatey" start="-68" end="-68" center="auto" time="0" condition="true">Conditional</animation>
+    </control>
+    <control type="image">
+      <left>170</left>
+      <top>326</top>
+      <width>370</width>
+      <height>370</height>
+      <texture colordiffuse="887B9295" fallback="shelf/placeholder.png">$INFO[Window.Property(Shelf.Cover1.Art)]</texture>
+      <aspectratio>keep</aspectratio>
+      <visible>String.IsEqual(Window.Property(Shelf.Ready),true) + String.IsEqual(Window.Property(Shelf.Cover1.Visible),true)</visible>
+      <animation effect="rotatey" start="62" end="62" center="auto" time="0" condition="true">Conditional</animation>
+    </control>
+    <control type="image">
+      <left>1380</left>
+      <top>326</top>
+      <width>370</width>
+      <height>370</height>
+      <texture colordiffuse="887B9295" fallback="shelf/placeholder.png">$INFO[Window.Property(Shelf.Cover5.Art)]</texture>
+      <aspectratio>keep</aspectratio>
+      <visible>String.IsEqual(Window.Property(Shelf.Ready),true) + String.IsEqual(Window.Property(Shelf.Cover5.Visible),true)</visible>
+      <animation effect="rotatey" start="-62" end="-62" center="auto" time="0" condition="true">Conditional</animation>
+    </control>
+    <control type="image">
+      <left>356</left>
+      <top>277</top>
+      <width>460</width>
+      <height>460</height>
+      <texture colordiffuse="BBA7B7B9" fallback="shelf/placeholder.png">$INFO[Window.Property(Shelf.Cover2.Art)]</texture>
+      <aspectratio>keep</aspectratio>
+      <visible>String.IsEqual(Window.Property(Shelf.Ready),true) + String.IsEqual(Window.Property(Shelf.Cover2.Visible),true)</visible>
+      <animation effect="rotatey" start="52" end="52" center="auto" time="0" condition="true">Conditional</animation>
+    </control>
+    <control type="image">
+      <left>1104</left>
+      <top>277</top>
+      <width>460</width>
+      <height>460</height>
+      <texture colordiffuse="BBA7B7B9" fallback="shelf/placeholder.png">$INFO[Window.Property(Shelf.Cover4.Art)]</texture>
+      <aspectratio>keep</aspectratio>
+      <visible>String.IsEqual(Window.Property(Shelf.Ready),true) + String.IsEqual(Window.Property(Shelf.Cover4.Visible),true)</visible>
+      <animation effect="rotatey" start="-52" end="-52" center="auto" time="0" condition="true">Conditional</animation>
+    </control>
+    <control type="image">
+      <left>700</left>
+      <top>244</top>
+      <width>520</width>
+      <height>520</height>
+      <texture colordiffuse="FFFFFFFF" fallback="shelf/placeholder.png">$INFO[Window.Property(Shelf.Cover3.Art)]</texture>
+      <aspectratio>keep</aspectratio>
+      <visible>String.IsEqual(Window.Property(Shelf.Ready),true) + String.IsEqual(Window.Property(Shelf.Cover3.Visible),true)</visible>
+    </control>
+    <control type="label">
+      <left>470</left>
+      <top>788</top>
+      <width>980</width>
+      <height>53</height>
+      <font>font37</font>
+      <textcolor>FFF4F8F8</textcolor>
+      <shadowcolor>90000000</shadowcolor>
+      <label>$INFO[Window.Property(Shelf.Title)]</label>
+      <align>center</align>
+      <visible>String.IsEqual(Window.Property(Shelf.Ready),true)</visible>
+    </control>
+    <control type="label">
+      <left>470</left>
+      <top>844</top>
+      <width>980</width>
+      <height>39</height>
+      <font>font27</font>
+      <textcolor>FFB6D9DB</textcolor>
+      <shadowcolor>90000000</shadowcolor>
+      <label>$INFO[Window.Property(Shelf.Artist)]</label>
+      <align>center</align>
+      <visible>String.IsEqual(Window.Property(Shelf.Ready),true)</visible>
+    </control>
+    <control type="label">
+      <left>1490</left>
+      <top>795</top>
+      <width>334</width>
+      <height>40</height>
+      <font>font13</font>
+      <textcolor>FFB6C8CA</textcolor>
+      <shadowcolor>90000000</shadowcolor>
+      <label>$INFO[Window.Property(Shelf.Year)]</label>
+      <align>right</align>
+      <visible>String.IsEqual(Window.Property(Shelf.Ready),true)</visible>
+    </control>
+    <control type="label">
+      <left>1490</left>
+      <top>842</top>
+      <width>334</width>
+      <height>40</height>
+      <font>font13</font>
+      <textcolor>FF94A9AC</textcolor>
+      <shadowcolor>90000000</shadowcolor>
+      <label>$INFO[Window.Property(Shelf.Position)]</label>
+      <align>right</align>
+      <visible>String.IsEqual(Window.Property(Shelf.Ready),true)</visible>
+    </control>
+    <control type="button" id="100">
+      <left>770</left>
+      <top>902</top>
+      <width>380</width>
+      <height>62</height>
+      <font>font13</font>
+      <label>$INFO[Window.Property(Shelf.Primary)]</label>
+      <textcolor>FFD3DEDF</textcolor>
+      <focusedcolor>FF10272B</focusedcolor>
+      <align>center</align>
+      <aligny>center</aligny>
+      <texturefocus border="6">shelf/focus.png</texturefocus>
+      <texturenofocus border="6">shelf/quiet.png</texturenofocus>
+      <onleft>100</onleft>
+      <onright>100</onright>
+      <onup>200</onup>
+      <ondown>200</ondown>
+    </control>
+    <control type="button" id="101">
+      <left>72</left>
+      <top>486</top>
+      <width>82</width>
+      <height>90</height>
+      <font>font13</font>
+      <label>‹</label>
+      <textcolor>FFD3DEDF</textcolor>
+      <focusedcolor>FF10272B</focusedcolor>
+      <align>center</align>
+      <aligny>center</aligny>
+      <texturefocus border="6">shelf/focus.png</texturefocus>
+      <texturenofocus border="6">shelf/quiet.png</texturenofocus>
+      <onleft>100</onleft>
+      <onright>100</onright>
+      <onup>100</onup>
+      <ondown>200</ondown>
+      <visible>String.IsEqual(Window.Property(Shelf.Ready),true)</visible>
+    </control>
+    <control type="button" id="102">
+      <left>1766</left>
+      <top>486</top>
+      <width>82</width>
+      <height>90</height>
+      <font>font13</font>
+      <label>›</label>
+      <textcolor>FFD3DEDF</textcolor>
+      <focusedcolor>FF10272B</focusedcolor>
+      <align>center</align>
+      <aligny>center</aligny>
+      <texturefocus border="6">shelf/focus.png</texturefocus>
+      <texturenofocus border="6">shelf/quiet.png</texturenofocus>
+      <onleft>100</onleft>
+      <onright>100</onright>
+      <onup>100</onup>
+      <ondown>200</ondown>
+      <visible>String.IsEqual(Window.Property(Shelf.Ready),true)</visible>
+    </control>
+    <control type="label">
+      <left>360</left>
+      <top>394</top>
+      <width>1200</width>
+      <height>80</height>
+      <font>font45</font>
+      <textcolor>FFF4F8F8</textcolor>
+      <shadowcolor>90000000</shadowcolor>
+      <label>$INFO[Window.Property(Shelf.Status)]</label>
+      <align>center</align>
+      <visible>!String.IsEqual(Window.Property(Shelf.Ready),true)</visible>
+    </control>
+    <control type="textbox">
+      <left>360</left>
+      <top>501</top>
+      <width>1200</width>
+      <height>180</height>
+      <font>font27</font>
+      <textcolor>FFB6C8CA</textcolor>
+      <shadowcolor>90000000</shadowcolor>
+      <label>$INFO[Window.Property(Shelf.Detail)]</label>
+      <align>center</align>
+      <visible>!String.IsEqual(Window.Property(Shelf.Ready),true)</visible>
+    </control>
+    <control type="button" id="200">
+      <left>96</left>
+      <top>974</top>
+      <width>260</width>
+      <height>62</height>
+      <font>font13</font>
+      <label>Kodi Music</label>
+      <textcolor>FFD3DEDF</textcolor>
+      <focusedcolor>FF10272B</focusedcolor>
+      <align>center</align>
+      <aligny>center</aligny>
+      <texturefocus border="6">shelf/focus.png</texturefocus>
+      <texturenofocus border="6">shelf/quiet.png</texturenofocus>
+      <onleft>201</onleft>
+      <onright>202</onright>
+      <onup>100</onup>
+      <ondown>100</ondown>
+    </control>
+    <control type="button" id="202">
+      <left>376</left>
+      <top>974</top>
+      <width>220</width>
+      <height>62</height>
+      <font>font13</font>
+      <label>Refresh</label>
+      <textcolor>FFD3DEDF</textcolor>
+      <focusedcolor>FF10272B</focusedcolor>
+      <align>center</align>
+      <aligny>center</aligny>
+      <texturefocus border="6">shelf/focus.png</texturefocus>
+      <texturenofocus border="6">shelf/quiet.png</texturenofocus>
+      <onleft>200</onleft>
+      <onright>201</onright>
+      <onup>100</onup>
+      <ondown>100</ondown>
+    </control>
+    <control type="button" id="201">
+      <left>616</left>
+      <top>974</top>
+      <width>220</width>
+      <height>62</height>
+      <font>font13</font>
+      <label>Home</label>
+      <textcolor>FFD3DEDF</textcolor>
+      <focusedcolor>FF10272B</focusedcolor>
+      <align>center</align>
+      <aligny>center</aligny>
+      <texturefocus border="6">shelf/focus.png</texturefocus>
+      <texturenofocus border="6">shelf/quiet.png</texturenofocus>
+      <onleft>202</onleft>
+      <onright>200</onright>
+      <onup>100</onup>
+      <ondown>100</ondown>
+    </control>
+    <control type="label">
+      <left>900</left>
+      <top>988</top>
+      <width>924</width>
+      <height>36</height>
+      <font>font13</font>
+      <textcolor>FF9FB5B8</textcolor>
+      <shadowcolor>90000000</shadowcolor>
+      <label>← → Browse   ·   OK Play album   ·   Back Return</label>
+      <align>right</align>
+      <visible>String.IsEqual(Window.Property(Shelf.Ready),true)</visible>
+    </control>
+    <control type="label">
+      <left>900</left>
+      <top>988</top>
+      <width>924</width>
+      <height>36</height>
+      <font>font13</font>
+      <textcolor>FF9FB5B8</textcolor>
+      <shadowcolor>90000000</shadowcolor>
+      <label>No downloads. Just your Kodi library.</label>
+      <align>right</align>
+      <visible>!String.IsEqual(Window.Property(Shelf.Ready),true)</visible>
+    </control>
+  </controls>
+</window>

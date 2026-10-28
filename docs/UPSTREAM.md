@@ -66,7 +66,8 @@ and release metadata are removed/replaced: none are represented as Apeture's UI.
   When the add-on is absent/disabled, a real modal explains installation and
   offers Add-ons without automatically installing or enabling anything.
 - Movies and TV route to their respective native libraries, or video sources
-  if empty. Music opens native albums or music files if empty. Empty-state copy
+  if empty. Music runs the optional native album-shelf companion when enabled;
+  otherwise it opens native albums or music files if empty. Empty-state copy
   reflects real Kodi library conditions; no fabricated collections or counts.
 - `xml/Font.xml`: retains both upstream fontsets and adds named Apeture roles.
   The optional Arial fallback is Kodi's system `arial.ttf`, as in Estuary; it is
@@ -85,11 +86,13 @@ and release metadata are removed/replaced: none are represented as Apeture's UI.
   behavior in this foundation release. A broader Apeture restyle remains future
   work; this release does not pretend those windows are newly designed.
 
-Music's future Format-inspired direction is an album-cover shelf that opens at
-a random album, giving the feeling of reaching into a record collection. That
-interaction is **not implemented** in this scenic experiment; Music currently means native Kodi
-music browsing. The game integration shares the libretro ecosystem with
-RetroArch but does not embed the RetroArch frontend or launch its executable.
+Music now offers the optional original native `script.apeture.music` companion.
+It reimplements Format-inspired album sorting, current-playing/random entry and
+perspective browsing against Kodi’s own library, without importing Format code or
+requiring a server. See [MUSIC_SHELF.md](MUSIC_SHELF.md) for the separate helper’s
+license, native API evidence and outstanding runtime acceptance. The game
+integration shares the libretro ecosystem with RetroArch but does not embed the
+RetroArch frontend or launch its executable.
 
 ## License boundaries
 

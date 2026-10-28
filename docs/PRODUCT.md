@@ -32,8 +32,8 @@ Games and metadata must not be fabricated to make the installed interface look f
 
 1. Test the initial packages on the actual Pi 5, LibreELEC/Kodi version and controller.
 2. Refine systems, game artwork, navigation, playlists and verified core support.
-3. Build the album shelf and random-entry behaviour, inspecting Format's actual
-   architecture before deciding whether code or an API should be shared.
+3. Runtime-test the native album-shelf slice: current-playing/random entry,
+   artist/year/title ordering and disc-ordered album playback (see MUSIC_SHELF.md).
 4. Specify and test receiver protocols as separate services/add-ons. A skin alone
    cannot guarantee AirPlay, Chromecast, Miracast, DRM or every source device.
 
@@ -42,7 +42,8 @@ Games and metadata must not be fabricated to make the installed interface look f
 - Exact installed Kodi/LibreELEC version and available Pi 5 game cores.
 - Actual ROM folder layout and required systems.
 - Receiver protocols and audio/video handoff behaviour.
-- Whether Format contributes interaction design, an API or reusable implementation.
+- Format now contributes behavior/design reference only; the original native
+  Kodi implementation does not copy its code or depend on its server.
 
 Do not interpret a visible game file as proof that a compatible emulator core is
 available. Keep original media untouched and expose empty/error states honestly.

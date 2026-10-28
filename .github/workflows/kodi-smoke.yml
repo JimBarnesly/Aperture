@@ -1,11 +1,11 @@
-name: Kodi 21 GUI smoke test
+name: Kodi 21 native Music and GUI smoke test
 
 # Opt-in experiment branch only. Does not run on main or unrelated branches.
 on:
   workflow_dispatch:
   push:
     branches:
-      - experiment/scenic-bridge
+      - experiment/format-shelf
 
 permissions:
   contents: read
@@ -37,7 +37,7 @@ jobs:
         run: |
           python3 -m unittest discover -s tests -v
           python3 tools/build.py
-      - name: Exercise real Kodi GUI with private software-rendered display
+      - name: Exercise real Kodi GUI and synthetic native Music with private display
         run: bash tools/ci_kodi_smoke.sh
       - name: Publish scope and result
         if: always()

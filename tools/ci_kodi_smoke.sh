@@ -69,7 +69,7 @@ grep -Eq 'Center 21\.' "$OUT/kodi-version.txt" || { echo 'This test requires Kod
 
 # Copy distro data into the fixture, materializing its external font/JS links.
 # Bundle the two test subjects and a read-only observer in this ephemeral KODI_HOME.
-# This tests rendering/navigation, NOT the ZIP-install or keep/revert experience.
+# This tests rendering/navigation and automatic rollback, NOT ZIP installation.
 APETURE_SOURCE_ROOT="$ROOT" python3 - <<'PY_COPY'
 import os
 from pathlib import Path
@@ -137,6 +137,9 @@ try:
                 'folder': xbmc.getInfoLabel('Container.FolderPath'),
                 'library_state': xbmc.getInfoLabel('Container.Property(Apeture.LibraryState)'),
                 'game_plugin_enabled': bool(xbmc.getCondVisibility('System.AddonIsEnabled(plugin.games.apeture)')),
+                'has_media': bool(xbmc.getCondVisibility('Player.HasMedia')),
+                'notification_visible': bool(xbmc.getCondVisibility('Window.IsVisible(10107)')),
+                'player_controls_visible': bool(xbmc.getCondVisibility('Window.IsVisible(10114)')),
                 'width': xbmcgui.getScreenWidth(), 'height': xbmcgui.getScreenHeight(),
             }
             payload = json.dumps(state)
@@ -183,6 +186,10 @@ XML
 cat > "$KODI_DATA/userdata/advancedsettings.xml" <<'XML'
 <advancedsettings><loglevel hide="false">1</loglevel></advancedsettings>
 XML
+# Separate music extension: original tagged tones, local-only scan and observer
+# are installed in this disposable profile, never a user profile or release ZIP.
+python3 "$ROOT/tools/music_smoke_fixture.py" prepare --runtime "$RUNTIME" --out "$OUT"
+export APETURE_MUSIC_DRIVER="$ROOT/tools/music_smoke_driver.py"
 # Do not relax X authentication or expose X11 on TCP.
 touch "$XAUTHORITY"
 xauth -f "$XAUTHORITY" add "$DISPLAY" . "$(python3 -c 'import secrets; print(secrets.token_hex(16))')"
@@ -344,7 +351,9 @@ try:
     wait_for('Repeated Settings exit',lambda s:s.get('window')==HOME,after=before)
     checks.append({'check':'repeat-settings-round-trip','state':state()})
     # Empty-library destinations must open native windows, not just focus on Home.
-    for control,expected,name in [(9101,10025,'movies'),(9102,10025,'tv'),(9103,10502,'music'),(9104,10003,'files')]:
+    # Music is now the native shelf; the music extension below checks that route
+    # plus its empty-state action into Kodi's actual Music window and Back.
+    for control,expected,name in [(9101,10025,'movies'),(9102,10025,'tv'),(9104,10003,'files')]:
         focus(control); before=press('Return')
         wait_for(f'{name} destination',lambda s:s.get('window')==expected and s.get('skin')=='skin.apeture',after=before)
         screenshot('06-'+name)
@@ -375,6 +384,16 @@ try:
     before=press('Escape')
     wait_for('Back from Favourites',lambda s:s.get('window')==HOME and s.get('dialog')==9999,after=before)
     checks.append({'check':'utilities-dismissed','state':state()})
+    # Idle playback controls should explain why there is nothing to control,
+    # without opening an invisible modal dialog or starting any media.
+    focus(9202)
+    wait_for('Idle Home before playback-controls test',lambda s:not s.get('has_media') and not s.get('notification_visible') and not s.get('player_controls_visible'))
+    before=press('Return')
+    wait_for('No-media notification',lambda s:s.get('window')==HOME and s.get('focus')==9202 and s.get('notification_visible') and not s.get('has_media') and not s.get('player_controls_visible'),after=before)
+    screenshot('09-idle-playback-controls')
+    before=state()['sequence']
+    wait_for('Idle notification expires without changing Home',lambda s:s.get('window')==HOME and s.get('focus')==9202 and not s.get('notification_visible') and not s.get('player_controls_visible') and not s.get('has_media'),timeout=15,after=before)
+    checks.append({'check':'idle-playback-notification-expired','state':state()})
     # Exercise Kodi's own skin chooser and automatic rollback via keyboard only.
     # The temporary profile is disposable, and no keep-confirmation is accepted.
     focus(9105); before=press('Return')
@@ -403,14 +422,20 @@ try:
         time.sleep(0.3)
     wait_for('Home after automatic skin rollback',lambda s:s.get('window')==HOME and s.get('skin')=='skin.apeture' and s.get('dialog')==9999)
     checks.append({'check':'skin-auto-revert-and-home','state':state()})
+    # Keep every baseline check above; add actual WindowXML/library/playback tests.
+    import importlib.util
+    spec = importlib.util.spec_from_file_location('apeture_music_smoke_driver', os.environ['APETURE_MUSIC_DRIVER'])
+    music_driver = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(music_driver)
+    checks.extend(music_driver.run(out, focus, press, wait_for, screenshot, state))
     log=(out/'logs/kodi.log').read_text(errors='replace')
     fatal_markers=('Error loading skin', 'failed to load skin', 'EXCEPTION Thrown (PythonToCppException)', 'Apeture: operation failed')
     errors=[line for line in log.splitlines() if any(marker.lower() in line.lower() for marker in fatal_markers)]
     if errors: raise AssertionError('Skin/plugin errors in Kodi log: '+'\n'.join(errors))
-    result={'status':'passed','scope':'Kodi 21 keyboard navigation, empty-library destinations, dialogs, configuration Cancel and automatic skin rollback',
-            'checks':checks,'limitations':['No ZIP-install or accepted skin-switch check','No Pi/hardware/controller/playback/core acceptance','No media-present playback-controls check','Visual design still needs screenshot review']}
+    result={'status':'passed','scope':'Kodi 21 baseline navigation/dialogs/automatic skin rollback plus native album shelf, synthetic tagged library, ordered queue and active playback',
+            'checks':checks,'limitations':['No ZIP-install or accepted skin-switch check','No Pi/hardware audio-output/controller/game-core acceptance','No media-present playback-controls check','Visual design still needs screenshot review']}
     (out/'result.json').write_text(json.dumps(result,indent=2)+'\n')
-    print('PASS: real Kodi GUI navigation, empty-library destinations, Power/Favourites, game config Cancel and skin auto-revert verified.',flush=True)
+    print('PASS: baseline Kodi GUI navigation/dialogs/skin rollback plus native Music shelf, synthetic library, ordered queue and active audio player verified.',flush=True)
 except Exception as exc:
     try: screenshot('failure')
     except Exception: pass

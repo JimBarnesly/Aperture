@@ -59,6 +59,7 @@ def main() -> None:
                         "--output", str(ROOT / "build/skin.apeture")], check=True)
     subprocess.run([sys.executable, str(ROOT / "tools/validate.py")], check=True)
     packages = [package_addon(ROOT / "addons/plugin.games.apeture", ROOT / "dist"),
+                package_addon(ROOT / "addons/script.apeture.music", ROOT / "dist"),
                 package_addon(ROOT / "build/skin.apeture", ROOT / "dist")]
     (ROOT / "dist/checksums.json").write_text(json.dumps(packages, indent=2) + "\n")
     print(json.dumps(packages, indent=2))

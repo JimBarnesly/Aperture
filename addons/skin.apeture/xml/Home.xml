@@ -384,7 +384,7 @@
         <textcolor>FFD5DEDF</textcolor>
         <shadowcolor>90000000</shadowcolor>
         <aligny>center</aligny>
-        <label>Browse albums in your Kodi library.</label>
+        <label>Choose a record from your Kodi music library.</label>
         <visible>Library.HasContent(music)</visible>
       </control>
       <control type="label">
@@ -404,7 +404,7 @@
         <top>663</top>
         <width>454</width>
         <height>72</height>
-        <label>Browse music</label>
+        <label>Browse albums</label>
         <font>ApetureSmall</font>
         <textcolor>FFD5DEDF</textcolor>
         <focusedcolor>FFF4F8F8</focusedcolor>
@@ -422,8 +422,9 @@
         <onup>9103</onup>
         <ondown>9103</ondown>
         <onback>9103</onback>
-        <onclick condition="Library.HasContent(music)">ActivateWindow(Music,musicdb://albums/,return)</onclick>
-        <onclick condition="!Library.HasContent(music)">ActivateWindow(Music,files,return)</onclick>
+        <onclick condition="System.AddonIsEnabled(script.apeture.music)">RunScript(script.apeture.music)</onclick>
+        <onclick condition="!System.AddonIsEnabled(script.apeture.music) + Library.HasContent(music)">ActivateWindow(Music,musicdb://albums/,return)</onclick>
+        <onclick condition="!System.AddonIsEnabled(script.apeture.music) + !Library.HasContent(music)">ActivateWindow(Music,files,return)</onclick>
       </control>
       <control type="image">
         <left>960</left>
@@ -456,8 +457,9 @@
       <onright>9104</onright>
       <onup>9303</onup>
       <ondown>9200</ondown>
-      <onclick condition="Library.HasContent(music)">ActivateWindow(Music,musicdb://albums/,return)</onclick>
-      <onclick condition="!Library.HasContent(music)">ActivateWindow(Music,files,return)</onclick>
+      <onclick condition="System.AddonIsEnabled(script.apeture.music)">RunScript(script.apeture.music)</onclick>
+        <onclick condition="!System.AddonIsEnabled(script.apeture.music) + Library.HasContent(music)">ActivateWindow(Music,musicdb://albums/,return)</onclick>
+      <onclick condition="!System.AddonIsEnabled(script.apeture.music) + !Library.HasContent(music)">ActivateWindow(Music,files,return)</onclick>
     </control>
     <control type="group">
       <visible>Control.HasFocus(9104) | Control.HasFocus(9304)</visible>
