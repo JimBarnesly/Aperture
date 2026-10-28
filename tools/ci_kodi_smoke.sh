@@ -5,6 +5,10 @@
 set -Eeuo pipefail
 
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+# Record the tested revision before replacing HOME. A container checkout may be
+# owned by the host runner; do not disable Git ownership checks or add exceptions.
+COMMIT="${GITHUB_SHA:-$(git -C "$ROOT" rev-parse HEAD)}"
+[[ "$COMMIT" =~ ^[[:xdigit:]]{40}$ ]] || { echo "Invalid tested commit SHA" >&2; exit 2; }
 OUT="${APETURE_SMOKE_OUT:-$ROOT/build/kodi-smoke}"
 mkdir -p "$OUT"
 OUT="$(cd -- "$OUT" && pwd)"
@@ -56,7 +60,7 @@ KODI_BIN="$(dpkg -L kodi-bin | grep '/kodi\.bin$' | head -1)"
 export KODI_BIN_HOME="$(dirname -- "$KODI_BIN")"
 export KODI_BINADDON_PATH="$KODI_BIN_HOME/addons"
 "$KODI_BIN" --version | tee "$OUT/kodi-version.txt"
-git -C "$ROOT" rev-parse HEAD > "$OUT/commit.txt"
+printf '%s\n' "$COMMIT" > "$OUT/commit.txt"
 dpkg-query -W kodi kodi-bin kodi-data xvfb libgl1-mesa-dri > "$OUT/runtime-packages.txt"
 [[ ! -f "$ROOT/dist/checksums.json" ]] || cp "$ROOT/dist/checksums.json" "$OUT/package-checksums.json"
 grep -Eq 'Center 21\.' "$OUT/kodi-version.txt" || { echo 'This test requires Kodi 21, not another major version' >&2; exit 2; }
