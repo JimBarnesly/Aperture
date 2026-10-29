@@ -1,6 +1,9 @@
 # Testing and acceptance
 
-Automated checks are necessary, but XML parsing is not a Kodi render test.
+Target: Aperture **1.0.0~rc1**, Kodi 21/Omega, Pi 5 / LibreELEC, 1080p 16:9.
+The RC is not stable until hardware acceptance is recorded. Automated checks are
+necessary, but XML parsing is not a Kodi render test. See [BUILD_REPORT.md](BUILD_REPORT.md)
+for the historical desktop GUI/Music evidence; do not apply it to untested edits.
 
 ## Automated
 
@@ -11,7 +14,7 @@ Generated upstream dependencies must come from pinned official source revisions.
 ## Pi 5 / Kodi 21 smoke test (not performed in the build container)
 
 1. Back up Kodi's profile. Keep the existing default skin installed.
-2. Install the companion game-library ZIP, then the skin ZIP. Accept the skin
+2. Install the Games and Album Shelf companion ZIPs, then the complete skin ZIP. Accept the skin
    change only if the keep/revert confirmation is visible and usable.
 3. Navigate every Home destination using only a keyboard/remote/controller.
    Repeat left/right/up/down, Back and select; no invisible focus or trapped paths.
@@ -31,3 +34,13 @@ Generated upstream dependencies must come from pinned official source revisions.
 
 Record the OS, Kodi version, controller, cores, tested games and observed results.
 Do not mark this checklist passed from desktop mock-ups, XML checks or unit tests.
+
+## Record acceptance against one exact kit
+
+Record the source commit, all three ZIP SHA-256 values from `checksums.json`,
+LibreELEC/Kodi versions, display mode, audio device, controller/CEC model, game
+core versions and media tested. For each step mark PASS / FAIL / NOT RUN and
+attach the relevant screenshot/log (redact source credentials). Check the
+Music shelf's full album order, playing-album return and sound, not only a timer.
+A stable release requires resolving failures or explicitly narrowing scope;
+NOT RUN is never PASS. Keep this record with the tested kit.

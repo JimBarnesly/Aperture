@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build a complete Apeture skin from pinned official Kodi Omega Estuary.
+"""Build a complete Aperture skin from pinned official Kodi Omega Estuary.
 
 This is a build-time vendor operation, never an installed Kodi service.
 Only the Estuary sparse tree is materialized; no full XBMC history is cloned.
@@ -17,6 +17,7 @@ import tempfile
 import xml.etree.ElementTree as ET
 
 from vendor_estuary_assets import generate
+from build import file_fingerprints, skin_input_fingerprints
 
 ROOT = Path(__file__).resolve().parents[1]
 UPSTREAM = 'https://github.com/xbmc/xbmc.git'
@@ -73,6 +74,7 @@ def materialize(output: Path, cache: Path):
     marker = output/'APETURE_BUILD.json'
     if output.exists() and any(output.iterdir()) and not marker.is_file():
         raise ValueError(f'Refusing to replace unmarked nonempty output: {output}')
+    inputs = skin_input_fingerprints()
     source = checkout(cache.resolve())
     output.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='apeture-skin-',dir=output.parent) as tmp:
@@ -94,7 +96,7 @@ def materialize(output: Path, cache: Path):
                     with bundle.extractfile(member) as src, destination.open('wb') as dst:
                         shutil.copyfileobj(src,dst)
                     baseline_file_count += 1
-        # Upstream marketing images are not Apeture screenshots or assets.
+        # Upstream marketing images are not Aperture screenshots or assets.
         for name in ('icon.png','fanart.jpg'):
             (staged/'resources'/name).unlink(missing_ok=True)
         for picture in (staged/'resources').glob('screenshot*'):
@@ -111,13 +113,17 @@ def materialize(output: Path, cache: Path):
             (licenses/f'{license_name}.txt').write_bytes(license_bytes)
         # Remove source-only metadata that could be confused with a new release.
         version = ET.parse(staged/'addon.xml').getroot().attrib['version']
-        (staged/'changelog.txt').write_text(f'Apeture {version}: original home on pinned Kodi Omega Estuary. See UPSTREAM.md and DESIGN.md.\n',encoding='utf-8')
+        (staged/'changelog.txt').write_text(f'Aperture {version}: original home on pinned Kodi Omega Estuary. See UPSTREAM.md and DESIGN.md.\n',encoding='utf-8')
         manifest={'upstream':UPSTREAM,'revision':REVISION,'skin_tree':SKIN_TREE,
                   'addon':'skin.apeture','version':version,'baseline_file_count':baseline_file_count,
+                  'inputs_sha256':inputs,
+                  'files_sha256':file_fingerprints(staged),
                   'overrides':sorted(str(p.relative_to(overrides)) for p in overrides.rglob('*') if p.is_file())}
         (staged/'APETURE_BUILD.json').write_text(json.dumps(manifest,indent=2)+'\n',encoding='utf-8')
         for xml in staged.rglob('*.xml'):
             ET.parse(xml)
+        if skin_input_fingerprints() != inputs:
+            raise RuntimeError('Skin inputs changed during materialization; retry the normal build')
         if output.exists():shutil.rmtree(output)
         shutil.move(str(staged),str(output))
     print(f'Materialized {output} from official Kodi commit {REVISION}')

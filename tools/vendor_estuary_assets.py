@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Original Apeture assets and an XML-derived design preview, not a Kodi capture.
+"""Original Aperture assets and an XML-derived design preview, not a Kodi capture.
 
 The original AI-generated scenic PNG is shipped byte-for-byte from assets/.
 Only UI textures and the existing original mark are generated procedurally.
@@ -168,7 +168,7 @@ def preview(skin: Path, destination: Path, selection='games', focus_action=False
     draw=ImageDraw.Draw(im)
     draw.rectangle((0,1040,1920,1080),fill=(7,15,18,255))
     font=load_font('NotoSans-Regular.ttf',19)
-    draw.text((96,1047),'APETURE  /  DESIGN PREVIEW — actual XML and assets; empty-library state; not a Kodi runtime screenshot',font=font,fill=(174,191,193,255))
+    draw.text((96,1047),'APERTURE  /  DESIGN PREVIEW — actual XML and assets; empty-library state; not a Kodi runtime screenshot',font=font,fill=(174,191,193,255))
     destination.parent.mkdir(parents=True,exist_ok=True)
     im.convert('RGB').save(destination,optimize=True)
 

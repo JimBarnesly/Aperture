@@ -1,7 +1,8 @@
 # Scenic experiment 0.2.0
 
-The original 0.1.0 report remains a record of the baseline. This experiment keeps
-the game-library add-on at 0.1.0 and updates the skin to 0.2.0.
+Historical scenic experiment report (0.2.0), retained for design context.
+For current 1.0 RC1 scope and evidence, see [BUILD_REPORT.md](BUILD_REPORT.md).
+Version and verification statements below describe this earlier slice only.
 
 ## Changes
 

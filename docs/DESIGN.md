@@ -5,7 +5,7 @@
 An atmospheric living-room media centre, informed by the quiet full-screen scenery
 and horizontal navigation of older XBMC skins. The user remembered a stone bridge
 in mist; **the exact old skin and image have not been identified**. This is a fresh
-Apeture design, not a claim to reproduce a particular Behance project or Aeon asset.
+Aperture design, not a claim to reproduce a particular Behance project or Aeon asset.
 
 The scene takes precedence over interface decoration. There are no marketing
 slogans, oversized controller illustrations, pretend library counts, sample films
@@ -17,7 +17,7 @@ or fabricated album covers. Navigable destinations stay readable at TV distance.
   on the user's actual display; no claim of a separately authored ultrawide layout.
 - Original bridge scene fills the screen. A separate translucent scrim improves
   header/footer readability without altering the source image.
-- Small Apeture mark at upper left; Kodi time and date at upper right.
+- Small Aperture mark at upper left; Kodi time and date at upper right.
 - Games, Movies, TV, Music, Files and Settings occupy a continuous lower-third
   charcoal-glass band. Focus is white type, a mild cyan tint and a thin cyan rule.
 - Left/right wrap through IDs `9100`–`9105`. Up reaches the corresponding visible

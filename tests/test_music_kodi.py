@@ -79,6 +79,46 @@ class KodiTests(unittest.TestCase):
         self.window.onInit()
         self.library.albums.assert_called_once()
 
+    def test_refresh_preserves_browsed_album_without_randomizing_or_playing(self):
+        self.window.onInit()
+        self.window.move(2)
+        self.library.playing_album.return_value = 1
+        self.window.onClick(202)
+        self.assertEqual(self.window.shelf.current.id, 5)
+        self.assertEqual(self.window.focus, 100)
+        self.library.playing_album.assert_called_once()  # Initial entry only.
+        self.xbmc.PlayList.assert_not_called()
+
+    def test_refresh_removed_selection_uses_current_album_then_safe_random(self):
+        self.window.onInit()
+        self.library.albums.return_value = [a for a in self.albums if a.id != 3]
+        self.library.playing_album.return_value = 6
+        self.window.load()
+        self.assertEqual(self.window.shelf.current.id, 6)
+        self.library.albums.return_value = [self.albums[0]]
+        self.window.load()
+        self.assertEqual(self.window.shelf.current.id, 0)
+        self.assertEqual(self.window.properties["Shelf.HasPrevious"], "")
+        self.assertEqual(self.window.properties["Shelf.HasNext"], "")
+
+    def test_refresh_to_empty_or_error_clears_old_metadata_and_art(self):
+        for result in ([], LibraryError("Cannot read library")):
+            self.window.onInit()
+            if isinstance(result, Exception):
+                self.library.albums.side_effect = result
+            else:
+                self.library.albums.return_value = result
+            self.window.load()
+            self.assertEqual(self.window.getProperty("Shelf.Title"), "")
+            self.assertEqual(self.window.getProperty("Shelf.Artist"), "")
+            self.assertEqual(self.window.getProperty("Shelf.Position"), "")
+            for index in range(7):
+                self.assertEqual(self.window.getProperty("Shelf.Cover{}.Art".format(index)), "")
+                self.assertEqual(self.window.getProperty("Shelf.Cover{}.Visible".format(index)), "")
+            self.library.albums.side_effect = None
+            self.library.albums.return_value = self.albums
+            self.window.load()
+
     def test_empty_and_error_are_not_fake_catalogues_and_have_recovery(self):
         self.library.albums.return_value = []
         self.window.onInit()
@@ -122,6 +162,38 @@ class KodiTests(unittest.TestCase):
         self.window.onAction(self.action(1))
         self.assertEqual(self.window.shelf.current.id, 3)
         self.xbmc.PlayList.assert_not_called()
+
+    def test_mouse_browse_returns_focus_to_shelf_and_edges_are_not_actionable(self):
+        self.window.onInit()
+        self.window.focus = 101
+        self.window.onClick(101)
+        self.assertEqual(self.window.focus, 100)
+        self.assertEqual(self.window.shelf.current.id, 2)
+        self.window.move(-100)
+        self.assertEqual(self.window.properties["Shelf.HasPrevious"], "")
+        self.assertEqual(self.window.properties["Shelf.HasNext"], "true")
+        self.window.onClick(101)
+        self.assertEqual(self.window.shelf.current.id, 0)
+        self.window.move(100)
+        self.assertEqual(self.window.properties["Shelf.HasPrevious"], "true")
+        self.assertEqual(self.window.properties["Shelf.HasNext"], "")
+        self.window.onClick(102)
+        self.assertEqual(self.window.shelf.current.id, 7)
+        self.xbmc.PlayList.assert_not_called()
+
+    def test_busy_refresh_browse_and_play_do_not_reenter(self):
+        self.window.onInit()
+        self.window.busy = True
+        self.library.reset_mock()
+        self.window.onClick(202)
+        self.window.onClick(101)
+        self.window.onClick(102)
+        self.window.onAction(self.action(79))
+        self.assertEqual(self.window.shelf.current.id, 3)
+        self.library.albums.assert_not_called()
+        self.library.songs.assert_not_called()
+        self.window.onAction(self.action(92))
+        self.assertTrue(self.window.closed)  # Back is always an escape route.
 
     def test_all_back_actions_close_without_changing_playback(self):
         for code in (9, 10, 92):
@@ -170,6 +242,22 @@ class KodiTests(unittest.TestCase):
         self.playlist.clear.assert_not_called()
         self.player.play.assert_not_called()
 
+    def test_shared_file_album_has_specific_safe_native_recovery(self):
+        self.window.onInit()
+        self.library.songs.return_value = songs_from_rows([
+            {"songid": 1, "file": "/private/shared.flac", "track": 1},
+            {"songid": 2, "file": "/private/shared.flac", "track": 2}])
+        self.window.play()
+        self.assertIn("shared audio files", self.dialog.ok.call_args.args[1])
+        self.assertNotIn("private", str(self.dialog.ok.call_args))
+        self.assertEqual(self.window.focus, 200)
+        self.assertFalse(self.window.busy)
+        self.assertEqual(self.window.shelf.current.id, 3)
+        self.playlist.clear.assert_not_called()
+        self.window.onClick(200)
+        self.assertEqual(self.window.destination, "library")
+        self.assertTrue(self.window.closed)
+
     def test_item_preparation_failure_does_not_clear_queue(self):
         with patch.object(self.gui, "ListItem", side_effect=RuntimeError("bad tag")):
             with self.assertRaises(RuntimeError): self.kodi.play_album(self.albums[0], self.library)
@@ -197,6 +285,20 @@ class KodiTests(unittest.TestCase):
         with patch.object(self.kodi, "AlbumWindow") as window:
             self.kodi.run()
             window.assert_not_called()
+
+    def test_repeated_completed_runs_release_lock_and_have_explicit_destinations(self):
+        for destination, expected in ((None, None), ("home", "ActivateWindow(Home)"),
+                                      ("library", "ActivateWindow(Music,root,return)")):
+            window = Mock(destination=destination)
+            with patch.object(self.kodi, "AlbumWindow", return_value=window):
+                self.kodi.run()
+            self.assertEqual(self.home.getProperty("Apeture.Music.Open"), "")
+            window.doModal.assert_called_once()
+            if expected:
+                self.xbmc.executebuiltin.assert_called_once_with(expected)
+            else:
+                self.xbmc.executebuiltin.assert_not_called()
+            self.xbmc.executebuiltin.reset_mock()
 
     def test_missing_focus_does_not_crash_action(self):
         with patch.object(self.window, "getFocusId", side_effect=RuntimeError("no control")):
@@ -230,6 +332,33 @@ class ShelfXMLTests(unittest.TestCase):
                 self.assertNotIn('http', texture.text)
         rotations = [a for a in self.root.iter('animation') if a.get('effect') == 'rotatey']
         self.assertEqual(len(rotations), 6)
+
+    def test_neighbor_pivots_have_no_screen_y_depth_and_angles_stay_readable(self):
+        # Omega CRotateEffect passes center.x,center.y into SetYRotation(x,z).
+        # 'auto' would use the image's screen Y as a false Z-depth pivot.
+        neighbors = [c for c in self.root.iter('control')
+                     if c.find("animation[@effect='rotatey']") is not None]
+        self.assertEqual(len(neighbors), 6)
+        for control in neighbors:
+            animation = control.find("animation[@effect='rotatey']")
+            x, z = map(float, animation.get('center').split(','))
+            self.assertEqual(x, float(control.findtext('left')) + float(control.findtext('width')) / 2)
+            self.assertEqual(z, 0)
+            self.assertLessEqual(abs(float(animation.get('end'))), 30)
+            self.assertEqual(animation.get('start'), animation.get('end'))
+
+    def test_browse_buttons_do_not_overlay_covers_and_disable_at_shelf_edges(self):
+        for identifier, prop in (('101', 'HasPrevious'), ('102', 'HasNext')):
+            control = self.root.find('.//control[@id="' + identifier + '"]')
+            self.assertGreaterEqual(int(control.findtext('top')), 900)
+            self.assertEqual(control.findtext('enable'), 'String.IsEqual(Window.Property(Shelf.' + prop + '),true)')
+            self.assertTrue(control.findtext('disabledcolor'))
+
+    def test_queue_and_shuffle_consequences_are_visible_before_play(self):
+        hints = [c for c in self.root.iter('control')
+                 if c.findtext('label') == 'Replaces queue · Shuffle off']
+        self.assertEqual(len(hints), 1)
+        self.assertEqual(hints[0].findtext('visible'), 'String.IsEqual(Window.Property(Shelf.Ready),true)')
 
     def test_all_cover_slots_fall_back_when_local_art_is_missing(self):
         covers = [node for node in self.root.iter('texture') if 'Shelf.Cover' in (node.text or '')]

@@ -1,11 +1,12 @@
 name: Kodi 21 native Music and GUI smoke test
 
-# Opt-in experiment branch only. Does not run on main or unrelated branches.
+# Opt-in experiment and release-candidate branches only; never main.
 on:
   workflow_dispatch:
   push:
     branches:
       - experiment/format-shelf
+      - release/1.0-rc
 
 permissions:
   contents: read

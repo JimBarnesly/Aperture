@@ -389,7 +389,7 @@ try:
     # Open the unconfigured game-library settings and Cancel without choosing files.
     focus(9100); before=press('Return')
     wait_for('Games for configuration test',lambda s:s.get('window')==GAMES and s.get('library_state')=='unconfigured',after=before)
-    find_label('Choose your ROM folder to get started…','Down',3)
+    find_label('Choose ROM folder…','Down',3)
     before=press('Return')
     wait_for('Game-library settings dialog',lambda s:s.get('dialog')==10140,after=before)
     screenshot('07-game-config')
@@ -468,4 +468,30 @@ except Exception as exc:
     result={'status':'failed','reason':str(exc),'checks':checks,'last_state':last,'traceback':traceback.format_exc()}
     (out/'result.json').write_text(json.dumps(result,indent=2)+'\n')
     raise
+PY
+
+# Preserve the earlier full GUI/Music result, then exercise the actual ZIP
+# installer in a second fresh profile. Reuse only this private X/audio runtime.
+cp "$OUT/result.json" "$OUT/baseline-result.json"
+kill -TERM "$KODI_PID"
+for _ in {1..120}; do kill -0 "$KODI_PID" 2>/dev/null || break; sleep 0.1; done
+if kill -0 "$KODI_PID" 2>/dev/null; then
+  echo 'First Kodi did not exit before fresh-profile test' >&2
+  exit 4
+fi
+wait "$KODI_PID" 2>/dev/null || true
+KODI_PID=""
+python3 "$ROOT/tools/zip_smoke_driver.py" --root "$ROOT" --runtime "$RUNTIME" \
+  --out "$OUT/zip-install" --binary "$KODI_BIN"
+python3 - "$OUT" <<'PY'
+import json, pathlib, sys
+out=pathlib.Path(sys.argv[1])
+base=json.loads((out/'baseline-result.json').read_text())
+installed=json.loads((out/'zip-install/result.json').read_text())
+assert base['status']=='passed' and installed['status']=='passed'
+base['scope'] += '; fresh ZIP installation, accepted skin switching and restart/recovery'
+base['checks'].extend(installed['checks'])
+base['zip_install_result']='zip-install/result.json'
+base['limitations']=[item for item in base['limitations'] if item!='No ZIP-install or accepted skin-switch check']
+(out/'result.json').write_text(json.dumps(base,indent=2)+'\n')
 PY

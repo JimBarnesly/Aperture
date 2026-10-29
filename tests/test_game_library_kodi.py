@@ -63,7 +63,7 @@ class AdapterTests(unittest.TestCase):
         self.plugin_api = Mock()
         self.vfs = Mock()
         self.vfs.translatePath.return_value = str(self.root)
-        self.xbmc = types.SimpleNamespace(Monitor=lambda: self.monitor, log=Mock(),
+        self.xbmc = types.SimpleNamespace(Monitor=lambda: self.monitor, log=Mock(), executebuiltin=Mock(),
                                          LOGWARNING=2, LOGERROR=3)
         modules = {
             "xbmc": self.xbmc,
@@ -191,6 +191,46 @@ class AdapterTests(unittest.TestCase):
         self.run_plugin("action=settings")
         self.addon.openSettings.assert_called_once()
         self.plugin_api.endOfDirectory.assert_called_once_with(42, succeeded=True, updateListing=True, cacheToDisc=False)
+
+    def test_skin_settings_action_refreshes_after_editor_returns(self):
+        calls = []
+        self.addon.openSettings.side_effect = lambda: calls.append("settings")
+        self.xbmc.executebuiltin.side_effect = lambda command: calls.append(command)
+        self.module.run([self.module.BASE_URL, "-1", "?action=settings"])
+        self.assertEqual(calls, ["settings", "Container.Refresh"])
+        self.plugin_api.endOfDirectory.assert_not_called()
+
+    def test_unconfigured_presentation_has_honest_zero_counts(self):
+        self.addon.getSetting.return_value = ""
+        self.run_plugin()
+        properties = {call.args[1]: call.args[2] for call in self.plugin_api.setProperty.call_args_list}
+        self.assertEqual(properties["Apeture.Heading"], "text-32017")
+        self.assertEqual(properties["Apeture.GameCount"], "0")
+        self.assertEqual(properties["Apeture.SystemCount"], "0")
+        self.assertEqual(properties["Apeture.Summary"], "text-32027")
+        self.assertEqual(properties["Apeture.Directory"], "root")
+        self.plugin_api.setPluginCategory.assert_called_with(42, "text-32016")
+
+    def test_ready_presentation_counts_games_not_management_rows(self):
+        self.put("nes/One.nes")
+        self.put("nes/Two.nes")
+        self.put("gba/Three.gba")
+        self.run_plugin()
+        properties = {call.args[1]: call.args[2] for call in self.plugin_api.setProperty.call_args_list}
+        self.assertEqual(properties["Apeture.GameCount"], "3")
+        self.assertEqual(properties["Apeture.SystemCount"], "2")
+        self.assertEqual(properties["Apeture.LibraryState"], "ready")
+        self.assertEqual(properties["Apeture.Heading"], "text-32023")
+        self.assertEqual(len(self.directory_items()), 4)
+
+    def test_actions_expose_hint_without_becoming_playable(self):
+        self.addon.getSetting.return_value = ""
+        self.run_plugin()
+        for _, item, folder in self.directory_items():
+            self.assertTrue(folder)
+            self.assertEqual(item.properties["IsPlayable"], "false")
+            self.assertIn(item.properties["Apeture.Action"], ("settings", "help"))
+            self.assertTrue(item.properties["Apeture.Hint"])
 
     def test_runplugin_help_has_no_invalid_directory_callback(self):
         self.module.run([self.module.BASE_URL, "-1", "?action=help"])

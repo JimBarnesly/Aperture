@@ -1,49 +1,33 @@
-# Apeture
+# Aperture 1.0 scope
 
-A modern, controller-first living-room interface for Raspberry Pi 5. The name
-is deliberately **Apeture**. This is a native Kodi skin, not a web dashboard or
-a retro-console simulation.
+A native Kodi 21/Omega interface for Pi 5 / LibreELEC, authored at 1080p 16:9.
+**1.0.0~rc1 is a release candidate, not stable hardware acceptance.**
 
-## Product commitments
+## Included
 
-- One interface for games, music and video.
-- Games lists only systems that contain detected games.
-- Keep game browsing and compatible game playback inside Kodi rather than
-  starting the separate RetroArch application.
-- Music should ultimately feel like a record shelf: album-centred Cover Flow,
-  entering at a random album, inspired by Format.
-- Longer-term audio and video receiving from Android, Apple devices and PCs.
-- Optimistic early-2000s XBMC/Wii character, with original contemporary designs.
-  Prior image concepts are inspiration, not a pixel-perfect implementation target.
+- Original misty-bridge Home with quiet horizontal, controller-first navigation;
+  restrained early-XBMC/Wii character, not a pixel-perfect historical recreation.
+- Read-only Games companion: supported populated system folders only, honest
+  empty/error states, native Kodi RetroPlayer dispatch. No standalone RetroArch.
+- Original native Format-inspired album shelf over the real Kodi library:
+  artist/year/title order, current-playing/random entry and ordered full-album play.
+- Native Movies/TV/Music/Files/Settings and full pinned Estuary playback/dialog
+  foundation. Most non-Home media screens intentionally retain Estuary styling.
+- Deterministic add-on packaging, pinned provenance, content hashes, installation
+  guidance, regression tests and desktop runtime evidence with stated boundaries.
 
-## First slice
+## Explicitly deferred
 
-An installable Kodi 21 skin with original Home navigation and a companion
-read-only local game-library add-on. Retain a complete upstream window/dialog
-baseline so settings, media browsing, playback and skin rollback remain available.
-Use RetroPlayer and compatible Kodi game add-ons for native playback. RetroArch
-is a different frontend using libretro; it is not embedded by a skin.
+Streaming receivers/protocols, Hermes and Home Assistant are outside 1.0.
+No Format server or web dashboard is required. No ROMs, BIOS, emulator cores,
+commercial catalogue, automatic metadata/art downloads or background services.
+Format contributes behavior reference only; none of its code/assets/license is copied.
 
-The first package must not pretend to include streaming receivers, emulator cores,
-BIOS files, ROM downloads, cloud services or a finished Format integration.
-Games and metadata must not be fabricated to make the installed interface look full.
+## Stable-release gate
 
-## Later slices
-
-1. Test the initial packages on the actual Pi 5, LibreELEC/Kodi version and controller.
-2. Refine systems, game artwork, navigation, playlists and verified core support.
-3. Runtime-test the native album-shelf slice: current-playing/random entry,
-   artist/year/title ordering and disc-ordered album playback (see MUSIC_SHELF.md).
-4. Specify and test receiver protocols as separate services/add-ons. A skin alone
-   cannot guarantee AirPlay, Chromecast, Miracast, DRM or every source device.
-
-## Open decisions
-
-- Exact installed Kodi/LibreELEC version and available Pi 5 game cores.
-- Actual ROM folder layout and required systems.
-- Receiver protocols and audio/video handoff behaviour.
-- Format now contributes behavior/design reference only; the original native
-  Kodi implementation does not copy its code or depend on its server.
-
-Do not interpret a visible game file as proof that a compatible emulator core is
-available. Keep original media untouched and expose empty/error states honestly.
+Install the exact RC kit on the target Pi 5 test card/profile and complete
+[TESTING.md](TESTING.md): fresh ZIP install, skin confirmation/recovery, physical
+controller/CEC, TV scaling, audible music/video, native game/core return, restart
+and representative populated libraries. Record LibreELEC/Kodi/core versions and
+any failures. Desktop tests and mocked APIs cannot stand in for these results.
+Do not silently promote an RC to stable because its version number changed.

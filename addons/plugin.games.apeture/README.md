@@ -1,4 +1,4 @@
-# Apeture Game Library
+# Aperture Game Library
 
 A read-only Python game-source add-on targeting **Kodi 21 Omega**. It puts a
 folder-organised game collection into Kodi's native Games window and hands
@@ -14,14 +14,14 @@ not that its contents, BIOS, emulator, or host device have been validated.
 1. Install the separately packaged `plugin.games.apeture` ZIP using Kodi's
    **Add-ons → Install from zip file**. See the repository README for the build
    command. You can use this add-on with any skin that supports Kodi Games.
-2. Open **Games → Game add-ons → Apeture Game Library**.
+2. Open **Games → Game add-ons → Aperture Game Library**.
 3. Select **Choose your ROM folder…** or **Configure library…**. Set **ROM root
    folder** to a folder containing the system subfolders below.
 4. Supply your own legally obtained game files. Keep BIOS/firmware outside the
    scanned system folders and configure it according to the selected Kodi core.
 5. Open a detected system, select a game, and use Kodi's native emulator chooser.
    If there is no compatible available core, Kodi reports that. Kodi may offer
-   to install a game add-on; Apeture neither silently installs cores nor
+   to install a game add-on; Aperture neither silently installs cores nor
    downloads ROMs, BIOS, covers, or metadata.
 
 You can back out of settings, scanning, disc selection, or Kodi's emulator
@@ -77,7 +77,9 @@ Child names containing path separators, `:`, `|`, `?`, `#`, control characters,
 or encoded traversal are conservatively omitted to avoid VFS interpretation.
 
 The root shows **only populated system tiles**, plus clearly labelled settings
-and playback-help actions. Counts represent game entries, not individual discs.
+and playback-help actions. In the Aperture skin, Games has a dedicated native
+list shell with visible ROM-folder setup, refresh and playback help; it never
+substitutes a sample catalogue for an empty collection. Counts represent game entries, not individual discs.
 
 ## CUE and multi-disc handling
 
@@ -155,7 +157,12 @@ The scanner/catalog have no Kodi imports and no third-party Python dependencies.
 Skin-facing custom properties are `Apeture.System`, `Apeture.GameCount` (system
 items), `Apeture.DiscCount` (game items), and container property
 `Apeture.LibraryState` (`unconfigured`, `empty`, `ready`, `error`, `cancelled`).
-They are presentation metadata, not invented Kodi playback parameters.
+The Games shell additionally reads `Apeture.Heading`, `Apeture.Description`,
+`Apeture.Summary`, `Apeture.Directory`, `Apeture.GameCount` and
+`Apeture.SystemCount` from the container, plus `Apeture.Hint` and
+`Apeture.Action` from items. Counts exclude management rows. Settings launched
+from the skin/context menu refresh only after the modal editor closes.
+These are presentation metadata, not invented Kodi playback parameters.
 
 Official API/source references checked against Omega:
 

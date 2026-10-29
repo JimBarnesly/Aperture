@@ -105,6 +105,8 @@ class Plugin:
         item = xbmcgui.ListItem(label=label, offscreen=True)
         item.setProperty("IsPlayable", "false")
         item.setArt({"icon": "DefaultAddonGame.png"})
+        item.setProperty("Apeture.Action", action)
+        item.setProperty("Apeture.Hint", self.text(32030 if action == "settings" else 32031))
         if special_sort:
             item.setProperty("SpecialSort", special_sort)
         # Game-window nonfolders are always played; actions are directories.
@@ -120,20 +122,26 @@ class Plugin:
         item.setArt({"icon": "DefaultAddonGame.png"})
         item.setProperty("Apeture.System", game.system_id)
         item.setProperty("Apeture.DiscCount", str(len(game.discs) or 1))
+        item.setProperty("Apeture.Hint", self.text(32032 if game.discs else 32033))
         # Do not hard-code a gameclient or invent a game MIME type. Kodi's
         # GameInfoTag marks this as a game and triggers its native core chooser.
         item.addContextMenuItems([
-            (self.text(32006), "Addon.OpenSettings(" + ADDON_ID + ")"),
+            (self.text(32006), "RunPlugin(" + url(action="settings") + ")"),
             (self.text(32007), "RunPlugin(" + url(action="help") + ")"),
         ])
         return item
 
     def directory(self, system_id=None, update=False):
         xbmcplugin.setContent(self.handle, "games")
-        xbmcplugin.setPluginCategory(self.handle, self.text(32000))
+        # A category is a location, not another copy of the add-on name.
+        xbmcplugin.setPluginCategory(self.handle, self.text(32016))
+        xbmcplugin.addSortMethod(self.handle, xbmcplugin.SORT_METHOD_LABEL)
         items = []
+        game_count = system_count = 0
         try:
             result = self.scan(system_id)
+            game_count = sum(len(library.games) for library in result.libraries)
+            system_count = len(result.libraries)
             state = "ready" if result.libraries else "empty"
             if not self.addon.getSetting("rom_root").strip():
                 state = "unconfigured"
@@ -150,6 +158,7 @@ class Plugin:
                     item.setProperty("IsPlayable", "false")
                     item.setProperty("Apeture.System", library.system.id)
                     item.setProperty("Apeture.GameCount", str(len(library.games)))
+                    item.setProperty("Apeture.Hint", self.text(32034).format(len(library.games)))
                     item.setArt({"icon": "DefaultAddonGame.png"})
                     items.append((url(action="system", system=library.system.id), item, True))
             if result.issues:
@@ -170,6 +179,17 @@ class Plugin:
         if state == "ready":
             items.append(self.action_item(self.text(32006), "settings", "bottom"))
         items.append(self.action_item(self.text(32007), "help", "bottom"))
+        headings = {"unconfigured": 32017, "empty": 32019, "error": 32021, "ready": 32023}
+        descriptions = {"unconfigured": 32018, "empty": 32020, "error": 32022, "ready": 32024}
+        xbmcplugin.setProperty(self.handle, "Apeture.Heading", self.text(headings[state]))
+        xbmcplugin.setProperty(self.handle, "Apeture.Description", self.text(descriptions[state]))
+        xbmcplugin.setProperty(self.handle, "Apeture.Directory", "system" if system_id else "root")
+        xbmcplugin.setProperty(self.handle, "Apeture.GameCount", str(game_count))
+        xbmcplugin.setProperty(self.handle, "Apeture.SystemCount", str(system_count))
+        summary = self.text(32025 if system_id else 32026).format(game_count, system_count)
+        if state != "ready":
+            summary = self.text({"unconfigured": 32027, "empty": 32028, "error": 32029}[state])
+        xbmcplugin.setProperty(self.handle, "Apeture.Summary", summary)
         xbmcplugin.setProperty(self.handle, "Apeture.LibraryState", state)
         xbmcplugin.addDirectoryItems(self.handle, items, totalItems=len(items))
         xbmcplugin.endOfDirectory(self.handle, succeeded=True, updateListing=update, cacheToDisc=False)
@@ -221,6 +241,10 @@ def run(argv):
             plugin.addon.openSettings()
             if handle >= 0:
                 plugin.directory(update=True)
+            else:
+                # Skin/context actions run with no directory handle. Refresh
+                # only after the modal settings editor has returned.
+                xbmc.executebuiltin("Container.Refresh")
         elif action == "help":
             xbmcgui.Dialog().ok(plugin.text(32007), plugin.text(32008))
             if handle >= 0:

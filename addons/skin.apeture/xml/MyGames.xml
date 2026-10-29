@@ -1,0 +1,238 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Aperture Games shell. Native Kodi media list/menu contract retained.
+     Original layout GPL-2.0-or-later; shared menu includes from pinned Estuary. -->
+<window>
+  <defaultcontrol always="true">50</defaultcontrol>
+  <backgroundcolor>FF11191B</backgroundcolor>
+  <views>50</views>
+  <menucontrol>9000</menucontrol>
+  <controls>
+    <control type="image">
+      <left>0</left><top>0</top><width>1920</width><height>1080</height>
+      <texture>apeture/misty-stone-bridge.png</texture>
+    </control>
+    <control type="image">
+      <left>0</left><top>0</top><width>1920</width><height>1080</height>
+      <texture>apeture/home-scrim.png</texture>
+    </control>
+    <control type="image">
+      <left>0</left><top>0</top><width>1920</width><height>1080</height>
+      <texture colordiffuse="A60B1720">colors/white.png</texture>
+    </control>
+    <control type="image">
+      <left>96</left><top>65</top><width>35</width><height>35</height>
+      <texture>apeture/mark.png</texture>
+    </control>
+    <control type="label">
+      <left>148</left><top>58</top><width>420</width><height>51</height>
+      <font>ApetureBrand</font><textcolor>FFF4F8F8</textcolor><aligny>center</aligny>
+      <label>aperture</label>
+    </control>
+    <control type="label">
+      <left>1480</left><top>57</top><width>344</width><height>53</height>
+      <font>ApetureClock</font><textcolor>FFF4F8F8</textcolor><aligny>center</aligny>
+      <label>$INFO[System.Time]</label><align>right</align>
+    </control>
+    <control type="label">
+      <left>96</left><top>146</top><width>1728</width><height>62</height>
+      <font>ApetureNav</font><textcolor>FFF4F8F8</textcolor><aligny>center</aligny>
+      <label>Games</label>
+      <visible>!String.IsEqual(Container.Property(Apeture.Directory),system)</visible>
+    </control>
+    <control type="label">
+      <left>96</left><top>146</top><width>1728</width><height>62</height>
+      <font>ApetureSection</font><textcolor>FFF4F8F8</textcolor><aligny>center</aligny>
+      <label>Games / $INFO[Container.FolderName]</label>
+      <visible>String.IsEqual(Container.PluginName,plugin.games.apeture) + String.IsEqual(Container.Property(Apeture.Directory),system)</visible>
+    </control>
+    <control type="label">
+      <left>98</left><top>216</top><width>1720</width><height>38</height>
+      <font>ApetureBody</font><textcolor>FFB8CBD9</textcolor><aligny>center</aligny>
+      <label>$INFO[Container.Property(Apeture.Summary)]</label>
+      <visible>String.IsEqual(Container.PluginName,plugin.games.apeture)</visible>
+    </control>
+    <control type="label">
+      <left>98</left><top>216</top><width>1720</width><height>38</height>
+      <font>ApetureBody</font><textcolor>FFB8CBD9</textcolor><aligny>center</aligny>
+      <label>$INFO[Container.FolderName]</label>
+      <visible>!String.IsEqual(Container.PluginName,plugin.games.apeture)</visible>
+    </control>
+
+    <!-- The companion contributes real state; there is no sample catalogue. -->
+    <control type="group">
+      <visible>String.IsEqual(Container.PluginName,plugin.games.apeture)</visible>
+      <control type="image">
+        <left>96</left><top>290</top><width>532</width><height>594</height>
+        <texture border="6">apeture/glass-quiet.png</texture>
+      </control>
+      <control type="label">
+        <left>128</left><top>316</top><width>468</width><height>36</height>
+        <font>ApetureEyebrow</font><textcolor>FF9ADAE2</textcolor><label>YOUR COLLECTION</label>
+      </control>
+      <control type="textbox">
+        <left>128</left><top>371</top><width>468</width><height>106</height>
+        <font>ApetureNav</font><textcolor>FFF4F8F8</textcolor>
+        <label>$INFO[Container.Property(Apeture.Heading)]</label>
+      </control>
+      <control type="textbox">
+        <left>128</left><top>495</top><width>468</width><height>188</height>
+        <font>ApetureSmall</font><textcolor>FFD5DEDF</textcolor>
+        <label>$INFO[Container.Property(Apeture.Description)]</label>
+      </control>
+      <control type="button" id="9401">
+        <left>128</left><top>706</top><width>468</width><height>70</height>
+        <font>ApetureBody</font><label>Configure ROM folder</label>
+        <textcolor>FFE7EFF5</textcolor><focusedcolor>FFF4F8F8</focusedcolor>
+        <texturefocus border="6">apeture/glass-focus.png</texturefocus>
+        <texturenofocus border="6">apeture/glass-quiet.png</texturenofocus>
+        <align>center</align><aligny>center</aligny><textoffsetx>0</textoffsetx>
+        <onleft>9000</onleft><onright>50</onright><onup>50</onup><ondown>9402</ondown>
+        <onclick>RunPlugin(plugin://plugin.games.apeture/?action=settings)</onclick>
+      </control>
+      <control type="button" id="9402">
+        <left>128</left><top>794</top><width>224</width><height>60</height>
+        <font>ApetureSmall</font><label>Refresh</label>
+        <textcolor>FFB8CBD9</textcolor><focusedcolor>FFF4F8F8</focusedcolor>
+        <texturefocus border="6">apeture/glass-focus.png</texturefocus>
+        <texturenofocus border="6">apeture/glass-quiet.png</texturenofocus>
+        <align>center</align><aligny>center</aligny><textoffsetx>0</textoffsetx>
+        <onleft>9000</onleft><onright>9403</onright><onup>9401</onup><ondown>9400</ondown>
+        <onclick>Container.Refresh</onclick>
+      </control>
+      <control type="button" id="9403">
+        <left>372</left><top>794</top><width>224</width><height>60</height>
+        <font>ApetureSmall</font><label>Playback help</label>
+        <textcolor>FFB8CBD9</textcolor><focusedcolor>FFF4F8F8</focusedcolor>
+        <texturefocus border="6">apeture/glass-focus.png</texturefocus>
+        <texturenofocus border="6">apeture/glass-quiet.png</texturenofocus>
+        <align>center</align><aligny>center</aligny><textoffsetx>0</textoffsetx>
+        <onleft>9402</onleft><onright>50</onright><onup>9401</onup><ondown>9400</ondown>
+        <onclick>RunPlugin(plugin://plugin.games.apeture/?action=help)</onclick>
+      </control>
+    </control>
+    <!-- Native Games root, sources and other add-ons still use their own items. -->
+    <control type="group">
+      <visible>!String.IsEqual(Container.PluginName,plugin.games.apeture)</visible>
+      <control type="textbox">
+        <left>128</left><top>348</top><width>468</width><height>112</height>
+        <font>ApetureNav</font><textcolor>FFF4F8F8</textcolor><label>Play inside[CR]Kodi.</label>
+      </control>
+      <control type="textbox">
+        <left>128</left><top>495</top><width>468</width><height>188</height>
+        <font>ApetureBody</font><textcolor>FFD5DEDF</textcolor>
+        <label>Browse game sources and add-ons using Kodi's native controls.[CR][CR]Compatible game clients and your own game files are required.</label>
+      </control>
+      <control type="button" id="9404">
+        <left>128</left><top>706</top><width>468</width><height>70</height>
+        <font>ApetureBody</font><label>View options</label>
+        <textcolor>FFE7EFF5</textcolor><focusedcolor>FFF4F8F8</focusedcolor>
+        <texturefocus border="6">apeture/glass-focus.png</texturefocus>
+        <texturenofocus border="6">apeture/glass-quiet.png</texturenofocus>
+        <align>center</align><aligny>center</aligny><textoffsetx>0</textoffsetx>
+        <onleft>9000</onleft><onright>50</onright><onup>50</onup><ondown>9400</ondown>
+        <onclick>SetFocus(9000)</onclick>
+      </control>
+    </control>
+
+    <!-- Kodi fills and activates this list: no hand-built playback actions. -->
+    <control type="list" id="50">
+      <left>680</left><top>290</top><width>1144</width><height>594</height>
+      <orientation>vertical</orientation><scrolltime>180</scrolltime>
+      <viewtype label="Collection">list</viewtype><pagecontrol>50600</pagecontrol>
+      <onleft condition="String.IsEqual(Container.PluginName,plugin.games.apeture)">9401</onleft>
+      <onleft condition="!String.IsEqual(Container.PluginName,plugin.games.apeture)">9404</onleft>
+      <onright>50600</onright><onup>50</onup><ondown>50</ondown>
+      <itemlayout height="90" width="1144">
+        <control type="image">
+          <left>0</left><top>0</top><width>1144</width><height>82</height>
+          <texture border="6">apeture/glass-quiet.png</texture>
+        </control>
+        <control type="label">
+          <left>28</left><top>12</top><width>1088</width><height>36</height>
+          <font>ApetureBody</font><textcolor>FFE7EFF5</textcolor><label>$INFO[ListItem.Label]</label>
+          <visible>!ListItem.IsParentFolder</visible>
+        </control>
+        <control type="label">
+          <left>28</left><top>12</top><width>1088</width><height>55</height>
+          <font>ApetureBody</font><textcolor>FFB8CBD9</textcolor><label>← Back to previous folder</label>
+          <visible>ListItem.IsParentFolder</visible>
+        </control>
+        <control type="label">
+          <left>28</left><top>47</top><width>1088</width><height>28</height>
+          <font>ApetureSmall</font><textcolor>FF94ACBA</textcolor><label>$INFO[ListItem.Property(Apeture.Hint)]</label>
+          <visible>!ListItem.IsParentFolder</visible>
+        </control>
+      </itemlayout>
+      <focusedlayout height="90" width="1144">
+        <control type="image">
+          <left>0</left><top>0</top><width>1144</width><height>82</height>
+          <texture border="6">apeture/glass-focus.png</texture>
+          <visible>Control.HasFocus(50)</visible>
+        </control>
+        <control type="image">
+          <left>0</left><top>0</top><width>1144</width><height>82</height>
+          <texture border="6">apeture/glass-quiet.png</texture>
+          <visible>!Control.HasFocus(50)</visible>
+        </control>
+        <control type="label">
+          <left>28</left><top>12</top><width>1088</width><height>36</height>
+          <font>ApetureBody</font><textcolor>FFF4F8F8</textcolor><label>$INFO[ListItem.Label]</label>
+          <scroll>true</scroll><visible>!ListItem.IsParentFolder</visible>
+        </control>
+        <control type="label">
+          <left>28</left><top>12</top><width>1088</width><height>55</height>
+          <font>ApetureBody</font><textcolor>FFF4F8F8</textcolor><label>← Back to previous folder</label>
+          <visible>ListItem.IsParentFolder</visible>
+        </control>
+        <control type="label">
+          <left>28</left><top>47</top><width>1088</width><height>28</height>
+          <font>ApetureSmall</font><textcolor>FFB8CBD9</textcolor><label>$INFO[ListItem.Property(Apeture.Hint)]</label>
+          <visible>!ListItem.IsParentFolder</visible>
+        </control>
+      </focusedlayout>
+    </control>
+    <control type="scrollbar" id="50600">
+      <left>1840</left><top>290</top><width>12</width><height>594</height>
+      <orientation>vertical</orientation><onleft>50</onleft><onright>50</onright>
+      <showonepage>false</showonepage>
+    </control>
+    <control type="button" id="9400">
+      <left>96</left><top>932</top><width>180</width><height>64</height>
+      <font>ApetureBody</font><label>Back</label>
+      <textcolor>FFB8CBD9</textcolor><focusedcolor>FFF4F8F8</focusedcolor>
+      <texturefocus border="6">apeture/glass-focus.png</texturefocus>
+      <texturenofocus border="6">apeture/glass-quiet.png</texturenofocus>
+      <align>center</align><aligny>center</aligny><textoffsetx>0</textoffsetx>
+      <onleft>9000</onleft><onright>50</onright><onup>50</onup><ondown>50</ondown>
+      <onclick>Action(Back)</onclick>
+    </control>
+    <control type="label">
+      <left>312</left><top>944</top><width>1508</width><height>42</height>
+      <font>ApetureSmall</font><textcolor>FF94ACBA</textcolor>
+      <label>Your files. Native Kodi playback. No games or BIOS downloaded.</label>
+      <visible>String.IsEqual(Container.PluginName,plugin.games.apeture)</visible>
+    </control>
+    <include>MediaMenuMouseOverlay</include>
+    <control type="group">
+      <include>MediaMenuCommon</include>
+      <control type="grouplist" id="9000">
+        <top>50</top><include>MediaMenuListCommon</include>
+        <control type="label" id="203">
+          <include>MediaMenuLabelCommon</include><label>$LOCALIZE[31020]</label>
+          <visible>Control.IsVisible(621) | Control.IsVisible(624)</visible>
+        </control>
+        <control type="button" id="621">
+          <include>MediaMenuItemsCommon</include><label>$LOCALIZE[21452]</label>
+          <onclick>ActivateWindow(addonbrowser,addons://more/game/,return)</onclick>
+          <visible>Container.Content(addons)</visible>
+        </control>
+        <control type="button" id="624">
+          <include>MediaMenuItemsCommon</include><label>$LOCALIZE[10140]</label>
+          <onclick>Addon.OpenSettings($INFO[Container.PluginName])</onclick>
+          <visible>!String.IsEmpty(Container.PluginName)</visible>
+        </control>
+        <include>MediaMenuNowPlaying</include>
+      </control>
+    </control>
+  </controls>
+</window>

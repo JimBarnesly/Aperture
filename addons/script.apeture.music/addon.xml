@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<addon id="script.apeture.music" name="Apeture Album Shelf" version="0.1.0" provider-name="Apeture contributors">
+<addon id="script.apeture.music" name="Aperture Album Shelf" version="1.0.0~rc1" provider-name="Aperture contributors">
   <requires><import addon="xbmc.python" version="3.0.1"/></requires>
   <extension point="xbmc.python.script" library="default.py"><provides>audio</provides></extension>
   <extension point="xbmc.addon.metadata">
     <summary lang="en_GB">A record shelf for your Kodi music library.</summary>
     <description lang="en_GB">Native Kodi 21 album browsing with a quiet perspective shelf. Artist, year and title ordering; open at the playing album or a random starting position, then play a complete album in disc/track order. No Format server, account, catalogue or downloader. Uses the music already indexed by Kodi.</description>
     <platform>all</platform><license>GPL-3.0-or-later</license>
-    <disclaimer>Development slice. Test on your Kodi 21 installation before everyday use. Selecting Play album replaces the current Kodi music queue and disables shuffle for ordered album playback.</disclaimer>
+    <disclaimer>1.0 release candidate. Pi hardware acceptance is required before everyday use. Selecting Play album replaces the current Kodi music queue and disables shuffle for ordered album playback.</disclaimer>
   </extension>
 </addon>
