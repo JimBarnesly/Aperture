@@ -1,37 +1,62 @@
-# Apeture
+# Aperture 1.0 release candidate
 
-## Native album-shelf experiment (0.3.0)
+**Aperture 1.0 RC1** (`1.0.0~rc1`) is a native Kodi 21/Omega living-room interface
+for **Raspberry Pi 5 / LibreELEC, authored at 1080p 16:9**. This is a candidate
+for hardware testing, **not a stable or Pi-accepted release**. The visible brand is Aperture; legacy `apeture` add-on IDs remain for upgrades
+([compatibility note](docs/RENAME.md)).
 
-This branch keeps the misty stone-bridge backdrop and quiet horizontal Home
-menu, and adds an optional native Kodi album shelf inspired by Format’s behavior.
-See the [shelf design, API evidence and verification boundaries](docs/MUSIC_SHELF.md). The baseline design remains on `feat/native-kodi-foundation`. Both use the
-same native media routes and game-library add-on. See [design notes](docs/DESIGN.md).
-The bridge is original generated artwork, not a recovered historical wallpaper.
+- Original misty stone-bridge artwork and restrained early-XBMC/Wii-inspired Home.
+- Games shows supported, populated system folders from your own collection and
+  dispatches to Kodi RetroPlayer. Compatible cores/BIOS are separate.
+- Optional native, Format-inspired album shelf: artist/year/title ordering,
+  current-playing or random entry, and complete disc/track-ordered album playback.
+- Native Kodi Movies, TV, Files and Settings routes; complete pinned Estuary
+  windows, dialogs, fonts and playback foundation, not merely a Home mock-up.
+- No Format server, Node toolchain, Hermes, Home Assistant or streaming receivers.
+  Those integrations are explicitly deferred, not promised by this release.
 
-The scenic base has an actual Kodi 21 software-display smoke pass for navigation,
-empty libraries, dialogs and native skin rollback. The new album shelf has a
-separate fixture-driven runtime test; it is not covered by that earlier pass.
-Neither test establishes Pi/controller/core or physical audio compatibility.
+## Evidence and remaining acceptance
 
-A modern XBMC-original-inspired Kodi skin. One living-room interface for games,
-music and video, with an optimistic early-2000s character and native controller
-navigation. **Apeture** is the intentional spelling.
+The preceding desktop baseline passed **106 unit/contract tests** and **45 distinct
+actual Kodi GUI/Music checks** in [run 40695502466](https://github.com/JimBarnesly/Apeture/actions/runs/40695502466),
+with 22 screenshots. Its synthetic seven-album/ten-song library exercised native
+scanning, full ordered queue construction, an advancing playback clock and return
+to the playing album. The audio sink was null: this does **not** prove audible output.
+These are historical baseline results, not a claim that an edited RC has passed CI.
+See [release evidence and gates](docs/BUILD_REPORT.md) and [acceptance checklist](docs/TESTING.md).
 
-## First development slice
+Pi performance, physical audio, controller/CEC mapping, TV scaling and compatible
+game-core playback remain required before calling 1.0 stable.
 
-- Original Home screen over a complete, pinned Kodi 21 Omega Estuary foundation.
-- Companion game-library add-on that detects supported populated system folders.
-- Native Kodi RetroPlayer dispatch, not a standalone RetroArch launcher.
-- Reproducible ZIP packaging, XML/manifest checks and Python unit tests.
+**Fresh ZIP acceptance passed** in [run 40801720239](https://github.com/JimBarnesly/Apeture/actions/runs/40801720239)
+for exact commit `296711243206a822caba7997b229a0c885a57384`: all three ZIPs installed
+through Kodi, Keep Aperture explicitly accepted, selection persisted across
+restart, installed Games/Music opened, Estuary recovery was accepted, and Aperture
+was restored with Unknown sources off after the final restart. This is desktop
+installation evidence, not Pi or Windows acceptance; subsequent commits require
+fresh exact-head CI. See [release evidence](docs/BUILD_REPORT.md).
 
-This is an early development build, not a tested Pi appliance release. Automated
-checks do not establish successful Kodi rendering or emulator compatibility.
-Receiver protocols remain future work. The new album shelf is implemented and
-offline-tested, but its native rendering/audio acceptance is still outstanding.
+## Install the test kit
+
+Follow [First Pi 5 install](docs/INSTALL_PI5.md). Windows users can use the
+[guided preparation aid](installer/README.md) to verify/stage ZIPs; it is not
+one-click SD provisioning and has no Windows runtime acceptance yet. Official
+imaging and on-Pi installation stay manual. Extract an outer download/artifact
+wrapper, but leave these three inner add-on ZIPs zipped:
+
+1. `plugin.games.apeture-1.0.0~rc1.zip` — optional Games companion.
+2. `script.apeture.music-1.0.0~rc1.zip` — optional Album Shelf companion.
+3. `skin.apeture-1.0.0~rc1.zip` — complete skin; install/select last.
+
+Keep Estuary installed and back up the Kodi profile. Select Aperture in Settings →
+Interface → Skin; confirm only if readable and responsive, otherwise let Kodi revert.
+Neither companion is a hard dependency: missing Music falls back to Kodi Music;
+missing Games shows setup guidance. Configure and scan your own media explicitly.
+No ROMs, BIOS, emulator cores, commercial covers or synthetic catalogue are shipped.
 
 ## Build
 
-Requires Python 3.10+ and Pillow. No Node toolchain, database or credentials.
+Requires Git, Python 3.10+ and Pillow; no credentials or Node server.
 
 ```sh
 python -m venv .venv
@@ -41,49 +66,26 @@ python -m unittest discover -s tests -v
 python tools/build.py
 ```
 
-The first build fetches the pinned official Estuary baseline. The repository
-stores the authored overrides and vendoring recipe rather than duplicating all
-upstream binary assets. See [upstream provenance](docs/UPSTREAM.md).
+The first build fetches the [pinned official Estuary baseline](docs/UPSTREAM.md).
+`dist/` contains the three add-on ZIPs, `checksums.json`, install guidance and
+the optional `installer/` preparation script/README (no tests or CI evidence).
+`addons/skin.apeture` contains overrides, **not an installable skin**. Do not zip it
+or install a GitHub source archive. The assembled skin is `build/skin.apeture`.
 
-Outputs appear in `dist/`: game-library and album-shelf ZIPs, complete skin ZIP, and SHA-256
-checksums. The `addons/skin.apeture` source directory alone is **not** a complete
-installable skin. Do not zip it directly. `build/skin.apeture` is the assembled skin.
+`python tools/build.py --skip-vendor` is an offline repack shortcut only: it rejects
+stale/legacy provenance, changed inputs or modified assembled files. Rebuild
+normally after source changes. ZIP timestamps/order are deterministic for identical
+assembled bytes. Keep the checksum manifest and packages from one build together.
 
-After materialization, static checks and local repackaging can be repeated:
+## Boundaries and licensing
 
-```sh
-python tools/validate.py
-python tools/build.py --skip-vendor
-```
+No automatic media/metadata downloads, accounts, tracking, servers or media-file
+writes. Selecting **Play album replaces the music queue and disables shuffle**;
+cue/shared-file albums use native Kodi Music. A detected game is not a guarantee
+that its core works on Pi. [Product scope](docs/PRODUCT.md) and [shelf details](docs/MUSIC_SHELF.md).
 
-## Try it safely
-
-1. Back up your Kodi profile and keep your current skin installed.
-2. Use a Kodi 21 Omega test installation. Install the game-library ZIP first,
-   optionally the album-shelf ZIP, then the skin ZIP using Kodi's “Install from zip file” flow.
-3. Change the skin in Settings → Interface and confirm only if the keep/revert
-   dialog is visible and usable. Settings remain accessible from Home.
-4. Configure the game-library add-on's ROM root. Read its bundled README for
-   supported folder names and formats. Use only media you are entitled to use.
-5. Install compatible game add-ons separately through Kodi. Apeture includes no
-   emulator cores, BIOS or games. File detection does not guarantee playback.
-
-If Kodi asks to permit unknown-source ZIP installation, decide on that setting
-yourself after reviewing the source. This project does not change that setting.
-
-For actual Pi acceptance, work through [the test checklist](docs/TESTING.md).
-
-## Boundaries
-
-- No automatic ROM, BIOS, artwork or metadata downloads.
-- No accounts, tracking, network servers, system changes or media-file writes.
-- No claim that every RetroArch core runs in Kodi. RetroPlayer and RetroArch are
-  separate frontends; compatible Kodi game add-ons are required.
-- Format-inspired shelf browsing uses the optional native companion. Without it,
-  Music safely falls back to Kodi Music. Stream receiving is not implemented.
-
-See [product scope and roadmap](docs/PRODUCT.md). The game-library and build
-tooling use the repository's GPL-3.0 license. The assembled Estuary-derived skin
-has separate GPLv2-compatible code, CC-BY-SA artwork and font-license boundaries;
-its notices are retained. See [upstream licensing](docs/UPSTREAM.md) rather than
-assuming the root [LICENSE](LICENSE) relicenses inherited files.
+Format is a behavior reference only: no Format code, assets or license was imported.
+The game/music companions and build tooling use GPL-3.0-or-later; the assembled
+Estuary-derived skin retains separate GPLv2-compatible, artwork and font-license
+boundaries. See [upstream licensing](docs/UPSTREAM.md); the root [LICENSE](LICENSE)
+does not relicense inherited files.

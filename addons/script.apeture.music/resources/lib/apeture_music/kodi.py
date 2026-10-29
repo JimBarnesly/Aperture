@@ -15,6 +15,10 @@ LEFT, RIGHT, PLAYER_PLAY = 1, 2, 79
 SHELF, PREVIOUS, NEXT, LIBRARY, HOME, RETRY = 100, 101, 102, 200, 201, 202
 
 
+class NativePlaybackRequired(LibraryError):
+    """A known safe limitation with a native Kodi Music recovery path."""
+
+
 def prepare_items(album, songs):
     """Prepare before replacing a queue. Paths are never interpolated in builtins."""
     prepared = []
@@ -43,7 +47,7 @@ def play_album(album, library):
     if len({song.file for song in songs}) != len(songs):
         # JSON-RPC raw file URLs omit native cue offsets. Do not replay a whole
         # shared file for every cue track; let native Kodi Music handle it.
-        raise LibraryError("Shared-file albums need native Kodi Music playback.")
+        raise NativePlaybackRequired("Shared-file albums need native Kodi Music playback.")
     prepared = prepare_items(album, songs)
     playlist = xbmc.PlayList(xbmc.PLAYLIST_MUSIC)
     # Only explicit OK/Play changes playback. Browsing and loading never do.
@@ -76,14 +80,23 @@ class AlbumWindow(xbmcgui.WindowXML):
         if self.busy:
             return
         self.busy = True
+        selected = self.shelf.current.id if self.shelf.current else None
         self.setProperty("Shelf.Ready", "")
+        for key in ("Title", "Artist", "Year", "Position", "HasPrevious", "HasNext"):
+            self.clearProperty("Shelf." + key)
+        for index in range(7):
+            self.clearProperty("Shelf.Cover{}.Art".format(index))
+            self.clearProperty("Shelf.Cover{}.Visible".format(index))
         self.setProperty("Shelf.Primary", "Open Kodi Music")
         self.setProperty("Shelf.Status", "Opening your record shelf…")
         self.setProperty("Shelf.Detail", "Reading albums already in your Kodi music library.")
         self.setProperty("Shelf.Error", "")
         try:
             albums = self.library.albums()
-            current = self.library.playing_album()
+            # Refresh updates metadata without losing the record being browsed.
+            # A fresh window still starts on the playing album, or one random
+            # record; removing the selected album uses that same safe fallback.
+            current = selected if any(a.id == selected for a in albums) else self.library.playing_album()
             self.shelf = Shelf(albums, current, self.rng)
             if self.shelf.current:
                 self.setProperty("Shelf.Ready", "true")
@@ -121,6 +134,8 @@ class AlbumWindow(xbmcgui.WindowXML):
         self.setProperty("Shelf.Artist", album.artist)
         self.setProperty("Shelf.Year", str(album.year) if album.year else "")
         self.setProperty("Shelf.Position", "{} / {}".format(self.shelf.index + 1, len(self.shelf.albums)))
+        self.setProperty("Shelf.HasPrevious", "true" if self.shelf.neighbor(-1) else "")
+        self.setProperty("Shelf.HasNext", "true" if self.shelf.neighbor(1) else "")
 
     def move(self, delta):
         if not self.busy:
@@ -133,10 +148,13 @@ class AlbumWindow(xbmcgui.WindowXML):
         self.busy = True
         try:
             play_album(self.shelf.current, self.library)
+        except NativePlaybackRequired:
+            xbmcgui.Dialog().ok("Aperture Album Shelf", "This album uses shared audio files. Open Kodi Music to play its tracks correctly.")
+            self.setFocusId(LIBRARY)
         except LibraryError:
-            xbmcgui.Dialog().ok("Apeture Album Shelf", "This album could not be played. Check its tracks and source in Kodi Music, then try again.")
+            xbmcgui.Dialog().ok("Aperture Album Shelf", "This album could not be played. Check its tracks and source in Kodi Music, then try again.")
         except Exception:
-            xbmcgui.Dialog().ok("Apeture Album Shelf", "Kodi could not start this album. Open Kodi Music to check playback.")
+            xbmcgui.Dialog().ok("Aperture Album Shelf", "Kodi could not start this album. Open Kodi Music to check playback.")
         finally:
             self.busy = False
 
@@ -147,10 +165,10 @@ class AlbumWindow(xbmcgui.WindowXML):
             else:
                 self.destination = "library"
                 self.close()
-        elif control_id == PREVIOUS:
-            self.move(-1)
-        elif control_id == NEXT:
-            self.move(1)
+        elif control_id in (PREVIOUS, NEXT):
+            self.move(-1 if control_id == PREVIOUS else 1)
+            if not self.busy and self.shelf.current:
+                self.setFocusId(SHELF)
         elif control_id == RETRY:
             self.load()
         elif control_id in (HOME, LIBRARY):
@@ -195,7 +213,7 @@ def run():
         window.doModal()
         destination = window.destination
     except Exception:
-        xbmcgui.Dialog().ok("Apeture Album Shelf", "The album shelf is unavailable. Your music is still accessible from Kodi Music.")
+        xbmcgui.Dialog().ok("Aperture Album Shelf", "The album shelf is unavailable. Your music is still accessible from Kodi Music.")
         destination = "library"
     finally:
         if window is not None:

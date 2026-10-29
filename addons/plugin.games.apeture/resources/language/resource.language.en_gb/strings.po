@@ -7,7 +7,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 
 msgctxt "#32000"
-msgid "Apeture Game Library"
+msgid "Aperture Game Library"
 msgstr ""
 
 msgctxt "#32001"
@@ -23,7 +23,7 @@ msgid "Choose the folder containing system folders such as nes, snes, gba and ps
 msgstr ""
 
 msgctxt "#32004"
-msgid "Choose your ROM folder to get started…"
+msgid "Choose ROM folder…"
 msgstr ""
 
 msgctxt "#32005"
@@ -31,7 +31,7 @@ msgid "No games found — check your ROM folder…"
 msgstr ""
 
 msgctxt "#32006"
-msgid "Configure library…"
+msgid "Configure ROM folder…"
 msgstr ""
 
 msgctxt "#32007"
@@ -39,7 +39,7 @@ msgid "About native game playback"
 msgstr ""
 
 msgctxt "#32008"
-msgid "Apeture browses your files; Kodi RetroPlayer runs games with compatible Kodi game add-ons, not standalone RetroArch. Kodi chooses an emulator or reports when none is available; any installation prompt belongs to Kodi. Core, BIOS, file-format and network-path support vary by device. Put legally obtained games under the documented system folders; keep BIOS elsewhere. Multi-disc M3U entries ask which disc to launch, not seamless disc swapping. Nothing is downloaded by Apeture."
+msgid "Aperture browses your files; Kodi RetroPlayer runs games with compatible Kodi game add-ons, not standalone RetroArch. Kodi chooses an emulator or reports when none is available; any installation prompt belongs to Kodi. Core, BIOS, file-format and network-path support vary by device. Put legally obtained games under the documented system folders; keep BIOS elsewhere. Multi-disc M3U entries ask which disc to launch, not seamless disc swapping. Nothing is downloaded by Aperture."
 msgstr ""
 
 msgctxt "#32010"
@@ -64,4 +64,80 @@ msgstr ""
 
 msgctxt "#32015"
 msgid "This library link is not valid. Returning to your systems."
+msgstr ""
+
+msgctxt "#32016"
+msgid "Your collection"
+msgstr ""
+
+msgctxt "#32017"
+msgid "Your games.[CR]At home here."
+msgstr ""
+
+msgctxt "#32018"
+msgid "Choose the folder containing system folders such as nes, snes or gba.[CR][CR]Only systems with games appear. Your files stay where they are."
+msgstr ""
+
+msgctxt "#32019"
+msgid "Room for[CR]your collection."
+msgstr ""
+
+msgctxt "#32020"
+msgid "No supported games found. Check system folder names, file types and share access.[CR][CR]Choose another ROM root, or refresh after adding games."
+msgstr ""
+
+msgctxt "#32021"
+msgid "Let's reconnect[CR]your games."
+msgstr ""
+
+msgctxt "#32022"
+msgid "Check folder access or reconnect the drive or share.[CR][CR]Your files have not been changed. Configure the ROM folder, then try again."
+msgstr ""
+
+msgctxt "#32023"
+msgid "Ready when[CR]you are."
+msgstr ""
+
+msgctxt "#32024"
+msgid "Choose a game. Kodi handles playback with a compatible game add-on.[CR][CR]Need a different collection? Change the ROM folder below."
+msgstr ""
+
+msgctxt "#32025"
+msgid "Detected games: {0}"
+msgstr ""
+
+msgctxt "#32026"
+msgid "Systems: {1} · Games: {0}"
+msgstr ""
+
+msgctxt "#32027"
+msgid "Set up your local collection"
+msgstr ""
+
+msgctxt "#32028"
+msgid "No supported games detected"
+msgstr ""
+
+msgctxt "#32029"
+msgid "Collection unavailable"
+msgstr ""
+
+msgctxt "#32030"
+msgid "Local storage or an existing Kodi share"
+msgstr ""
+
+msgctxt "#32031"
+msgid "About game add-ons, BIOS and disc sets"
+msgstr ""
+
+msgctxt "#32032"
+msgid "Choose a disc · native Kodi playback"
+msgstr ""
+
+msgctxt "#32033"
+msgid "Native Kodi playback"
+msgstr ""
+
+msgctxt "#32034"
+msgid "Games: {0}"
 msgstr ""

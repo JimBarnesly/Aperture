@@ -2,7 +2,7 @@
 
 ## Provenance
 
-Apeture uses the **complete Estuary skin from Kodi 21 Omega**, rather than
+Aperture uses the **complete Estuary skin from Kodi 21 Omega**, rather than
 pretending a standalone `Home.xml` is an installable skin.
 
 - Official repository: <https://github.com/xbmc/xbmc>
@@ -41,7 +41,14 @@ and rejects a dirty upstream cache. Export comes from Git archive objects, not
 from the working directory, so ignored or untracked cache files cannot ship. The cache is `build/upstream/xbmc-omega`, or
 an explicit `--cache` path. Once populated, the same cache supports offline
 rebuilds. For a fresh offline machine, carry the complete cache or built ZIP.
-The package includes an `APETURE_BUILD.json` provenance manifest.
+The package includes an `APETURE_BUILD.json` provenance manifest, including
+SHA-256 maps of materialization inputs and assembled resources. `--skip-vendor`
+refuses legacy/stale inputs or changed output; use the normal build after edits.
+The generated `dist/checksums.json` describes the exact installable ZIP bytes.
+
+RC versions use `1.0.0~rc1`: the [pinned official Kodi AddonVersion implementation](https://github.com/xbmc/xbmc/blob/f8815ee40f49a700c047982d752be4b2a61420e2/xbmc/addons/AddonVersion.cpp)
+permits `~` and orders that suffix before the final `1.0.0`. This preserves an
+honest prerelease identity and a later stable upgrade path.
 
 Every upstream skin window and include is retained; Home, Font and
 SkinSettings have the explicit overrides described below. Source-only Home overrides are overlaid on
@@ -50,7 +57,7 @@ PNG is copied byte-for-byte from the committed `assets/misty-stone-bridge-v1.png
 The build never relies on an image-generation workspace or download URL. Runtime
 textures are ordinary PNGs,
 so Kodi TexturePacker is not required. Upstream add-on icon, fanart, screenshots
-and release metadata are removed/replaced: none are represented as Apeture's UI.
+and release metadata are removed/replaced: none are represented as Aperture's UI.
 
 ## Changes and behavior
 
@@ -69,7 +76,7 @@ and release metadata are removed/replaced: none are represented as Apeture's UI.
   if empty. Music runs the optional native album-shelf companion when enabled;
   otherwise it opens native albums or music files if empty. Empty-state copy
   reflects real Kodi library conditions; no fabricated collections or counts.
-- `xml/Font.xml`: retains both upstream fontsets and adds named Apeture roles.
+- `xml/Font.xml`: retains both upstream fontsets and adds named Aperture roles.
   The optional Arial fallback is Kodi's system `arial.ttf`, as in Estuary; it is
   not redistributed. Default font files and their upstream notices are bundled.
 - `colors/defaults.xml`: a restrained charcoal/mist-cyan default palette. Other
@@ -80,10 +87,10 @@ and release metadata are removed/replaced: none are represented as Apeture's UI.
   original AI-generated source PNG, unchanged; see `DESIGN.md` for provenance.
   Fanart is artwork, not a runtime screenshot or an identified historical photo.
 - `xml/SkinSettings.xml`: removes the inherited Home-widget/menu customization
-  panel, which does not apply to Apeture's fixed Home. A note makes that boundary
+  panel, which does not apply to Aperture's fixed Home. A note makes that boundary
   explicit. Other skin options and all actual Kodi settings remain available.
 - Non-Home browsing and playback windows retain Estuary's existing design and
-  behavior in this foundation release. A broader Apeture restyle remains future
+  behavior in this foundation release. A broader Aperture restyle remains future
   work; this release does not pretend those windows are newly designed.
 
 Music now offers the optional original native `script.apeture.music` companion.
@@ -100,8 +107,8 @@ The upstream skin's `LICENSE.txt` is preserved verbatim. It states **GPL version
 2 for Estuary code** and **Creative Commons Attribution-ShareAlike 4.0 for Estuary
 artwork**. We do not silently reinterpret the skin's specific GPLv2 statement as
 GPLv3. Modified inherited Font/color/SkinSettings files retain the upstream license. New
-Apeture skin XML is offered as GPL-2.0-or-later so the skin can be distributed
-alongside its inherited GPLv2 foundation. Original Apeture artwork is offered under CC-BY-SA
+Aperture skin XML is offered as GPL-2.0-or-later so the skin can be distributed
+alongside its inherited GPLv2 foundation. Original Aperture artwork is offered under CC-BY-SA
 4.0 to the extent rights apply. The bridge is AI-generated, not an identified
 photograph by a human photographer or a copied asset from a historical skin. Build scripts are original GPL-3.0-or-later code under the root license.
 
@@ -110,7 +117,7 @@ from pinned Git objects and included in `licenses/`, independent of sparse
 checkout contents.
 Upstream `fonts/noto_license.txt`, `fonts/roboto_license.txt`,
 `fonts/heebo_licence.txt`, and `fonts/mardoto_license.txt` are retained unmodified.
-Font licenses apply to their font files, not to Apeture's code. Please retain
+Font licenses apply to their font files, not to Aperture's code. Please retain
 all these notices when redistributing. This document is provenance, not legal
 advice; the package deliberately preserves the original license statements.
 

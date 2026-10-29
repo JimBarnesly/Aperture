@@ -1,11 +1,12 @@
 name: Kodi 21 native Music and GUI smoke test
 
-# Opt-in experiment branch only. Does not run on main or unrelated branches.
+# Opt-in experiment and release-candidate branches only; never main.
 on:
   workflow_dispatch:
   push:
     branches:
       - experiment/format-shelf
+      - release/1.0-rc
 
 permissions:
   contents: read
@@ -26,7 +27,7 @@ jobs:
         run: |
           apt-get update
           apt-get install --yes --no-install-recommends \
-            ca-certificates git python3 python3-pil \
+            ca-certificates git python3 python3-pil gdb \
             kodi kodi-bin kodi-data xvfb xauth xdotool x11-utils x11-apps \
             mesa-utils libgl1-mesa-dri imagemagick pulseaudio pulseaudio-utils \
             fonts-noto-core fonts-noto-mono fonts-roboto-unhinted

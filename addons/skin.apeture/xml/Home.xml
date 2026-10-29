@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<!-- Original Apeture scenic Home. GPL-2.0-or-later. -->
+<!-- Original Aperture scenic Home. GPL-2.0-or-later. -->
 <window>
   <defaultcontrol always="false">9100</defaultcontrol>
   <backgroundcolor>FF11191B</backgroundcolor>
@@ -34,7 +34,7 @@
       <textcolor>FFF4F8F8</textcolor>
       <shadowcolor>90000000</shadowcolor>
       <aligny>center</aligny>
-      <label>apeture</label>
+      <label>aperture</label>
     </control>
     <control type="label">
       <left>1480</left>
@@ -102,7 +102,7 @@
         <textcolor>FFD5DEDF</textcolor>
         <shadowcolor>90000000</shadowcolor>
         <aligny>center</aligny>
-        <label>Install Apeture Games to browse your collection.</label>
+        <label>Install Aperture Games to browse your collection.</label>
         <visible>!System.AddonIsEnabled(plugin.games.apeture)</visible>
       </control>
       <control type="button" id="9300">
@@ -701,7 +701,7 @@
       <ondown>9103</ondown>
       <onback>9103</onback>
       <onclick condition="Player.HasMedia">ActivateWindow(playercontrols)</onclick>
-      <onclick condition="!Player.HasMedia">Notification(Apeture,Nothing is playing,3000)</onclick>
+      <onclick condition="!Player.HasMedia">Notification(Aperture,Nothing is playing,3000)</onclick>
     </control>
     <control type="label">
       <left>1000</left>

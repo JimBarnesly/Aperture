@@ -1,13 +1,24 @@
 # First Pi 5 install
 
-Checked 28 October 2026. Use a test card/profile first; keep the original skin.
+Aperture 1.0 RC1, prepared 29 October 2026. Not a stable/hardware-accepted release.
+Use a test card/profile first; keep the original skin.
+
+## Optional Windows preparation
+
+The extracted test kit includes `installer/Prepare-Aperture.ps1` and
+`installer/README.md`. Read that README before running the script on a computer
+you are authorised to use. It verifies and stages the three ZIPs, optionally onto
+a separately identified USB data stick. It does not image the SD, configure Kodi,
+install add-ons or bypass work-machine policy. Windows/USB runtime validation is
+not yet established; Linux static checks are not hardware evidence. The following
+imaging and on-Pi actions remain manual, not one-click provisioning.
 
 ## 1. Write the system image
 
 1. Back up anything needed from the microSD card. **Writing an image erases the
    entire selected device.** Check the card's name and capacity before writing.
 2. From [LibreELEC's official Raspberry Pi page](https://libreelec.tv/downloads/raspberry/),
-   choose the **Raspberry Pi 5** stable image. The verified current file is
+   choose the **Raspberry Pi 5** stable image. The image recorded during 28 October preparation was
    `LibreELEC-RPi5.aarch64-12.2.1.img.gz`, containing Kodi **21.3 Omega**.
    Do not choose Pi 4, Generic PC, nightly or an update-only download.
 3. Open [Raspberry Pi Imager](https://www.raspberrypi.com/software/) on a computer
@@ -21,17 +32,17 @@ Checked 28 October 2026. Use a test card/profile first; keep the original skin.
 
 [Official image-writing instructions](https://www.raspberrypi.com/documentation/computers/getting-started.html#install-using-imager).
 
-## 2. Try Apeture
+## 2. Try Aperture
 
 1. Confirm the stock Kodi interface works and reports Kodi 21.x. Back up the new
    profile before experimenting. Keep Estuary installed for recovery.
 2. If the download is an outer kit/GitHub artifact ZIP, extract that wrapper on
    your computer first. Transfer the **three inner add-on ZIPs** to storage Kodi
-   can browse, such as a USB drive; leave those inner ZIPs zipped. This music-shelf
-   build contains:
-   - `plugin.games.apeture-0.1.0.zip` — optional game library.
-   - `script.apeture.music-0.1.0.zip` — optional native album shelf.
-   - `skin.apeture-0.3.0.zip` — complete skin, installed/selected last.
+   can browse, such as a USB drive; leave those inner ZIPs zipped. This release-candidate
+   kit contains:
+   - `plugin.games.apeture-1.0.0~rc1.zip` — optional game library.
+   - `script.apeture.music-1.0.0~rc1.zip` — optional native album shelf.
+   - `skin.apeture-1.0.0~rc1.zip` — complete skin, installed/selected last.
 
    In **Add-ons → Add-on browser → Install from ZIP file**, install each desired
    companion, wait for its notification, then install the skin. Neither companion
@@ -39,9 +50,9 @@ Checked 28 October 2026. Use a test card/profile first; keep the original skin.
    Music; missing Games helper shows setup guidance. If a companion is disabled,
    review it under **Add-ons → My add-ons** before expecting its Home integration.
 3. Kodi may ask you to review its Unknown sources setting for ZIP installation.
-   Decide on that warning yourself after reviewing the package/source. Apeture
+   Decide on that warning yourself after reviewing the package/source. Aperture
    does not enable it automatically.
-4. Select **Settings → Interface → Skin → Apeture**. Confirm the change only if
+4. Select **Settings → Interface → Skin → Aperture**. Confirm the change only if
    the screen is readable and controls respond. If not, let Kodi's timer revert.
 5. Test all six Home destinations and Back. Start at a readable 16:9 display mode
    (1080p is the authored layout). Verify the actual controller or TV remote/CEC
@@ -60,7 +71,7 @@ Choose a folder containing correctly tagged music and agree to scan the source
 into Kodi's library. Wait for the scan to finish, then reopen or Refresh the
 shelf. Adding a file-browser source without scanning does not populate albums.
 Additional online metadata/art scraping is optional, not a shelf requirement;
-Kodi's guide recommends leaving it off for the first scan. Apeture does not turn
+Kodi's guide recommends leaving it off for the first scan. Aperture does not turn
 it on. [Official scanning guide](https://kodi.wiki/view/Adding_music_to_the_library).
 
 The shelf uses album tags already indexed by Kodi. Missing/unreadable or remote
@@ -78,7 +89,11 @@ the skin. A detected game file does not guarantee a compatible Pi core exists.
 
 ## Acceptance
 
-Desktop Kodi GUI checks are evidence, not a substitute for this Pi test. Check
+Desktop native ZIP installation, accepted skin selection, restart persistence and
+Estuary recovery passed on commit `296711243206a822caba7997b229a0c885a57384` in
+[run 40801720239](https://github.com/JimBarnesly/Apeture/actions/runs/40801720239).
+That is not Windows preparation, SD imaging or Pi hardware acceptance. The kit
+remains guided preparation, not a fully provisioned SD image. Check
 remote/controller focus, TV scaling, skin rollback and actual media playback.
 If something fails, record the Kodi version, screen/action and log excerpt.
 Use [TESTING.md](TESTING.md) for the complete checklist.

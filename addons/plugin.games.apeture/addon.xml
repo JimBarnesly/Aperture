@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<addon id="plugin.games.apeture" name="Apeture Game Library" version="0.1.0" provider-name="Apeture contributors">
+<addon id="plugin.games.apeture" name="Aperture Game Library" version="1.0.0~rc1" provider-name="Aperture contributors">
   <requires>
     <import addon="xbmc.python" version="3.0.1"/>
   </requires>

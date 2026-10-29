@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Original native Apeture shelf. GPL-3.0-or-later. -->
+<!-- Original native Aperture shelf. GPL-3.0-or-later. -->
 <window>
   <defaultcontrol always="true">100</defaultcontrol>
   <backgroundcolor>FF0C1416</backgroundcolor>
@@ -51,65 +51,68 @@
       <label>$INFO[System.Time]</label>
       <align>right</align>
     </control>
+    <!-- rotatey centres are X,Z, not X,Y. Auto uses screen Y as depth and
+         pushes neighbours away. Keep explicit zero-depth pivots; modest angles
+         retain readable covers even at the edges of Kodi's perspective view. -->
     <control type="image">
       <left>12</left>
       <top>365</top>
       <width>290</width>
       <height>290</height>
-      <texture colordiffuse="557B9295" fallback="shelf/placeholder.png">$INFO[Window.Property(Shelf.Cover0.Art)]</texture>
+      <texture colordiffuse="7892A9AC" fallback="shelf/placeholder.png">$INFO[Window.Property(Shelf.Cover0.Art)]</texture>
       <aspectratio>keep</aspectratio>
       <visible>String.IsEqual(Window.Property(Shelf.Ready),true) + String.IsEqual(Window.Property(Shelf.Cover0.Visible),true)</visible>
-      <animation effect="rotatey" start="68" end="68" center="auto" time="0" condition="true">Conditional</animation>
+      <animation effect="rotatey" start="20" end="20" center="157,0" time="0" condition="true">Conditional</animation>
     </control>
     <control type="image">
       <left>1618</left>
       <top>365</top>
       <width>290</width>
       <height>290</height>
-      <texture colordiffuse="557B9295" fallback="shelf/placeholder.png">$INFO[Window.Property(Shelf.Cover6.Art)]</texture>
+      <texture colordiffuse="7892A9AC" fallback="shelf/placeholder.png">$INFO[Window.Property(Shelf.Cover6.Art)]</texture>
       <aspectratio>keep</aspectratio>
       <visible>String.IsEqual(Window.Property(Shelf.Ready),true) + String.IsEqual(Window.Property(Shelf.Cover6.Visible),true)</visible>
-      <animation effect="rotatey" start="-68" end="-68" center="auto" time="0" condition="true">Conditional</animation>
+      <animation effect="rotatey" start="-20" end="-20" center="1763,0" time="0" condition="true">Conditional</animation>
     </control>
     <control type="image">
       <left>170</left>
       <top>326</top>
       <width>370</width>
       <height>370</height>
-      <texture colordiffuse="887B9295" fallback="shelf/placeholder.png">$INFO[Window.Property(Shelf.Cover1.Art)]</texture>
+      <texture colordiffuse="A8A7B9BB" fallback="shelf/placeholder.png">$INFO[Window.Property(Shelf.Cover1.Art)]</texture>
       <aspectratio>keep</aspectratio>
       <visible>String.IsEqual(Window.Property(Shelf.Ready),true) + String.IsEqual(Window.Property(Shelf.Cover1.Visible),true)</visible>
-      <animation effect="rotatey" start="62" end="62" center="auto" time="0" condition="true">Conditional</animation>
+      <animation effect="rotatey" start="24" end="24" center="355,0" time="0" condition="true">Conditional</animation>
     </control>
     <control type="image">
       <left>1380</left>
       <top>326</top>
       <width>370</width>
       <height>370</height>
-      <texture colordiffuse="887B9295" fallback="shelf/placeholder.png">$INFO[Window.Property(Shelf.Cover5.Art)]</texture>
+      <texture colordiffuse="A8A7B9BB" fallback="shelf/placeholder.png">$INFO[Window.Property(Shelf.Cover5.Art)]</texture>
       <aspectratio>keep</aspectratio>
       <visible>String.IsEqual(Window.Property(Shelf.Ready),true) + String.IsEqual(Window.Property(Shelf.Cover5.Visible),true)</visible>
-      <animation effect="rotatey" start="-62" end="-62" center="auto" time="0" condition="true">Conditional</animation>
+      <animation effect="rotatey" start="-24" end="-24" center="1565,0" time="0" condition="true">Conditional</animation>
     </control>
     <control type="image">
       <left>356</left>
       <top>277</top>
       <width>460</width>
       <height>460</height>
-      <texture colordiffuse="BBA7B7B9" fallback="shelf/placeholder.png">$INFO[Window.Property(Shelf.Cover2.Art)]</texture>
+      <texture colordiffuse="D6C6D4D5" fallback="shelf/placeholder.png">$INFO[Window.Property(Shelf.Cover2.Art)]</texture>
       <aspectratio>keep</aspectratio>
       <visible>String.IsEqual(Window.Property(Shelf.Ready),true) + String.IsEqual(Window.Property(Shelf.Cover2.Visible),true)</visible>
-      <animation effect="rotatey" start="52" end="52" center="auto" time="0" condition="true">Conditional</animation>
+      <animation effect="rotatey" start="28" end="28" center="586,0" time="0" condition="true">Conditional</animation>
     </control>
     <control type="image">
       <left>1104</left>
       <top>277</top>
       <width>460</width>
       <height>460</height>
-      <texture colordiffuse="BBA7B7B9" fallback="shelf/placeholder.png">$INFO[Window.Property(Shelf.Cover4.Art)]</texture>
+      <texture colordiffuse="D6C6D4D5" fallback="shelf/placeholder.png">$INFO[Window.Property(Shelf.Cover4.Art)]</texture>
       <aspectratio>keep</aspectratio>
       <visible>String.IsEqual(Window.Property(Shelf.Ready),true) + String.IsEqual(Window.Property(Shelf.Cover4.Visible),true)</visible>
-      <animation effect="rotatey" start="-52" end="-52" center="auto" time="0" condition="true">Conditional</animation>
+      <animation effect="rotatey" start="-28" end="-28" center="1334,0" time="0" condition="true">Conditional</animation>
     </control>
     <control type="image">
       <left>700</left>
@@ -186,14 +189,27 @@
       <onup>200</onup>
       <ondown>200</ondown>
     </control>
+    <control type="label">
+      <left>1300</left>
+      <top>914</top>
+      <width>524</width>
+      <height>38</height>
+      <font>font12</font>
+      <textcolor>FFB6C8CA</textcolor>
+      <shadowcolor>90000000</shadowcolor>
+      <label>Replaces queue · Shuffle off</label>
+      <align>right</align>
+      <visible>String.IsEqual(Window.Property(Shelf.Ready),true)</visible>
+    </control>
     <control type="button" id="101">
-      <left>72</left>
-      <top>486</top>
-      <width>82</width>
-      <height>90</height>
+      <left>656</left>
+      <top>902</top>
+      <width>62</width>
+      <height>62</height>
       <font>font13</font>
       <label>‹</label>
       <textcolor>FFD3DEDF</textcolor>
+      <disabledcolor>FF58696C</disabledcolor>
       <focusedcolor>FF10272B</focusedcolor>
       <align>center</align>
       <aligny>center</aligny>
@@ -204,15 +220,17 @@
       <onup>100</onup>
       <ondown>200</ondown>
       <visible>String.IsEqual(Window.Property(Shelf.Ready),true)</visible>
+      <enable>String.IsEqual(Window.Property(Shelf.HasPrevious),true)</enable>
     </control>
     <control type="button" id="102">
-      <left>1766</left>
-      <top>486</top>
-      <width>82</width>
-      <height>90</height>
+      <left>1202</left>
+      <top>902</top>
+      <width>62</width>
+      <height>62</height>
       <font>font13</font>
       <label>›</label>
       <textcolor>FFD3DEDF</textcolor>
+      <disabledcolor>FF58696C</disabledcolor>
       <focusedcolor>FF10272B</focusedcolor>
       <align>center</align>
       <aligny>center</aligny>
@@ -223,6 +241,7 @@
       <onup>100</onup>
       <ondown>200</ondown>
       <visible>String.IsEqual(Window.Property(Shelf.Ready),true)</visible>
+      <enable>String.IsEqual(Window.Property(Shelf.HasNext),true)</enable>
     </control>
     <control type="label">
       <left>360</left>

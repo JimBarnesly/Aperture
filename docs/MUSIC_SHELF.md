@@ -1,6 +1,6 @@
-# Native album shelf — development slice
+# Native album shelf — 1.0 release candidate
 
-The optional **Apeture Album Shelf** is a native Kodi 21 Python/WindowXML add-on,
+The optional **Aperture Album Shelf** is a native Kodi 21 Python/WindowXML add-on,
 not a browser embedded in Kodi. The scenic Home's Music destination runs it when
 `script.apeture.music` is enabled. Without it, Music continues to open Kodi's
 native album library or music sources. Games, other Home routes and inherited
@@ -21,8 +21,9 @@ settings/playback windows are unchanged.
   music-queue shuffle for ordered playback. It does not alter the shelf's order.
 - Up/down reaches Kodi Music, Refresh and Home. Back/Escape closes the shelf,
   returning to its caller; Home explicitly returns Home. Browsing/closing never
-  stops, starts or replaces playback. Refresh reloads the library and applies the
-  current-playing/random focus rule again.
+  stops, starts or replaces playback. Refresh reloads the library and preserves
+  the selected album by database ID while it remains present. Fresh entry, or
+  Refresh after that selection disappears, uses the current-playing/random rule.
 - An empty library explains how to add/scan music in Kodi. A read failure exposes
   Refresh, Kodi Music and Home, not a fake catalogue. A failed/empty/incomplete album read
   does not clear an existing queue. Cue/shared-file albums are directed to native
@@ -43,15 +44,15 @@ python tools/build.py
 
 The build produces these independent packages:
 
-- `dist/skin.apeture-0.3.0.zip` — assembled pinned Estuary foundation plus scenic
+- `dist/skin.apeture-1.0.0~rc1.zip` — assembled pinned Estuary foundation plus scenic
   Home and the enabled-companion Music route.
-- `dist/script.apeture.music-0.1.0.zip` — self-contained album-shelf script/XML.
-- `dist/plugin.games.apeture-0.1.0.zip` — unchanged game companion.
+- `dist/script.apeture.music-1.0.0~rc1.zip` — self-contained album-shelf script/XML.
+- `dist/plugin.games.apeture-1.0.0~rc1.zip` — native Games companion.
 
 On a backed-up Kodi 21 test profile, install the album-shelf ZIP through Kodi's
 normal add-on UI and install/select the assembled skin. The helper has no forced
 skin dependency; its bundled fallback XML uses the existing Omega Estuary fonts.
-The scenic backdrop is used only when the active skin is Apeture. Other skins
+The scenic backdrop is used only when the active skin is Aperture. Other skins
 without these standard font names are not a compatibility claim.
 
 Installation does not enable unknown sources, add media sources, scan the library
@@ -105,7 +106,9 @@ Kodi 21 APIs and control behavior were checked against primary sources:
 - [Native navigation cycle handling](https://github.com/xbmc/xbmc/blob/f8815ee40f49a700c047982d752be4b2a61420e2/xbmc/guilib/GUIWindow.cpp#L951-L985):
   centre-button self-navigation does not double-step.
 - [Native rotatey implementation](https://github.com/xbmc/xbmc/blob/f8815ee40f49a700c047982d752be4b2a61420e2/xbmc/guilib/VisibleEffect.cpp#L249-L285):
-  conditional fixed-angle perspective and `center="auto"`.
+  conditional fixed-angle perspective with explicit `center="X,0"` pivots.
+  For `rotatey`, the second coordinate is depth (Z), not screen Y; zero depth
+  avoids pushing neighboring covers away through an automatic screen-Y pivot.
 - [Playlist API](https://github.com/xbmc/xbmc/blob/f8815ee40f49a700c047982d752be4b2a61420e2/xbmc/interfaces/legacy/PlayList.h):
   `clear`, `add`, `unshuffle`; Player uses `play(playlist, startpos=0)`.
 - [Music tag API](https://github.com/xbmc/xbmc/blob/Omega/xbmc/interfaces/legacy/InfoTagMusic.h):
@@ -122,25 +125,23 @@ preview renderer, not proof of native rotation or focus behavior.
 
 ## Verification status and acceptance
 
-**Passed locally:** 98 unit/static-contract tests, source API review, XML/Python
-validation, complete pinned skin materialization and deterministic ZIP packaging.
-The music tests cover ordering, multiple discs, missing/Unicode metadata, empty
-and error paths, pagination, seeded random/current focus, controller callbacks,
-queue protection before successful preparation, exact media URL preservation,
-artwork network filtering and private-error suppression. Baseline game tests
-remain included and passing.
+The preceding baseline passed 106 unit/contract tests and 45 distinct actual
+Kodi GUI/Music checks in [run 40695502466](https://github.com/JimBarnesly/Apeture/actions/runs/40695502466),
+with 22 screenshots. Seven labelled synthetic albums/ten generated FLAC songs
+were scanned into a real Kodi library. Checks covered ordered browsing, full
+queue construction, an advancing player clock (+588 ms) and current-album focus.
+The disposable CI HOME used a private clocked PulseAudio null sink: this establishes native playback
+progress, not audible output. These are baseline results, not proof of later RC
+changes or Pi acceptance. See [BUILD_REPORT.md](BUILD_REPORT.md).
 
-**Not established by these tests:** Kodi rendering, actual audio playback, real
-controller/CEC behavior, ZIP installation/keep-revert, network source reachability,
-Pi performance or sound. A source/API review and mock tests are not a live test.
-The extended CI smoke runner now includes a separate in-process Music observer,
-seven labelled synthetic albums/ten original FLAC tones, a real Kodi library
-scan and assertions for ordered browsing, queue construction, advancing playback
-and current-album focus. The disposable CI HOME uses an explicitly named
-ALSA default/null sink, so successful audio checks establish native decoder/player
-clock and queue behavior, not audible output. Its native run is still pending. Do not call the shelf
-runtime-verified from the earlier scenic-navigation smoke result. Details and
-headless audio caveats are in `tools/MUSIC_SMOKE_INTEGRATION.md`.
+**Fresh ZIP/accepted-switch evidence:** [run 40801720239](https://github.com/JimBarnesly/Apeture/actions/runs/40801720239)
+passed for `296711243206a822caba7997b229a0c885a57384`, including the installed Music
+companion, restart persistence and accepted Estuary recovery. Later commits need
+their own final CI; see [BUILD_REPORT.md](BUILD_REPORT.md).
+
+**Still required:** Pi performance, physical sound, controller/CEC and TV scaling.
+Desktop playback uses a null sink, not audible output. Source/API and mock tests
+do not replace those gates. Headless details: `tools/MUSIC_SMOKE_INTEGRATION.md`.
 
 Native acceptance checklist:
 
@@ -154,7 +155,8 @@ Native acceptance checklist:
 4. Move left/right rapidly and at both ends; OK starts one complete ordered album,
    not a duplicate queue. Verify paused/current player transitions and Play key.
 5. Check missing art, long Unicode titles, unreadable sources, queue protection on
-   failed reads, repeated Refresh and player continuation after Back/Home.
+   failed reads, repeated Refresh preserving the selected album, fallback when
+   that album is removed, and player continuation after Back/Home.
 6. Check missing/disabled helper: Home still reaches native Kodi Music.
 7. Only after the desktop checks, validate Pi/controller/audio/720p/1080p behavior.
 

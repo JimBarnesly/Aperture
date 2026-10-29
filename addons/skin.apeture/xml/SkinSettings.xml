@@ -261,7 +261,7 @@
       <height>165</height>
       <font>font12</font>
       <textcolor>grey</textcolor>
-      <label>Apeture Home uses a fixed six-section layout. These options customize the inherited media and playback views.</label>
+      <label>Aperture Home uses a fixed six-section layout. These options customize the inherited media and playback views.</label>
     </control>
   </controls>
 </window>

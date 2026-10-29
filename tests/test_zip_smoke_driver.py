@@ -1,0 +1,113 @@
+"""Pure navigation-label regression; no GUI is launched by these tests."""
+import ast
+from pathlib import Path
+import re
+import time
+import unittest
+
+
+class ZipDriverLabelsTests(unittest.TestCase):
+    def test_only_native_radio_state_suffix_is_normalized(self):
+        source = Path(__file__).resolve().parents[1] / 'tools/zip_smoke_driver.py'
+        tree = ast.parse(source.read_text(encoding='utf-8'))
+        function = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == 'label_matches')
+        namespace = {'re': re}
+        exec(compile(ast.Module(body=[function], type_ignores=[]), str(source), 'exec'), namespace)
+        matches = namespace['label_matches']
+        for label in ('Unknown sources', 'Unknown sources ( )', 'Unknown sources (*)', 'Unknown sources (X)'):
+            self.assertTrue(matches(label, 'Unknown sources'))
+        for label in ('Unknown sources modified', 'Unknown sources (other)', 'Not Unknown sources'):
+            self.assertFalse(matches(label, 'Unknown sources'))
+
+    def test_setting_assertion_rejects_stale_or_pre_action_read(self):
+        source = Path(__file__).resolve().parents[1] / 'tools/zip_smoke_driver.py'
+        tree = ast.parse(source.read_text(encoding='utf-8'))
+        function = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == 'setting_matches')
+        namespace = {'time': time}
+        exec(compile(ast.Module(body=[function], type_ignores=[]), str(source), 'exec'), namespace)
+        matches = namespace['setting_matches']
+        now = time.time()
+        state = {'unknown_sources': False, 'unknown_sources_read_started': now - 1,
+                 'unknown_sources_read_completed': now}
+        self.assertTrue(matches(state, False, now - 2))
+        self.assertFalse(matches(state, False, now))
+        self.assertFalse(matches(state, True))
+        self.assertFalse(matches(dict(state, unknown_sources_read_completed=now - 10), False))
+        self.assertFalse(matches({'unknown_sources': False}, False))
+
+    def test_debugger_launches_child_without_attachment_or_policy_changes(self):
+        source = Path(__file__).resolve().parents[1] / 'tools/zip_smoke_driver.py'
+        tree = ast.parse(source.read_text(encoding='utf-8'))
+        function = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == 'debugger_commands')
+        namespace = {}
+        exec(compile(ast.Module(body=[function], type_ignores=[]), str(source), 'exec'), namespace)
+        script = namespace['debugger_commands'](Path('/tmp/private fixture/kodi-pid.txt'))
+        self.assertIn('starti\n', script)
+        self.assertIn('continue\nthread apply all bt 24\n', script)
+        self.assertIn('set disable-randomization off', script)  # Preserve default ASLR.
+        self.assertIn('set debuginfod enabled off', script)
+        self.assertNotIn('attach ', script)
+        self.assertNotIn('sudo', script)
+        self.assertNotIn('sysctl', script)
+        python = script.split('python\n', 1)[1].split('\nend', 1)[0]
+        compile(python, '<gdb-python>', 'exec')
+
+    def test_find_waits_for_actual_item_change_before_another_arrow(self):
+        source = Path(__file__).resolve().parents[1] / 'tools/zip_smoke_driver.py'
+        tree = ast.parse(source.read_text(encoding='utf-8'))
+        driver = next(node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == 'Driver')
+        function = next(node for node in driver.body if isinstance(node, ast.FunctionDef) and node.name == 'find')
+        namespace = {}
+        exec(compile(ast.Module(body=[function], type_ignores=[]), str(source), 'exec'), namespace)
+        class DelayedUI:
+            index = 0
+            pending = False
+            arrows = 0
+            labels = ['..', 'Games.zip', 'Music.zip', 'Skin.zip']
+            def state(self):
+                return {'focus': 450, 'control_label': self.labels[self.index], 'list_item': self.labels[self.index]}
+            def labelled(self, label): return self.labels[self.index] == label
+            def settle_focus(self):
+                if self.pending: raise AssertionError('Cannot settle queued input')
+            def key(self, direction):
+                # Simulate an observer frame arriving before Kodi consumes Down.
+                if self.pending: raise AssertionError('Queued duplicate arrow against stale UI')
+                self.pending = True
+                self.arrows += 1
+                return self.arrows
+            def wait(self, description, predicate, **kwargs):
+                self_test.assertFalse(predicate(self.state()))
+                self.index = (self.index + 1) % len(self.labels)
+                self.pending = False
+                self_test.assertTrue(predicate(self.state()))
+        self_test = self
+        ui = DelayedUI()
+        namespace['find'](ui, 'Skin.zip')
+        self.assertEqual(ui.arrows, 3)
+        self.assertEqual(ui.state()['list_item'], 'Skin.zip')
+
+    def test_focus_barrier_rejects_folder_transition_and_repeated_cached_frames(self):
+        source = Path(__file__).resolve().parents[1] / 'tools/zip_smoke_driver.py'
+        tree = ast.parse(source.read_text(encoding='utf-8'))
+        driver = next(node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == 'Driver')
+        function = next(node for node in driver.body if isinstance(node, ast.FunctionDef) and node.name == 'settle_focus')
+        namespace = {}
+        exec(compile(ast.Module(body=[function], type_ignores=[]), str(source), 'exec'), namespace)
+        self_test = self
+        class TransitionalUI:
+            def wait(self, description, stable, **kwargs):
+                def frame(seq, when, label):
+                    return {'sequence': seq, 'time': when, 'window': 10040, 'dialog': 10126,
+                            'focus': 450, 'control_label': label, 'list_item': label}
+                self_test.assertFalse(stable(frame(1, 1.0, 'Source')))
+                self_test.assertFalse(stable(frame(2, 1.2, 'Source')))
+                self_test.assertFalse(stable(frame(3, 1.4, '..')))
+                for _ in range(5):
+                    self_test.assertFalse(stable(frame(3, 1.4, '..')))
+                self_test.assertFalse(stable(frame(4, 1.6, '..')))
+                self_test.assertTrue(stable(frame(5, 2.0, '..')))
+        namespace['settle_focus'](TransitionalUI())
+
+
+if __name__ == '__main__':
+    unittest.main()
