@@ -12,17 +12,6 @@ import xbmcgui
 SUBJECTS = ('plugin.games.apeture', 'script.apeture.music', 'skin.apeture')
 
 
-def control_text(window, identifier):
-    try:
-        control = window.getControl(identifier)
-        for method in ('getLabel', 'getText'):
-            if hasattr(control, method):
-                return getattr(control, method)()
-    except (RuntimeError, TypeError, ValueError):
-        pass
-    return ''
-
-
 
 class SettingsReader:
     """A setting read can wait behind Kodi's modal confirmation setting lock.
@@ -62,10 +51,12 @@ class SettingsReader:
 
 def observe(sequence, settings):
     current, dialog = xbmcgui.getCurrentWindowId(), xbmcgui.getCurrentWindowDialogId()
-    window = xbmcgui.Window(dialog if dialog != 9999 else current)
+    # Native dialogs can be destroyed between observer calls. Holding a Python
+    # Window/control proxy across that transition crashed Kodi GetControlById.
+    # Resolve each read through the GUI info manager instead of raw proxies.
     try:
-        focus = window.getFocusId()
-    except (RuntimeError, ValueError):
+        focus = int(xbmc.getInfoLabel('System.CurrentControlId'))
+    except (TypeError, ValueError):
         focus = -1
     installed = {}
     for identifier in SUBJECTS:
@@ -80,11 +71,10 @@ def observe(sequence, settings):
     return {'sequence': sequence, 'time': time.time(), 'pid': os.getpid(),
         'skin': xbmc.getSkinDir(), 'window': current, 'dialog': dialog, 'focus': focus,
         'control_label': xbmc.getInfoLabel('System.CurrentControl'), 'list_item': xbmc.getInfoLabel('ListItem.Label'),
-        'heading': control_text(window, 1) or control_text(window, 411), 'text': control_text(window, 9),
         **settings.snapshot(), 'installed': installed,
         'folder': xbmc.getInfoLabel('Container.FolderPath'),
         'library_state': xbmc.getInfoLabel('Container.Property(Apeture.LibraryState)'),
-        'music_open': xbmcgui.Window(10000).getProperty('Apeture.Music.Open'),
+        'music_open': xbmc.getInfoLabel('Window(Home).Property(Apeture.Music.Open)'),
         'width': xbmcgui.getScreenWidth(), 'height': xbmcgui.getScreenHeight()}
 
 

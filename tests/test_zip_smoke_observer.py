@@ -1,5 +1,6 @@
 """Read-only observer concurrency regressions, not graphical acceptance."""
 import importlib.util
+import ast
 import json
 from pathlib import Path
 import sys
@@ -42,7 +43,7 @@ class ZipObserverTests(unittest.TestCase):
         o.xbmcgui.getScreenHeight = lambda: 1080
         o.xbmc.getCondVisibility = lambda *args: False
         o.xbmc.getSkinDir = lambda: 'skin.estuary'
-        o.xbmc.getInfoLabel = lambda label: 'No' if label == 'System.CurrentControl' else ''
+        o.xbmc.getInfoLabel = lambda label: {'System.CurrentControl': 'No', 'System.CurrentControlId': '10'}.get(label, '')
         reader = o.SettingsReader(Monitor())
         reader.thread.start()
         try:
@@ -72,6 +73,15 @@ class ZipObserverTests(unittest.TestCase):
         reader.run()
         with self.assertRaisesRegex(RuntimeError, 'Cannot observe Unknown sources'):
             reader.snapshot()
+
+    def test_observer_never_holds_native_window_or_control_proxies(self):
+        source = Path(__file__).resolve().parents[1] / 'tools/zip_smoke_observer.py'
+        tree = ast.parse(source.read_text(encoding='utf-8'))
+        methods = {node.func.attr for node in ast.walk(tree)
+                   if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)}
+        self.assertTrue({'Window', 'getControl', 'getFocusId'}.isdisjoint(methods))
+        self.assertIn('System.CurrentControlId', source.read_text(encoding='utf-8'))
+        self.assertIn('Window(Home).Property(Apeture.Music.Open)', source.read_text(encoding='utf-8'))
 
 
 if __name__ == '__main__': unittest.main()
