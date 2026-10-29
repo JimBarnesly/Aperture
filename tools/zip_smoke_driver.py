@@ -27,6 +27,12 @@ def label_matches(actual, expected):
     return re.sub(r' \([ *xX]\)$', '', actual.strip()) == expected
 
 
+def setting_matches(state, expected, after=0):
+    return (state.get('unknown_sources') is expected
+            and state.get('unknown_sources_read_started', 0) > after
+            and time.time() - state.get('unknown_sources_read_completed', 0) < 3)
+
+
 class Driver:
     def __init__(self, root, runtime, out, binary):
         self.out, self.binary = Path(out), binary
@@ -75,7 +81,7 @@ class Driver:
         self.process = subprocess.Popen([self.binary, '--windowing=x11', '--gl-interface=glx',
             '--audio-backend=pulseaudio', '--debug', '-fs'], env=self.env, stdout=self.stdout, stderr=subprocess.STDOUT)
         self.wait('fresh-profile Home', lambda s: s.get('skin') == skin and s.get('window') == 10000
-                  and s.get('dialog') == 9999, timeout=90)
+                  and s.get('dialog') == 9999 and setting_matches(s, False), timeout=90)
         windows = subprocess.check_output(['xdotool', 'search', '--onlyvisible', '--class', '^Kodi( from Debian)?$'], text=True).split()
         if len(windows) != 1:
             raise AssertionError('Expected only our fresh Kodi window: ' + str(windows))
@@ -149,13 +155,15 @@ class Driver:
         if self.state().get('focus') == 3:
             self.key('Right')
         self.find('Unknown sources')
+        self.wait('fresh Unknown sources value', lambda s: any(setting_matches(s, value) for value in (True, False)))
         if self.state()['unknown_sources'] is not enabled:
+            changed_after = time.time()
             self.key('Return')
             if enabled:
                 self.wait('test-profile Unknown sources warning', lambda s: s.get('dialog') == 10100)
                 self.capture('zip-02-private-profile-warning')
                 self.confirm('Yes')
-            self.wait('Unknown sources matches requested test state', lambda s: s.get('unknown_sources') is enabled and s.get('dialog') == 9999)
+            self.wait('Unknown sources matches requested test state', lambda s: setting_matches(s, enabled, changed_after) and s.get('dialog') == 9999)
         self.capture('zip-03-private-sources-on' if enabled else 'zip-07-private-sources-off')
 
     def install(self, row):
@@ -239,7 +247,7 @@ class Driver:
         self.choose_skin(skin_name, 'skin.apeture', 'zip-08-accepted-apeture')
         self.stop()
         self.start('skin.apeture')
-        self.wait('accepted skin/sources-off persisted after restart', lambda s: s.get('unknown_sources') is False and
+        self.wait('accepted skin/sources-off persisted after restart', lambda s: setting_matches(s, False) and
             all(s.get('installed', {}).get(addon, {}).get('enabled') for addon in SUBJECTS))
         self.capture('zip-09-restarted-apeture')
         # Reach installed companions through the skin, not a test action hook.
@@ -260,7 +268,7 @@ class Driver:
         self.choose_skin(skin_name, 'skin.apeture', 'zip-13-return-apeture')
         self.stop()
         self.start('skin.apeture')
-        self.wait('recovered preference and sources-off persist', lambda s: s.get('unknown_sources') is False)
+        self.wait('recovered preference and sources-off persist', lambda s: setting_matches(s, False))
         self.capture('zip-14-final-restart')
         verify_installed(self.target / 'packages', self.target / 'data', self.packages)
         self.stop()

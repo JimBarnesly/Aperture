@@ -3,6 +3,7 @@ import json
 import os
 from pathlib import Path
 import time
+import threading
 import traceback
 import xbmc
 import xbmcaddon
@@ -22,7 +23,44 @@ def control_text(window, identifier):
     return ''
 
 
-def observe(sequence):
+
+class SettingsReader:
+    """A setting read can wait behind Kodi's modal confirmation setting lock.
+
+    Keep it off the GUI observation loop, so the driver can see and answer that
+    native dialog. This is a read-only in-process RPC, not a network endpoint.
+    Cached values carry their actual read timestamps and are never presumed fresh.
+    """
+    def __init__(self, monitor):
+        self.monitor = monitor
+        self.value = {'unknown_sources': None, 'unknown_sources_read_started': 0,
+                      'unknown_sources_read_completed': 0}
+        self.error = None
+        self.thread = threading.Thread(target=self.run, name='zip-settings-reader', daemon=True)
+
+    def run(self):
+        try:
+            while not self.monitor.abortRequested():
+                started = time.time()
+                reply = json.loads(xbmc.executeJSONRPC(json.dumps({'jsonrpc': '2.0', 'id': 1,
+                    'method': 'Settings.GetSettingValue', 'params': {'setting': 'addons.unknownsources'}})))
+                if 'error' in reply or type(reply.get('result', {}).get('value')) is not bool:
+                    raise RuntimeError('Cannot observe Unknown sources setting')
+                self.value = {'unknown_sources': reply['result']['value'],
+                              'unknown_sources_read_started': started,
+                              'unknown_sources_read_completed': time.time()}
+                if self.monitor.waitForAbort(0.15):
+                    break
+        except Exception:
+            self.error = traceback.format_exc()
+
+    def snapshot(self):
+        if self.error:
+            raise RuntimeError(self.error)
+        return dict(self.value)
+
+
+def observe(sequence, settings):
     current, dialog = xbmcgui.getCurrentWindowId(), xbmcgui.getCurrentWindowDialogId()
     window = xbmcgui.Window(dialog if dialog != 9999 else current)
     try:
@@ -39,15 +77,11 @@ def observe(sequence):
                 'enabled': bool(xbmc.getCondVisibility('System.AddonIsEnabled(' + identifier + ')'))}
         except RuntimeError:
             pass
-    reply = json.loads(xbmc.executeJSONRPC(json.dumps({'jsonrpc': '2.0', 'id': 1,
-        'method': 'Settings.GetSettingValue', 'params': {'setting': 'addons.unknownsources'}})))
-    if 'error' in reply:
-        raise RuntimeError('Cannot observe Unknown sources setting')
     return {'sequence': sequence, 'time': time.time(), 'pid': os.getpid(),
         'skin': xbmc.getSkinDir(), 'window': current, 'dialog': dialog, 'focus': focus,
         'control_label': xbmc.getInfoLabel('System.CurrentControl'), 'list_item': xbmc.getInfoLabel('ListItem.Label'),
         'heading': control_text(window, 1) or control_text(window, 411), 'text': control_text(window, 9),
-        'unknown_sources': reply['result']['value'], 'installed': installed,
+        **settings.snapshot(), 'installed': installed,
         'folder': xbmc.getInfoLabel('Container.FolderPath'),
         'library_state': xbmc.getInfoLabel('Container.Property(Apeture.LibraryState)'),
         'music_open': xbmcgui.Window(10000).getProperty('Apeture.Music.Open'),
@@ -58,10 +92,12 @@ def main():
     out = Path(os.environ['APETURE_ZIP_OUT'])
     monitor = xbmc.Monitor()
     sequence = 0
+    settings = SettingsReader(monitor)
+    settings.thread.start()
     with (out / 'states.jsonl').open('a', encoding='utf-8', buffering=1) as history:
         while not monitor.abortRequested():
             sequence += 1
-            payload = json.dumps(observe(sequence), ensure_ascii=False)
+            payload = json.dumps(observe(sequence, settings), ensure_ascii=False)
             history.write(payload + '\n')
             temporary = out / 'state.tmp'
             temporary.write_text(payload, encoding='utf-8')
