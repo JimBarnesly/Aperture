@@ -6,6 +6,7 @@ import sys
 import tempfile
 import types
 import unittest
+from unittest.mock import Mock, patch
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -149,6 +150,19 @@ class SettingsIsolationTests(unittest.TestCase):
         self.settings.write_text('<settings><setting id="rom_root">/some-existing-root</setting></settings>')
         with self.assertRaises(ValueError):
             module.SettingsSnapshot(self.driver, self.runtime)
+
+    def test_run_failure_still_stops_and_restores_exact_original_file(self):
+        self.settings.parent.mkdir(parents=True)
+        original = b'<settings version="2"><setting id="rom_root" default="true" /></settings>\n'
+        self.settings.write_bytes(original)
+        self.driver.checks = []
+        self.driver.start = Mock(side_effect=RuntimeError("synthetic startup failure"))
+        self.driver.stop = Mock()
+        manifest = {"root": str(self.runtime / "synthetic-game-browse"), "expected": {}}
+        with patch.object(module, "prepare", return_value=manifest), self.assertRaises(RuntimeError):
+            module.run(self.driver, self.runtime)
+        self.driver.stop.assert_called_once()
+        self.assertEqual(self.settings.read_bytes(), original)
         self.settings.unlink()
         self.settings.symlink_to(self.driver.target / "data/userdata/guisettings.xml")
         with self.assertRaises(ValueError):
