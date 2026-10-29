@@ -21,8 +21,9 @@ settings/playback windows are unchanged.
   music-queue shuffle for ordered playback. It does not alter the shelf's order.
 - Up/down reaches Kodi Music, Refresh and Home. Back/Escape closes the shelf,
   returning to its caller; Home explicitly returns Home. Browsing/closing never
-  stops, starts or replaces playback. Refresh reloads the library and applies the
-  current-playing/random focus rule again.
+  stops, starts or replaces playback. Refresh reloads the library and preserves
+  the selected album by database ID while it remains present. Fresh entry, or
+  Refresh after that selection disappears, uses the current-playing/random rule.
 - An empty library explains how to add/scan music in Kodi. A read failure exposes
   Refresh, Kodi Music and Home, not a fake catalogue. A failed/empty/incomplete album read
   does not clear an existing queue. Cue/shared-file albums are directed to native
@@ -105,7 +106,9 @@ Kodi 21 APIs and control behavior were checked against primary sources:
 - [Native navigation cycle handling](https://github.com/xbmc/xbmc/blob/f8815ee40f49a700c047982d752be4b2a61420e2/xbmc/guilib/GUIWindow.cpp#L951-L985):
   centre-button self-navigation does not double-step.
 - [Native rotatey implementation](https://github.com/xbmc/xbmc/blob/f8815ee40f49a700c047982d752be4b2a61420e2/xbmc/guilib/VisibleEffect.cpp#L249-L285):
-  conditional fixed-angle perspective and `center="auto"`.
+  conditional fixed-angle perspective with explicit `center="X,0"` pivots.
+  For `rotatey`, the second coordinate is depth (Z), not screen Y; zero depth
+  avoids pushing neighboring covers away through an automatic screen-Y pivot.
 - [Playlist API](https://github.com/xbmc/xbmc/blob/f8815ee40f49a700c047982d752be4b2a61420e2/xbmc/interfaces/legacy/PlayList.h):
   `clear`, `add`, `unshuffle`; Player uses `play(playlist, startpos=0)`.
 - [Music tag API](https://github.com/xbmc/xbmc/blob/Omega/xbmc/interfaces/legacy/InfoTagMusic.h):
@@ -147,7 +150,8 @@ Native acceptance checklist:
 4. Move left/right rapidly and at both ends; OK starts one complete ordered album,
    not a duplicate queue. Verify paused/current player transitions and Play key.
 5. Check missing art, long Unicode titles, unreadable sources, queue protection on
-   failed reads, repeated Refresh and player continuation after Back/Home.
+   failed reads, repeated Refresh preserving the selected album, fallback when
+   that album is removed, and player continuation after Back/Home.
 6. Check missing/disabled helper: Home still reaches native Kodi Music.
 7. Only after the desktop checks, validate Pi/controller/audio/720p/1080p behavior.
 

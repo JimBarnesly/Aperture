@@ -10,6 +10,7 @@ from collections import deque
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import time
@@ -18,6 +19,12 @@ import xml.etree.ElementTree as ET
 from PIL import Image, ImageStat
 
 from zip_smoke_fixture import SUBJECTS, prepare, verify_installed
+
+
+def label_matches(actual, expected):
+    # Kodi appends the radio-button state to System.CurrentControl. Match only
+    # that known suffix; do not select arbitrary prefixes or neighboring items.
+    return re.sub(r' \([ *xX]\)$', '', actual.strip()) == expected
 
 
 class Driver:
@@ -101,7 +108,7 @@ class Driver:
         return before
 
     def labelled(self, text):
-        return any(self.state().get(key, '').strip() == text for key in ('list_item', 'control_label'))
+        return any(label_matches(self.state().get(key, ''), text) for key in ('list_item', 'control_label'))
 
     def find(self, text, direction='Down', steps=15):
         for index in range(steps + 1):
