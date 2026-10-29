@@ -83,5 +83,27 @@ class ZipObserverTests(unittest.TestCase):
         self.assertIn('System.CurrentControlId', source.read_text(encoding='utf-8'))
         self.assertIn('Window(Home).Property(Apeture.Music.Open)', source.read_text(encoding='utf-8'))
 
+    def test_game_browse_observation_is_read_only_and_typed(self):
+        o = self.observer
+        o.xbmcgui.getCurrentWindowId = lambda: 10821
+        o.xbmcgui.getCurrentWindowDialogId = lambda: 9999
+        o.xbmcgui.getScreenWidth = lambda: 1920
+        o.xbmcgui.getScreenHeight = lambda: 1080
+        o.xbmc.getSkinDir = lambda: 'skin.apeture'
+        o.xbmc.getCondVisibility = lambda condition: condition == 'ListItem.IsFolder'
+        labels = {'System.CurrentControlId': '50', 'Container.Property(Apeture.Directory)': 'root',
+                  'Container.Property(Apeture.GameCount)': '3', 'Container.Property(Apeture.SystemCount)': '2',
+                  'ListItem.Property(Apeture.System)': 'nes', 'ListItem.Property(Apeture.GameCount)': '2',
+                  'ListItem.FileNameAndPath': 'plugin://plugin.games.apeture/?action=system&system=nes'}
+        o.xbmc.getInfoLabel = lambda label: labels.get(label, '')
+        reader = types.SimpleNamespace(snapshot=lambda: {'unknown_sources': False})
+        state = o.observe(7, reader)
+        self.assertEqual((state['focus'], state['directory'], state['game_count'], state['system_count']), (50, 'root', '3', '2'))
+        self.assertEqual((state['item_system'], state['item_game_count']), ('nes', '2'))
+        self.assertEqual(state['item_path'], labels['ListItem.FileNameAndPath'])
+        self.assertIs(state['item_is_folder'], True)
+        self.assertIs(state['item_is_parent'], False)
+        self.assertIs(state['game_playing'], False)
+
 
 if __name__ == '__main__': unittest.main()

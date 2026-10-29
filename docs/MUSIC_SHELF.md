@@ -134,9 +134,14 @@ The disposable CI HOME used a private clocked PulseAudio null sink: this establi
 progress, not audible output. These are baseline results, not proof of later RC
 changes or Pi acceptance. See [BUILD_REPORT.md](BUILD_REPORT.md).
 
-**Still required:** exact-RC fresh ZIP install and accepted skin-switch evidence,
-Pi performance, physical sound, controller/CEC and TV scaling. Source/API and mock
-tests do not replace those gates. Headless details: `tools/MUSIC_SMOKE_INTEGRATION.md`.
+**Fresh ZIP/accepted-switch evidence:** [run 40801720239](https://github.com/JimBarnesly/Apeture/actions/runs/40801720239)
+passed for `296711243206a822caba7997b229a0c885a57384`, including the installed Music
+companion, restart persistence and accepted Estuary recovery. Later commits need
+their own final CI; see [BUILD_REPORT.md](BUILD_REPORT.md).
+
+**Still required:** Pi performance, physical sound, controller/CEC and TV scaling.
+Desktop playback uses a null sink, not audible output. Source/API and mock tests
+do not replace those gates. Headless details: `tools/MUSIC_SMOKE_INTEGRATION.md`.
 
 Native acceptance checklist:
 

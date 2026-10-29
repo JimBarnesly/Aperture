@@ -488,9 +488,16 @@ import json, pathlib, sys
 out=pathlib.Path(sys.argv[1])
 base=json.loads((out/'baseline-result.json').read_text())
 installed=json.loads((out/'zip-install/result.json').read_text())
-assert base['status']=='passed' and installed['status']=='passed'
+games=json.loads((out/'game-browse/result.json').read_text())
+assert base['status']=='passed' and installed['status']=='passed' and games['status']=='passed'
 base['scope'] += '; fresh ZIP installation, accepted skin switching and restart/recovery'
-base['checks'].extend(installed['checks'])
+for phase in (installed, games):
+    for check in phase['checks']:
+        if 'screenshot' in check:
+            check['screenshot']='zip-install/'+check['screenshot']
+        base['checks'].append(check)
+base['scope'] += '; synthetic nonplayable Games browsing and source recovery'
+base['game_browse_result']='game-browse/result.json'
 base['zip_install_result']='zip-install/result.json'
 base['limitations']=[item for item in base['limitations'] if item!='No ZIP-install or accepted skin-switch check']
 (out/'result.json').write_text(json.dumps(base,indent=2)+'\n')

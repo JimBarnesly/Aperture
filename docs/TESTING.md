@@ -11,6 +11,15 @@ Run the repository's validation, Python unit tests and package build. Check ZIP
 root names against their add-on identifiers, reject path traversal and omit caches.
 Generated upstream dependencies must come from pinned official source revisions.
 
+## Desktop fresh-install gate
+
+[Run 40801720239](https://github.com/JimBarnesly/Apeture/actions/runs/40801720239)
+passed on `296711243206a822caba7997b229a0c885a57384`: native installation of all three
+ZIPs, explicit Keep Aperture, restart persistence, installed Games/Music, accepted
+Estuary recovery and return to Aperture with Unknown sources off after restart.
+Retain the run's matching checksums and evidence. Re-run CI after later changes;
+this result does not mark the Pi checklist below passed.
+
 ## Pi 5 / Kodi 21 smoke test (not performed in the build container)
 
 1. Back up Kodi's profile. Keep the existing default skin installed.

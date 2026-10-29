@@ -89,7 +89,11 @@ the skin. A detected game file does not guarantee a compatible Pi core exists.
 
 ## Acceptance
 
-Desktop Kodi GUI checks are evidence, not a substitute for this Pi test. Check
+Desktop native ZIP installation, accepted skin selection, restart persistence and
+Estuary recovery passed on commit `296711243206a822caba7997b229a0c885a57384` in
+[run 40801720239](https://github.com/JimBarnesly/Apeture/actions/runs/40801720239).
+That is not Windows preparation, SD imaging or Pi hardware acceptance. The kit
+remains guided preparation, not a fully provisioned SD image. Check
 remote/controller focus, TV scaling, skin rollback and actual media playback.
 If something fails, record the Kodi version, screen/action and log excerpt.
 Use [TESTING.md](TESTING.md) for the complete checklist.

@@ -16,9 +16,28 @@ not bundled into the installable add-ons.
 
 The earlier claim that no Kodi runtime had ever been exercised is obsolete.
 These baseline results do not automatically validate subsequent RC source changes.
-Fresh ZIP installation and an accepted keep/revert skin switch are separate gates;
-require the exact RC's resulting runtime evidence rather than inferring them from
-pre-populated addon directories or a previous navigation run.
+## Verified RC fresh-install acceptance
+
+[Run 40801720239](https://github.com/JimBarnesly/Apeture/actions/runs/40801720239)
+**passed** for exact source commit `296711243206a822caba7997b229a0c885a57384`:
+
+- Started with stock Estuary and no preinstalled Aperture add-ons.
+- Installed all three `1.0.0~rc1` packages through Kodi's native ZIP installer.
+- Explicitly accepted Keep Aperture and verified the selection after restart.
+- Opened the installed Games and Music companions.
+- Explicitly accepted recovery to Estuary, then returned to Aperture.
+- Verified the final restarted profile had Aperture selected and Unknown sources off.
+
+This closes the desktop fresh-ZIP/accepted-switch gate for that exact head; it is
+not inferred from copying an add-on tree into an existing profile. Counts and
+package hashes are retained with the run's artifacts rather than guessed here.
+Further source, harness or documentation commits require their own final CI run;
+this record does not automatically attest a later commit or differently built kit.
+
+An earlier harness crash was traced with GDB to the test observer calling
+`Window.getControl` after the observed window was destroyed. That was an observer
+lifetime error, not evidence of an installable-package fault. The passing run
+uses the corrected observer. This diagnosis does not waive hardware acceptance.
 
 ## Build and provenance
 
@@ -42,8 +61,8 @@ The test kit comprises:
 
 The generated `checksums.json` is authoritative for the exact ZIP bytes; this
 source document deliberately does not copy hashes that change after rebuilding.
-Do not mix kits or infer a published artifact, successful CI run, merge or stable
-tag from this preparation report.
+Do not mix kits or infer a merge, stable tag or successful CI for any head other
+than the explicitly identified evidence above.
 
 ## Hardware gates still open
 

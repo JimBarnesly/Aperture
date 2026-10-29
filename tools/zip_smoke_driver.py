@@ -371,6 +371,26 @@ def main():
             driver.stop()
     (out / 'result.json').write_text(json.dumps(result, indent=2) + '\n', encoding='utf-8')
     print('PASS: fresh Kodi ZIP installs, accepted skin switching, restart persistence and Estuary recovery verified.', flush=True)
+    # Preserve the completed ZIP result even if later browse-only coverage fails.
+    from game_browse_smoke_driver import run as run_game_browse
+    game_out = out.parent / 'game-browse'
+    game_out.mkdir(exist_ok=True)
+    start = len(driver.checks)
+    try:
+        game_result = run_game_browse(driver, args.runtime)
+    except Exception as exc:
+        try:
+            driver.capture('games-failure')
+        except Exception:
+            pass
+        game_result = {'status': 'failed', 'reason': str(exc), 'checks': driver.checks[start:],
+                       'traceback': traceback.format_exc()}
+        (game_out / 'result.json').write_text(json.dumps(game_result, indent=2) + '\n', encoding='utf-8')
+        raise
+    finally:
+        driver.stop()
+    (game_out / 'result.json').write_text(json.dumps(game_result, indent=2) + '\n', encoding='utf-8')
+    print('PASS: synthetic nonplayable Games browsing and source recovery verified; no game launch attempted.', flush=True)
 
 
 if __name__ == '__main__':

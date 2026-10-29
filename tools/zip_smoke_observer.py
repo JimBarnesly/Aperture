@@ -75,6 +75,15 @@ def observe(sequence, settings):
         'folder': xbmc.getInfoLabel('Container.FolderPath'),
         'library_state': xbmc.getInfoLabel('Container.Property(Apeture.LibraryState)'),
         'music_open': xbmc.getInfoLabel('Window(Home).Property(Apeture.Music.Open)'),
+        'directory': xbmc.getInfoLabel('Container.Property(Apeture.Directory)'),
+        'game_count': xbmc.getInfoLabel('Container.Property(Apeture.GameCount)'),
+        'system_count': xbmc.getInfoLabel('Container.Property(Apeture.SystemCount)'),
+        'item_system': xbmc.getInfoLabel('ListItem.Property(Apeture.System)'),
+        'item_game_count': xbmc.getInfoLabel('ListItem.Property(Apeture.GameCount)'),
+        'item_path': xbmc.getInfoLabel('ListItem.FileNameAndPath'),
+        'item_is_folder': bool(xbmc.getCondVisibility('ListItem.IsFolder')),
+        'item_is_parent': bool(xbmc.getCondVisibility('ListItem.IsParentFolder')),
+        'game_playing': bool(xbmc.getCondVisibility('Player.HasGame')),
         'width': xbmcgui.getScreenWidth(), 'height': xbmcgui.getScreenHeight()}
 
 

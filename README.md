@@ -26,8 +26,15 @@ These are historical baseline results, not a claim that an edited RC has passed 
 See [release evidence and gates](docs/BUILD_REPORT.md) and [acceptance checklist](docs/TESTING.md).
 
 Pi performance, physical audio, controller/CEC mapping, TV scaling and compatible
-game-core playback remain required before calling 1.0 stable. Fresh ZIP installation
-and an accepted skin switch require their own exact-build runtime evidence.
+game-core playback remain required before calling 1.0 stable.
+
+**Fresh ZIP acceptance passed** in [run 40801720239](https://github.com/JimBarnesly/Apeture/actions/runs/40801720239)
+for exact commit `296711243206a822caba7997b229a0c885a57384`: all three ZIPs installed
+through Kodi, Keep Aperture explicitly accepted, selection persisted across
+restart, installed Games/Music opened, Estuary recovery was accepted, and Aperture
+was restored with Unknown sources off after the final restart. This is desktop
+installation evidence, not Pi or Windows acceptance; subsequent commits require
+fresh exact-head CI. See [release evidence](docs/BUILD_REPORT.md).
 
 ## Install the test kit
 
