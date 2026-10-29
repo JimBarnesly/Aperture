@@ -67,6 +67,8 @@ class ZipDriverLabelsTests(unittest.TestCase):
             def state(self):
                 return {'focus': 450, 'control_label': self.labels[self.index], 'list_item': self.labels[self.index]}
             def labelled(self, label): return self.labels[self.index] == label
+            def settle_focus(self):
+                if self.pending: raise AssertionError('Cannot settle queued input')
             def key(self, direction):
                 # Simulate an observer frame arriving before Kodi consumes Down.
                 if self.pending: raise AssertionError('Queued duplicate arrow against stale UI')
@@ -83,6 +85,28 @@ class ZipDriverLabelsTests(unittest.TestCase):
         namespace['find'](ui, 'Skin.zip')
         self.assertEqual(ui.arrows, 3)
         self.assertEqual(ui.state()['list_item'], 'Skin.zip')
+
+    def test_focus_barrier_rejects_folder_transition_and_repeated_cached_frames(self):
+        source = Path(__file__).resolve().parents[1] / 'tools/zip_smoke_driver.py'
+        tree = ast.parse(source.read_text(encoding='utf-8'))
+        driver = next(node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == 'Driver')
+        function = next(node for node in driver.body if isinstance(node, ast.FunctionDef) and node.name == 'settle_focus')
+        namespace = {}
+        exec(compile(ast.Module(body=[function], type_ignores=[]), str(source), 'exec'), namespace)
+        self_test = self
+        class TransitionalUI:
+            def wait(self, description, stable, **kwargs):
+                def frame(seq, when, label):
+                    return {'sequence': seq, 'time': when, 'window': 10040, 'dialog': 10126,
+                            'focus': 450, 'control_label': label, 'list_item': label}
+                self_test.assertFalse(stable(frame(1, 1.0, 'Source')))
+                self_test.assertFalse(stable(frame(2, 1.2, 'Source')))
+                self_test.assertFalse(stable(frame(3, 1.4, '..')))
+                for _ in range(5):
+                    self_test.assertFalse(stable(frame(3, 1.4, '..')))
+                self_test.assertFalse(stable(frame(4, 1.6, '..')))
+                self_test.assertTrue(stable(frame(5, 2.0, '..')))
+        namespace['settle_focus'](TransitionalUI())
 
 
 if __name__ == '__main__':

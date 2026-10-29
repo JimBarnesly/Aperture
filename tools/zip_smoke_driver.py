@@ -151,7 +151,24 @@ class Driver:
     def labelled(self, text):
         return any(label_matches(self.state().get(key, ''), text) for key in ('list_item', 'control_label'))
 
+    def settle_focus(self):
+        signature, since, frames, sequence = None, 0, 0, -1
+        def stable(state):
+            nonlocal signature, since, frames, sequence
+            current = tuple(state.get(key) for key in ('window', 'dialog', 'focus', 'control_label', 'list_item'))
+            if current != signature:
+                signature, since, frames, sequence = current, state['time'], 0, -1
+            if state['sequence'] != sequence:
+                sequence = state['sequence']
+                frames += 1
+            return frames >= 3 and state['time'] - since >= 0.5
+        self.wait('focused item settled across real rendered frames', stable, timeout=8)
+
     def find(self, text, direction='Down', steps=15):
+        # Entering a folder can briefly retain its previous source row. Let that
+        # transition finish before sending an arrow, or it can masquerade as the
+        # arrow's own focus change and leave an extra input queued behind it.
+        self.settle_focus()
         for index in range(steps + 1):
             if self.labelled(text):
                 return
@@ -163,6 +180,7 @@ class Driver:
                 self.wait('focus changed after ' + direction,
                     lambda s: tuple(s.get(key) for key in ('focus', 'control_label', 'list_item')) != previous,
                     after=before, timeout=5)
+                self.settle_focus()
         raise AssertionError('Cannot focus {!r}; actual state={}'.format(text, self.state()))
 
     def capture(self, name):
