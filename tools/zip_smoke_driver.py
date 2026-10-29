@@ -12,6 +12,7 @@ import os
 from pathlib import Path
 import re
 import shutil
+import signal
 import subprocess
 import time
 import traceback
@@ -33,6 +34,15 @@ def setting_matches(state, expected, after=0):
             and time.time() - state.get('unknown_sources_read_completed', 0) < 3)
 
 
+def debugger_commands(pidfile):
+    return ("set pagination off\nset confirm off\nset debuginfod enabled off\n"
+            "set disable-randomization off\nset startup-with-shell off\n"
+            "handle SIGTERM nostop noprint pass\nstarti\n"
+            "python\nimport pathlib\npathlib.Path(" + repr(str(pidfile)) +
+            ").write_text(str(gdb.selected_inferior().pid), encoding='utf-8')\nend\n"
+            "continue\nthread apply all bt 24\n")
+
+
 class Driver:
     def __init__(self, root, runtime, out, binary):
         self.out, self.binary = Path(out), binary
@@ -46,6 +56,7 @@ class Driver:
         (self.out / 'logs').mkdir()
         (self.out / 'screenshots').mkdir()
         self.process = None
+        self.kodi_pid = None
         self.stdout = None
         self.session = 0
         self.latest = {}
@@ -67,7 +78,7 @@ class Driver:
             if self.process.poll() is not None:
                 raise AssertionError('Fresh-profile Kodi exited: ' + str(self.process.returncode))
             value = self.state()
-            if (value.get('pid') == self.process.pid and value.get('sequence', 0) > after
+            if (value.get('pid') == self.kodi_pid and value.get('sequence', 0) > after
                     and time.time() - value.get('time', 0) < 3 and predicate(value)):
                 return value
             time.sleep(0.1)
@@ -78,8 +89,21 @@ class Driver:
         (self.out / 'state.json').unlink(missing_ok=True)
         self.latest = {}
         self.stdout = (self.out / 'logs' / ('stdout-{}.log'.format(self.session))).open('wb')
-        self.process = subprocess.Popen([self.binary, '--windowing=x11', '--gl-interface=glx',
-            '--audio-backend=pulseaudio', '--debug', '-fs'], env=self.env, stdout=self.stdout, stderr=subprocess.STDOUT)
+        # Debug only our own newly launched child. No attach, ptrace policy,
+        # capabilities, ASLR setting or host configuration changes are made.
+        # A native crash remains a failure, with all-thread backtraces retained.
+        pidfile = self.out / 'logs' / ('kodi-pid-{}.txt'.format(self.session))
+        commands = self.out / 'logs' / ('gdb-{}.commands'.format(self.session))
+        commands.write_text(debugger_commands(pidfile), encoding='utf-8')
+        self.process = subprocess.Popen(['gdb', '--batch', '--nx', '-x', str(commands), '--args',
+            self.binary, '--windowing=x11', '--gl-interface=glx', '--audio-backend=pulseaudio', '--debug', '-fs'],
+            env=self.env, stdout=self.stdout, stderr=subprocess.STDOUT)
+        until = time.monotonic() + 20
+        while not pidfile.exists() and self.process.poll() is None and time.monotonic() < until:
+            time.sleep(0.1)
+        if not pidfile.exists() or int(pidfile.read_text(encoding='utf-8')) <= 0:
+            raise AssertionError('Debugger could not launch its isolated Kodi child; see stdout log')
+        self.kodi_pid = int(pidfile.read_text(encoding='utf-8'))
         self.wait('fresh-profile Home', lambda s: s.get('skin') == skin and s.get('window') == 10000
                   and s.get('dialog') == 9999 and setting_matches(s, False), timeout=90)
         windows = subprocess.check_output(['xdotool', 'search', '--onlyvisible', '--class', '^Kodi( from Debian)?$'], text=True).split()
@@ -92,10 +116,21 @@ class Driver:
 
     def stop(self):
         if self.process is not None and self.process.poll() is None:
-            self.process.terminate()
+            if self.kodi_pid is not None:
+                try:
+                    os.kill(self.kodi_pid, signal.SIGTERM)
+                except ProcessLookupError:
+                    pass
+            else:
+                self.process.terminate()
             try:
                 self.process.wait(timeout=12)
             except subprocess.TimeoutExpired:
+                if self.kodi_pid is not None:
+                    try:
+                        os.kill(self.kodi_pid, signal.SIGKILL)
+                    except ProcessLookupError:
+                        pass
                 self.process.kill()
                 self.process.wait(timeout=5)
                 raise AssertionError('Kodi did not shut down cleanly for persistence test')

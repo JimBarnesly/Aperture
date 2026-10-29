@@ -35,6 +35,23 @@ class ZipDriverLabelsTests(unittest.TestCase):
         self.assertFalse(matches(dict(state, unknown_sources_read_completed=now - 10), False))
         self.assertFalse(matches({'unknown_sources': False}, False))
 
+    def test_debugger_launches_child_without_attachment_or_policy_changes(self):
+        source = Path(__file__).resolve().parents[1] / 'tools/zip_smoke_driver.py'
+        tree = ast.parse(source.read_text(encoding='utf-8'))
+        function = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == 'debugger_commands')
+        namespace = {}
+        exec(compile(ast.Module(body=[function], type_ignores=[]), str(source), 'exec'), namespace)
+        script = namespace['debugger_commands'](Path('/tmp/private fixture/kodi-pid.txt'))
+        self.assertIn('starti\n', script)
+        self.assertIn('continue\nthread apply all bt 24\n', script)
+        self.assertIn('set disable-randomization off', script)  # Preserve default ASLR.
+        self.assertIn('set debuginfod enabled off', script)
+        self.assertNotIn('attach ', script)
+        self.assertNotIn('sudo', script)
+        self.assertNotIn('sysctl', script)
+        python = script.split('python\n', 1)[1].split('\nend', 1)[0]
+        compile(python, '<gdb-python>', 'exec')
+
 
 if __name__ == '__main__':
     unittest.main()
