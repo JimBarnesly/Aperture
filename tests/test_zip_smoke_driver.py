@@ -52,6 +52,38 @@ class ZipDriverLabelsTests(unittest.TestCase):
         python = script.split('python\n', 1)[1].split('\nend', 1)[0]
         compile(python, '<gdb-python>', 'exec')
 
+    def test_find_waits_for_actual_item_change_before_another_arrow(self):
+        source = Path(__file__).resolve().parents[1] / 'tools/zip_smoke_driver.py'
+        tree = ast.parse(source.read_text(encoding='utf-8'))
+        driver = next(node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == 'Driver')
+        function = next(node for node in driver.body if isinstance(node, ast.FunctionDef) and node.name == 'find')
+        namespace = {}
+        exec(compile(ast.Module(body=[function], type_ignores=[]), str(source), 'exec'), namespace)
+        class DelayedUI:
+            index = 0
+            pending = False
+            arrows = 0
+            labels = ['..', 'Games.zip', 'Music.zip', 'Skin.zip']
+            def state(self):
+                return {'focus': 450, 'control_label': self.labels[self.index], 'list_item': self.labels[self.index]}
+            def labelled(self, label): return self.labels[self.index] == label
+            def key(self, direction):
+                # Simulate an observer frame arriving before Kodi consumes Down.
+                if self.pending: raise AssertionError('Queued duplicate arrow against stale UI')
+                self.pending = True
+                self.arrows += 1
+                return self.arrows
+            def wait(self, description, predicate, **kwargs):
+                self_test.assertFalse(predicate(self.state()))
+                self.index = (self.index + 1) % len(self.labels)
+                self.pending = False
+                self_test.assertTrue(predicate(self.state()))
+        self_test = self
+        ui = DelayedUI()
+        namespace['find'](ui, 'Skin.zip')
+        self.assertEqual(ui.arrows, 3)
+        self.assertEqual(ui.state()['list_item'], 'Skin.zip')
+
 
 if __name__ == '__main__':
     unittest.main()

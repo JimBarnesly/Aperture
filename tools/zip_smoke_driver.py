@@ -156,7 +156,13 @@ class Driver:
             if self.labelled(text):
                 return
             if index < steps:
-                self.key(direction)
+                previous = tuple(self.state().get(key) for key in ('focus', 'control_label', 'list_item'))
+                before = self.key(direction)
+                # A newer observer frame need not mean Kodi has consumed the key.
+                # Never queue another arrow until the actual focused item changes.
+                self.wait('focus changed after ' + direction,
+                    lambda s: tuple(s.get(key) for key in ('focus', 'control_label', 'list_item')) != previous,
+                    after=before, timeout=5)
         raise AssertionError('Cannot focus {!r}; actual state={}'.format(text, self.state()))
 
     def capture(self, name):
@@ -211,6 +217,8 @@ class Driver:
         self.key('Return')
         self.find(row['file'], steps=5)
         self.capture('zip-04-select-' + row['addon'])
+        if not self.labelled(row['file']):
+            raise AssertionError('ZIP filename focus changed before activation; refusing to select another item')
         self.key('Return')
         self.wait('ZIP installed or skin install prompt', lambda s: row['addon'] in s.get('installed', {}), timeout=90)
         if row['addon'] == 'skin.apeture':
