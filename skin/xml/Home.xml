@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<window>
+  <defaultcontrol always="true">100</defaultcontrol>
+  <controls>
+    <control type="image">
+      <left>0</left><top>0</top><width>1920</width><height>1080</height>
+      <texture colordiffuse="FF10283D">colors/white.png</texture>
+    </control>
+    <control type="label">
+      <left>100</left><top>76</top><width>900</width><height>100</height>
+      <font>font45</font><textcolor>FFECF7FF</textcolor><label>APERTURE</label>
+    </control>
+    <control type="label">
+      <left>105</left><top>176</top><width>1000</width><height>70</height>
+      <font>font13</font><textcolor>FF8FBBD4</textcolor><label>YOUR ENTERTAINMENT, ALL IN ONE PLACE</label>
+    </control>
+    <control type="group">
+      <left>105</left><top>315</top><width>650</width><height>620</height>
+      <control type="button" id="100">
+        <left>0</left><top>0</top><width>590</width><height>88</height>
+        <label>Movies</label><font>font30</font>
+        <onclick>ActivateWindow(Videos,videodb://movies/titles/,return)</onclick>
+        <onup>106</onup><ondown>101</ondown>
+      </control>
+      <control type="button" id="101">
+        <left>0</left><top>95</top><width>590</width><height>88</height>
+        <label>TV Shows</label><font>font30</font>
+        <onclick>ActivateWindow(Videos,videodb://tvshows/titles/,return)</onclick>
+        <onup>100</onup><ondown>102</ondown>
+      </control>
+      <control type="button" id="102">
+        <left>0</left><top>190</top><width>590</width><height>88</height>
+        <label>Games</label><font>font30</font>
+        <onclick>ActivateWindow(Games)</onclick>
+        <onup>101</onup><ondown>103</ondown>
+      </control>
+      <control type="button" id="103">
+        <left>0</left><top>285</top><width>590</width><height>88</height>
+        <label>Music</label><font>font30</font>
+        <onclick>ActivateWindow(Music)</onclick>
+        <onup>102</onup><ondown>104</ondown>
+      </control>
+      <control type="button" id="104">
+        <left>0</left><top>380</top><width>590</width><height>88</height>
+        <label>Videos / Streaming</label><font>font30</font>
+        <onclick>ActivateWindow(Videos)</onclick>
+        <onup>103</onup><ondown>105</ondown>
+      </control>
+      <control type="button" id="105">
+        <left>0</left><top>475</top><width>590</width><height>88</height>
+        <label>Settings</label><font>font30</font>
+        <onclick>ActivateWindow(Settings)</onclick>
+        <onup>104</onup><ondown>106</ondown>
+      </control>
+      <control type="button" id="106">
+        <left>0</left><top>570</top><width>590</width><height>88</height>
+        <label>Power</label><font>font30</font>
+        <onclick>ActivateWindow(ShutdownMenu)</onclick>
+        <onup>105</onup><ondown>100</ondown>
+      </control>
+    </control>
+    <control type="label">
+      <left>1000</left><top>365</top><width>760</width><height>100</height>
+      <font>font30</font><textcolor>FFECF7FF</textcolor><label>WELCOME HOME</label>
+    </control>
+    <control type="label">
+      <left>1000</left><top>470</top><width>770</width><height>170</height>
+      <font>font13</font><textcolor>FF8FBBD4</textcolor>
+      <label>Movies  /  Games  /  Music  /  Streaming</label>
+    </control>
+  </controls>
+</window>
