@@ -1,39 +1,51 @@
 # Aperture
 
-A unified TV-first Kodi skin for Raspberry Pi 5 and LibreELEC, inspired by classic XBMC, early-2000s media centres and restrained Wii-era gloss.
+Kodi-first TV interface for Raspberry Pi 5, with native Kodi RetroPlayer and integration with [Format](https://github.com/JimBarnesly/Format).
 
-## Current state — 0.1.0 prototype
+## Status
 
-This is an **early installable home-screen prototype**, not the completed reference design. It reuses the locally installed Estuary skin for all secondary screens and replaces its home window with an Aperture navigation screen. The Games entry opens Kodi's native Games window; no ROM scanner, console carousel or emulator cores are bundled yet. Real-Debrid, AirPlay and Format are not integrated.
+**Development prototype — not hardware-tested.** The initial skin froze during activation on LibreELEC/Kodi 21.3. A simplified Home.xml and revised installer have been committed, but must be tested on Kodi before treating them as stable.
 
-## Install on LibreELEC
+## Install skin
 
-Enable SSH in LibreELEC settings. SSH into the Pi, then run:
+On LibreELEC (root SSH) or Raspberry Pi OS (SSH as the Kodi desktop user):
 
 ```sh
-wget -O /storage/aperture-install.sh https://raw.githubusercontent.com/JimBarnesly/Aperture/main/install.sh
-cat /storage/aperture-install.sh
-sh /storage/aperture-install.sh
+wget -O /tmp/aperture-install.sh https://raw.githubusercontent.com/JimBarnesly/Aperture/main/install.sh
+sh /tmp/aperture-install.sh
 ```
 
-Then in Kodi open **Settings → Interface → Skin → Aperture**. Keep Estuary installed as a fallback.
+Activate through Kodi's add-on manager and Settings > Interface > Skin. Estuary remains installed. The installer keeps a previous Aperture backup.
 
-The installer copies the Estuary skin already installed on the Pi, changes its add-on ID and overlays the new Home.xml. It backs up any prior Aperture install as `skin.aperture.previous`. Requires a LibreELEC build with Estuary under `/usr/share/kodi/addons/skin.estuary`. Requires network access to GitHub.
+## Format Kodi integration
+
+Format is a separate Node.js music server. It exposes `GET /api/library`, `GET /api/cover?id=...`, and `GET /api/audio?id=...`. The initial read-only Kodi client displays Format albums and tracks and passes streaming URLs to Kodi's player.
+
+```sh
+wget -O /tmp/aperture-format.sh https://raw.githubusercontent.com/JimBarnesly/Aperture/main/install-format.sh
+sh /tmp/aperture-format.sh
+```
+
+In Kodi, configure **Format for Aperture** with the reachable Format server URL (default `http://192.168.68.60:4534` is only an example from the original Format deployment). The Format service must be running on a computer/server reachable by the Pi. It is not automatically installed on the Pi.
+
+**Limitations:** Kodi-native music views are used for now, not Format's original web cover-flow UI. Library browsing and playback still need on-device testing. No automatic discovery or remote server provisioning. Kodi skin and Format add-on are independently installable.
+
+## Planned work
+
+1. Confirm Kodi 21.3 skin activation and navigation without hanging.
+2. Verify Format library and playback against the actual server.
+3. Recreate Format's album-first browsing with a controller-oriented view.
+4. Integrate native RetroPlayer game library and system auto-detection.
+5. Add audio/video receiver services under Raspberry Pi OS.
 
 ## Recovery
 
-If the interface becomes unusable, SSH into the Pi and run:
+Switch to Estuary in Kodi. On LibreELEC, if Kodi hangs:
 
 ```sh
+systemctl stop kodi
 sed -i 's/skin.aperture/skin.estuary/g' /storage/.kodi/userdata/guisettings.xml
-systemctl restart kodi
+systemctl start kodi
 ```
 
-## Roadmap
-
-- Native game library and system detection
-- Artwork and polished controller navigation
-- Music/Format integration
-- Receiver services and session management
-
-GPL-compatible Estuary source is copied **locally from your installed Kodi distribution**; this repository only holds Aperture-specific changes and installation logic.
+Estuary's files are copied locally from the installed Kodi distribution. The repository contains Aperture-specific source and installation scripts.
