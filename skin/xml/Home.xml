@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <window>
-  <defaultcontrol always="true">100</defaultcontrol>
+  <defaultcontrol always="false">100</defaultcontrol>
   <controls>
     <control type="image">
       <left>0</left><top>0</top><width>1920</width><height>1080</height>
@@ -8,7 +8,7 @@
     </control>
     <control type="label">
       <left>100</left><top>75</top><width>1300</width><height>90</height>
-      <font>font30</font><textcolor>FFFFFFFF</textcolor><label>APERTURE</label>
+      <font>font32</font><textcolor>FFFFFFFF</textcolor><label>APERTURE</label>
     </control>
     <control type="label">
       <left>100</left><top>175</top><width>1400</width><height>60</height>
@@ -16,44 +16,44 @@
     </control>
     <control type="button" id="100">
       <left>100</left><top>300</top><width>620</width><height>85</height>
-      <label>Movies</label><font>font30</font>
+      <label>Movies</label><font>font32</font>
       <onclick>ActivateWindow(Videos,videodb://movies/titles/,return)</onclick>
       <onup>106</onup><ondown>101</ondown>
     </control>
     <control type="button" id="101">
       <left>100</left><top>390</top><width>620</width><height>85</height>
-      <label>TV Shows</label><font>font30</font>
+      <label>TV Shows</label><font>font32</font>
       <onclick>ActivateWindow(Videos,videodb://tvshows/titles/,return)</onclick>
       <onup>100</onup><ondown>102</ondown>
     </control>
     <control type="button" id="102">
       <left>100</left><top>480</top><width>620</width><height>85</height>
-      <label>Games</label><font>font30</font>
+      <label>Games</label><font>font32</font>
       <onclick>ActivateWindow(Games)</onclick>
       <onup>101</onup><ondown>103</ondown>
     </control>
     <control type="button" id="103">
       <left>100</left><top>570</top><width>620</width><height>85</height>
-      <label>Format Music</label><font>font30</font>
+      <label>Format Music</label><font>font32</font>
       <onclick condition="System.HasAddon(plugin.audio.aperture.format)">ActivateWindow(Music,plugin://plugin.audio.aperture.format/,return)</onclick>
       <onclick condition="!System.HasAddon(plugin.audio.aperture.format)">ActivateWindow(Music)</onclick>
       <onup>102</onup><ondown>104</ondown>
     </control>
     <control type="button" id="104">
       <left>100</left><top>660</top><width>620</width><height>85</height>
-      <label>Video Sources</label><font>font30</font>
+      <label>Video Sources</label><font>font32</font>
       <onclick>ActivateWindow(Videos)</onclick>
       <onup>103</onup><ondown>105</ondown>
     </control>
     <control type="button" id="105">
       <left>100</left><top>750</top><width>620</width><height>85</height>
-      <label>Settings</label><font>font30</font>
+      <label>Settings</label><font>font32</font>
       <onclick>ActivateWindow(Settings)</onclick>
       <onup>104</onup><ondown>106</ondown>
     </control>
     <control type="button" id="106">
       <left>100</left><top>840</top><width>620</width><height>85</height>
-      <label>Power</label><font>font30</font>
+      <label>Power</label><font>font32</font>
       <onclick>ActivateWindow(ShutdownMenu)</onclick>
       <onup>105</onup><ondown>100</ondown>
     </control>
