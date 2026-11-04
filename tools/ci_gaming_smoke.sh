@@ -15,6 +15,7 @@ chmod 700 "$XDG_RUNTIME_DIR"
 KODI_BIN=$(dpkg -L kodi-bin | grep '/kodi\.bin$' | head -1)
 export KODI_BIN_HOME=$(dirname "$KODI_BIN") KODI_BINADDON_PATH="$(dirname "$KODI_BIN")/addons"
 "$KODI_BIN" --version > "$OUT/kodi-version.txt"
+grep -Eq "Center 21\.([0-9]+)" "$OUT/kodi-version.txt" || { echo "Kodi21 required" >&2; exit 2; }
 python3 "$ROOT/tools/build_pcsx_core.py" --output-dir "$RUNTIME/pcsx" > "$OUT/pcsx-build.log" 2>&1
 python3 "$ROOT/tools/gaming_fixture.py" --root "$ROOT" --runtime "$RUNTIME" --out "$OUT" --pcsx "$RUNTIME/pcsx/pcsx_rearmed_libretro.so"
 export PULSE_RUNTIME_PATH="$RUNTIME/pulse" PULSE_STATE_PATH="$RUNTIME/pulse-state" PULSE_SERVER="unix:$RUNTIME/pulse/native" PULSE_COOKIE="$RUNTIME/pulse/cookie"
@@ -32,7 +33,7 @@ touch "$XAUTHORITY"; xauth -f "$XAUTHORITY" add "$DISPLAY" . "$(python3 -c 'impo
 Xvfb "$DISPLAY" -auth "$XAUTHORITY" -screen 0 1280x720x24 -nolisten tcp +extension GLX +render > "$OUT/xvfb.log" 2>&1 & X_PID=$!
 for _ in {1..100}; do xdpyinfo >/dev/null 2>&1 && pactl info >/dev/null 2>&1 && break; sleep .1; done
 xdpyinfo >/dev/null; pactl info > "$OUT/pulse-info.txt"
-"$KODI_BIN" --standalone > "$OUT/kodi.stdout" 2>&1 & K_PID=$!
+"$KODI_BIN" --windowing=x11 --gl-interface=glx --audio-backend=pulseaudio --debug -fs > "$OUT/kodi.stdout" 2>&1 & K_PID=$!
 for _ in {1..1800}; do
   [[ -f "$OUT/result.json" ]] && break
   kill -0 "$K_PID" 2>/dev/null || { echo 'Kodi exited without test result'; cat "$OUT/kodi.stdout"; exit 1; }
