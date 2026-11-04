@@ -184,7 +184,7 @@ cat > "$KODI_DATA/userdata/advancedsettings.xml" <<'XML'
 XML
 mkdir -p "$KODI_DATA/userdata/keymaps"
 cat > "$KODI_DATA/userdata/keymaps/ci.xml" <<'XML'
-<keymap><global><keyboard><i>ActivateWindow(10032)</i></keyboard></global><Home><keyboard><i>ActivateWindow(10032)</i></keyboard></Home></keymap>
+<keymap><global><keyboard><i>ActivateWindow(10032,lookandfeel.skin)</i></keyboard></global><Home><keyboard><i>ActivateWindow(10032,lookandfeel.skin)</i></keyboard></Home></keymap>
 XML
 # Synthetic loopback Format server and read-only player observer. No user data.
 python3 "$ROOT/tests/kodi_format_fixture.py" prepare --runtime "$RUNTIME" --out "$OUT"
@@ -368,9 +368,9 @@ try:
         before=press('i')
         wait_for('Interface settings',lambda s:s.get('window')==10032 and s.get('dialog')==9999,after=before)
         current=settle_focus()
-        if current.get('focus')==3:
+        if current.get('focus') in (3,-200):
             before=press('Right')
-            wait_for('Settings content focused',lambda s:s.get('focus')!=3,after=before)
+            wait_for('Settings content focused',lambda s:s.get('focus') not in (3,-200),after=before)
         find_label('Skin','Down',8)
         before=press('Return')
         wait_for('Skin chooser',lambda s:s.get('dialog')==12000,after=before)

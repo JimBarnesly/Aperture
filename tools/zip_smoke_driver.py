@@ -193,7 +193,7 @@ class Driver:
     def set_unknown_sources(self, enabled):
         self.key('n')
         self.wait('native add-on settings', lambda s: s.get('window') == 10016 and s.get('dialog') == 9999)
-        if self.state().get('focus') == 3:
+        if self.state().get('focus') in (3, -200):
             self.key('Right')
         self.find('Unknown sources')
         self.wait('fresh Unknown sources value', lambda s: any(setting_matches(s, value) for value in (True, False)))
@@ -236,7 +236,7 @@ class Driver:
     def choose_skin(self, name, identifier, tag):
         self.key('i')
         self.wait('native Interface settings', lambda s: s.get('window') == 10032 and s.get('dialog') == 9999)
-        if self.state().get('focus') == 3:
+        if self.state().get('focus') in (3, -200):
             self.key('Right')
         self.find('Skin', steps=12)
         self.key('Return')
