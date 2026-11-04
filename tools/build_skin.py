@@ -109,6 +109,9 @@ def assemble(source: Path, output: Path, home: Path, font_roots=()):
         games = ROOT / 'skin/xml/MyGames.xml'
         if games.is_file():
             shutil.copy2(games, staged / 'xml/MyGames.xml')
+        movies = ROOT / 'skin/xml/MyVideoNav.xml'
+        if movies.is_file():
+            shutil.copy2(movies, staged / 'xml/MyVideoNav.xml')
         for folder in ('media', 'licenses'):
             extra=ROOT/'skin'/folder
             if extra.is_dir(): shutil.copytree(extra, staged/folder, dirs_exist_ok=True)
@@ -160,6 +163,27 @@ def package_format(source: Path, output: Path):
     return hashlib.sha256(output.read_bytes()).hexdigest()
 
 
+def package_movies(source: Path, output: Path):
+    """Package read-only local movie browser independently of the skin."""
+    manifest = ET.parse(source / 'addon.xml').getroot()
+    addon_id = manifest.get('id')
+    if addon_id != 'plugin.video.aperture.movies':
+        raise ValueError('Wrong Movies add-on ID')
+    for script in source.rglob('*.py'):
+        compile(script.read_text(), str(script), 'exec')
+    output.parent.mkdir(parents=True, exist_ok=True)
+    files = {p.relative_to(source).as_posix(): p.read_bytes() for p in source.rglob('*')
+             if p.is_file() and '__pycache__' not in p.parts and p.suffix != '.pyc'}
+    files['LICENSE'] = (ROOT / 'LICENSE').read_bytes()
+    with zipfile.ZipFile(output, 'w', compression=zipfile.ZIP_DEFLATED) as archive:
+        for name, content in sorted(files.items()):
+            entry = zipfile.ZipInfo(f'{addon_id}/{name}', (2026, 1, 1, 0, 0, 0))
+            entry.external_attr = 0o100644 << 16
+            entry.compress_type = zipfile.ZIP_DEFLATED
+            archive.writestr(entry, content)
+    return hashlib.sha256(output.read_bytes()).hexdigest()
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--source', type=Path, default=Path('/usr/share/kodi/addons/skin.estuary'))
@@ -182,7 +206,9 @@ def main():
     format_version = ET.parse(ROOT / 'format-kodi/addon.xml').getroot().get('version')
     format_archive = archive.parent / f'plugin.audio.aperture.format-{format_version}.zip'
     format_digest = package_format(ROOT / 'format-kodi', format_archive)
-    (archive.parent / 'checksums.json').write_text(json.dumps({archive.name: digest, format_archive.name: format_digest}, indent=2) + '\n')
+    movies_archive = archive.parent / 'plugin.video.aperture.movies-0.1.0.zip'
+    movies_digest = package_movies(ROOT / 'movies-kodi', movies_archive)
+    (archive.parent / 'checksums.json').write_text(json.dumps({archive.name: digest, format_archive.name: format_digest, movies_archive.name: movies_digest}, indent=2) + '\n')
     print(f'{digest}  {archive}')
 
 

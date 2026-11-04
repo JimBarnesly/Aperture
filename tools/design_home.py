@@ -43,11 +43,14 @@ for index,(ident,label) in enumerate(items):
     b=control(menu,'button',ident,left=80,top=y,width=550,height=86,label=label,font='font32',textcolor='00000000',focusedcolor='00000000',texturefocus='',texturenofocus='',onleft=106,onright=203 if ident==103 else ident,onup=ids[index-1] if index else 106,ondown=ids[index+1] if index+1<len(ids) else 106)
     if ident==103:
         E.SubElement(b,'onclick').text='SetFocus(203)'
-    elif ident in (100,101):
-        content='Movies' if ident==100 else 'TVShows'
-        folder='movies' if ident==100 else 'tvshows'
-        E.SubElement(b,'onclick',{'condition':f'Library.HasContent({content})'}).text=f'ActivateWindow(Videos,videodb://{folder}/titles/,return)'
-        E.SubElement(b,'onclick',{'condition':f'!Library.HasContent({content})'}).text='ActivateWindow(Videos,sources://video/,return)'
+    elif ident==100:
+        enabled='System.AddonIsEnabled(plugin.video.aperture.movies)'
+        E.SubElement(b,'onclick',{'condition':enabled}).text='ActivateWindow(Videos,plugin://plugin.video.aperture.movies/,return)'
+        E.SubElement(b,'onclick',{'condition':f'!{enabled} + Library.HasContent(Movies)'}).text='ActivateWindow(Videos,videodb://movies/titles/,return)'
+        E.SubElement(b,'onclick',{'condition':f'!{enabled} + !Library.HasContent(Movies)'}).text='ActivateWindow(Videos,sources://video/,return)'
+    elif ident==101:
+        E.SubElement(b,'onclick',{'condition':'Library.HasContent(TVShows)'}).text='ActivateWindow(Videos,videodb://tvshows/titles/,return)'
+        E.SubElement(b,'onclick',{'condition':'!Library.HasContent(TVShows)'}).text='ActivateWindow(Videos,sources://video/,return)'
     elif ident==102:
         E.SubElement(b,'onclick',{'condition':'System.AddonIsEnabled(plugin.games.aperture)'}).text='ActivateWindow(Games,plugin://plugin.games.aperture/,return)'
         E.SubElement(b,'onclick',{'condition':'!System.AddonIsEnabled(plugin.games.aperture)'}).text='ActivateWindow(Games)'

@@ -59,12 +59,17 @@ class LocalMediaNavigationTests(unittest.TestCase):
         self.assertEqual(group.findtext('visible'),
                          'Control.HasFocus(103) | Control.HasFocus(203) | Control.HasFocus(204)')
 
-    def test_movies_and_television_browse_files_before_scanning(self):
-        for ident, content, folder in ((100, 'Movies', 'movies'), (101, 'TVShows', 'tvshows')):
-            self.assertEqual(self.actions(ident), {
-                f'Library.HasContent({content})': f'ActivateWindow(Videos,videodb://{folder}/titles/,return)',
-                f'!Library.HasContent({content})': 'ActivateWindow(Videos,sources://video/,return)',
-            })
+    def test_movies_prefer_cinematic_plugin_with_native_fallback(self):
+        enabled = 'System.AddonIsEnabled(plugin.video.aperture.movies)'
+        self.assertEqual(self.actions(100), {
+            enabled: 'ActivateWindow(Videos,plugin://plugin.video.aperture.movies/,return)',
+            f'!{enabled} + Library.HasContent(Movies)': 'ActivateWindow(Videos,videodb://movies/titles/,return)',
+            f'!{enabled} + !Library.HasContent(Movies)': 'ActivateWindow(Videos,sources://video/,return)',
+        })
+        self.assertEqual(self.actions(101), {
+            'Library.HasContent(TVShows)': 'ActivateWindow(Videos,videodb://tvshows/titles/,return)',
+            '!Library.HasContent(TVShows)': 'ActivateWindow(Videos,sources://video/,return)',
+        })
 
     def test_sources_always_opens_native_video_files(self):
         self.assertEqual(self.actions(104), {None: 'ActivateWindow(Videos,sources://video/,return)'})

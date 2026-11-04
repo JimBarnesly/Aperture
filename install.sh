@@ -88,7 +88,7 @@ sed -i '/<addon /s/id="skin.estuary"/id="skin.aperture"/; /<addon /s/name="Estua
 if [ "$BASELINE" -eq 0 ]; then
   # Use one complete, matching source checkout, never moving remote fragments.
   [ -f "$SOURCE_DIR/skin/xml/Home.xml" ] || fail 'Use the complete source checkout or install the complete ZIP through Kodi.'
-  HOME_SHA=614abed2a1ddb1dfc4849d354b925b75abc32ce05997ab3244ff70306ea43c3b
+  HOME_SHA=536eda136f2c82441fbb43ca84156de435ce84321e8c6cd324c7eb0dc63e7122
   cp "$SOURCE_DIR/skin/xml/Home.xml" "$STAGE/Home.xml"
   printf '%s  %s\n' "$HOME_SHA" "$STAGE/Home.xml" | sha256sum -c - >/dev/null || fail 'Home.xml integrity check failed'
   [ -d "$SOURCE_DIR/skin/media/aperture" ] || fail 'Matching Aperture artwork missing'
@@ -98,6 +98,10 @@ if [ "$BASELINE" -eq 0 ]; then
   GAMES_SHA=b37bdad96419ef0f3c8533638e43b7535f2e495707e314500d3592e93de232ba
   printf '%s  %s\n' "$GAMES_SHA" "$SOURCE_DIR/skin/xml/MyGames.xml" | sha256sum -c - >/dev/null || fail 'MyGames.xml integrity check failed'
   cp "$SOURCE_DIR/skin/xml/MyGames.xml" "$TMP/xml/MyGames.xml"
+  [ -f "$SOURCE_DIR/skin/xml/MyVideoNav.xml" ] || fail 'Matching movie browser XML missing'
+  MOVIES_SHA=3c0a3085654f6c6d63551e24e4317b3ac0dd66dbc6d969454e4439e265404c3a
+  printf '%s  %s\n' "$MOVIES_SHA" "$SOURCE_DIR/skin/xml/MyVideoNav.xml" | sha256sum -c - >/dev/null || fail 'MyVideoNav.xml integrity check failed'
+  cp "$SOURCE_DIR/skin/xml/MyVideoNav.xml" "$TMP/xml/MyVideoNav.xml"
   cp -R "$SOURCE_DIR/skin/media/." "$TMP/media/"
   mkdir -p "$TMP/licenses"
   cp -R "$SOURCE_DIR/skin/licenses/." "$TMP/licenses/"

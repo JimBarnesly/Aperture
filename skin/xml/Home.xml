@@ -59,8 +59,9 @@
         <onright>100</onright>
         <onup>106</onup>
         <ondown>101</ondown>
-        <onclick condition="Library.HasContent(Movies)">ActivateWindow(Videos,videodb://movies/titles/,return)</onclick>
-        <onclick condition="!Library.HasContent(Movies)">ActivateWindow(Videos,sources://video/,return)</onclick>
+        <onclick condition="System.AddonIsEnabled(plugin.video.aperture.movies)">ActivateWindow(Videos,plugin://plugin.video.aperture.movies/,return)</onclick>
+        <onclick condition="!System.AddonIsEnabled(plugin.video.aperture.movies) + Library.HasContent(Movies)">ActivateWindow(Videos,videodb://movies/titles/,return)</onclick>
+        <onclick condition="!System.AddonIsEnabled(plugin.video.aperture.movies) + !Library.HasContent(Movies)">ActivateWindow(Videos,sources://video/,return)</onclick>
       </control>
       <control type="label">
         <left>50</left>
