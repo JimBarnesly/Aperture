@@ -161,7 +161,7 @@ class Driver:
                 sequence = state['sequence']
                 frames += 1
             return frames >= 3 and state['time'] - since >= 0.5
-        self.wait('focused item settled across real rendered frames', stable, timeout=8)
+        return self.wait('focused item settled across real rendered frames', stable, timeout=8)
 
     def find(self, text, direction='Down', steps=15):
         # Entering a folder can briefly retain its previous source row. Let that
@@ -275,14 +275,25 @@ class Driver:
                 graph[int(node.get('id'))] = {key: int(node.findtext(tag)) for key, tag in
                     [('Left', 'onleft'), ('Right', 'onright'), ('Up', 'onup'), ('Down', 'ondown')]
                     if node.findtext(tag, '').isdigit()}
-        start = self.state()['focus']
+        self.wait('Home before installed focus navigation', lambda s: s.get('skin') == 'skin.aperture'
+            and s.get('window') == 10000 and s.get('dialog') == 9999)
+        # Home is reported active before its 730 ms WindowOpen reveal accepts
+        # arrows. Match the broad GUI driver's guard, then route from fresh,
+        # settled focus rather than the transient focus restored during entry.
+        time.sleep(0.85)
+        current = self.settle_focus()
+        if (current.get('skin') != 'skin.aperture' or current.get('window') != 10000
+                or current.get('dialog') != 9999):
+            raise AssertionError('Home changed while waiting for installed focus navigation')
+        start = current['focus']
         todo, visited = deque([(start, [])]), {start}
         while todo:
             at, route = todo.popleft()
             if at == target:
                 for key, wanted in route:
                     before = self.key(key)
-                    self.wait('installed Home focus ' + str(wanted), lambda s: s.get('focus') == wanted and s.get('window') == 10000, after=before)
+                    self.wait('installed Home focus ' + str(wanted), lambda s: s.get('focus') == wanted
+                        and s.get('window') == 10000 and s.get('dialog') == 9999, after=before)
                 return
             for key, nxt in graph.get(at, {}).items():
                 if nxt not in visited:

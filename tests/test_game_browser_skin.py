@@ -13,9 +13,18 @@ class BrowserSkinTests(unittest.TestCase):
   self.assertEqual(len(ids),len(set(ids)))
   for vid in ('59','60'):
    c=tree.find('.//control[@id="'+vid+'"]')
-   self.assertEqual(c.findtext('visible'),'String.IsEqual(Container.PluginName,plugin.games.aperture)')
+   kind='systems' if vid=='59' else 'games'
+   self.assertEqual(c.findtext('visible'),'String.IsEqual(Container.PluginName,plugin.games.aperture) + String.IsEqual(Container.Property(Aperture.View),'+kind+')')
    self.assertIsNone(c.find('content'))
    self.assertEqual(list(c.iter('onclick')),[])
+ def test_directory_switch_prefers_the_eligible_custom_view(self):
+  tree=ET.parse(ROOT/'skin/xml/MyGames.xml')
+  # Kodi first falls back to an eligible view of the current type. Both
+  # custom views must precede the native views and share that type so Back
+  # from the game list selects cards rather than a native list fallback.
+  self.assertEqual(tree.findtext('views').split(',')[:2],['59','60'])
+  for vid in ('59','60'):
+   self.assertEqual(tree.find('.//control[@id="'+vid+'"]/viewtype').text,'list')
  def test_static_game_textures_are_packaged(self):
   for node in ET.parse(ROOT/'skin/xml/MyGames.xml').iter('texture'):
    if node.text and node.text.startswith('aperture/games/'):

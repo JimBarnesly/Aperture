@@ -229,6 +229,86 @@ class FreshFixtureTest(unittest.TestCase):
 
 
 class DriverSafetyTest(unittest.TestCase):
+    def test_home_navigation_waits_for_reveal_and_routes_from_settled_focus(self):
+        home = ET.parse(ROOT / 'skin/xml/Home.xml').getroot()
+        reveal_ms = max(int(node.get('time', '0')) + int(node.get('delay', '0'))
+                        for node in home.iter('animation') if node.text == 'WindowOpen')
+        with tempfile.TemporaryDirectory() as tmp:
+            subject = driver.Driver.__new__(driver.Driver)
+            subject.target = Path(tmp)
+            installed = subject.target / 'data/addons/skin.aperture/xml'
+            installed.mkdir(parents=True)
+            shutil.copy2(ROOT / 'skin/xml/Home.xml', installed / 'Home.xml')
+            now = [0]
+            # A transition can briefly report the destination focus before
+            # restoring the submenu focus that actually receives the next key.
+            state = {'skin': 'skin.aperture', 'window': 10000, 'dialog': 9999,
+                     'focus': 103, 'sequence': 10}
+            events = []
+            def sleep(seconds):
+                now[0] += seconds
+                events.append('reveal')
+            def settle():
+                self.assertGreater(now[0] * 1000, reveal_ms)
+                events.append('settled')
+                state['focus'] = 203
+                return dict(state)
+            def key(value):
+                events.append(value)
+                self.assertEqual(value, 'Left')
+                self.assertEqual(state['focus'], 203)
+                before = state['sequence']
+                if now[0] * 1000 > reveal_ms:
+                    state.update(focus=103, sequence=before + 1)
+                return before
+            def wait(description, predicate, after=0, **_):
+                self.assertTrue(predicate(state), description)
+                self.assertGreater(state['sequence'], after)
+                return dict(state)
+            subject.state = lambda: dict(state)
+            subject.wait = Mock(side_effect=wait)
+            subject.key = Mock(side_effect=key)
+            subject.settle_focus = Mock(side_effect=settle)
+            with patch.object(driver.time, 'sleep', side_effect=sleep):
+                subject.focus_home(103)
+            self.assertEqual(events, ['reveal', 'settled', 'Left'])
+            self.assertEqual(state['focus'], 103)
+            self.assertEqual(subject.wait.call_args.kwargs['after'], 10)
+
+    def test_home_navigation_still_rejects_an_unconsumed_arrow(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            subject = driver.Driver.__new__(driver.Driver)
+            subject.target = Path(tmp)
+            installed = subject.target / 'data/addons/skin.aperture/xml'
+            installed.mkdir(parents=True)
+            shutil.copy2(ROOT / 'skin/xml/Home.xml', installed / 'Home.xml')
+            state = {'skin': 'skin.aperture', 'window': 10000, 'dialog': 9999, 'focus': 203}
+            def wait(description, predicate, **_):
+                if not predicate(state):
+                    raise AssertionError(description)
+                return dict(state)
+            subject.wait = Mock(side_effect=wait)
+            subject.key = Mock(return_value=1)
+            subject.settle_focus = Mock(return_value=state)
+            with patch.object(driver.time, 'sleep'), self.assertRaisesRegex(AssertionError, 'installed Home focus 103'):
+                subject.focus_home(103)
+            subject.key.assert_called_once_with('Left')
+
+    def test_home_navigation_rejects_a_modal_during_settle(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            subject = driver.Driver.__new__(driver.Driver)
+            subject.target = Path(tmp)
+            installed = subject.target / 'data/addons/skin.aperture/xml'
+            installed.mkdir(parents=True)
+            shutil.copy2(ROOT / 'skin/xml/Home.xml', installed / 'Home.xml')
+            subject.wait = Mock()
+            subject.key = Mock()
+            subject.settle_focus = Mock(return_value={
+                'skin': 'skin.aperture', 'window': 10000, 'dialog': 10100, 'focus': 203})
+            with patch.object(driver.time, 'sleep'), self.assertRaisesRegex(AssertionError, 'Home changed'):
+                subject.focus_home(103)
+            subject.key.assert_not_called()
+
     def test_observer_subjects_match_complete_build_set(self):
         tree = ast.parse((ROOT / 'tools/zip_smoke_observer.py').read_text())
         subjects = next(node.value for node in tree.body if isinstance(node, ast.Assign)

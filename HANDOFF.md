@@ -14,6 +14,16 @@ Code and installed state are different:
 
 The PR description contains older checkpoints. Use exact commit/run links below rather than interpreting its historical “current head” or “running” text as live status.
 
+## CI repair candidate — 2026-11-04 16:32 UTC
+
+The older “current” runs below are historical. At `206c37f34c1f4811f50bae1a4922b2a7e7bfe8c3`, [gaming acceptance](https://github.com/JimBarnesly/Aperture/actions/runs/41865822516) identified a reproducible browser defect: native Back reaches the console directory after Stop, but the game-list view remains selected on both ARM64 and x86. This is separate from the physical controller teardown crash.
+
+This candidate makes console-card/game-list eligibility depend on the directory's `Aperture.View` property, and gives both custom views the same selection type so Kodi's fallback chooses the eligible custom view before a native fallback. The horizontal card layout is unchanged. Acceptance still requires real Back to restore cards and then continue through PS1 playback.
+
+The [startup/ZIP run](https://github.com/JimBarnesly/Aperture/actions/runs/41865822561) successfully installed and verified all three current packages (skin, Format, Movies), then hit a Home navigation race. The ZIP driver now waits for the existing Home opening animation and settled focus before sending native keys, matching the broader harness. It still fails if an arrow is not consumed.
+
+274 local tests pass. Native CI on the commit containing this note is pending; check its exact head before deployment. No claim is made about physical Pi input stability, controller hotplug, installed versions or Format deployment. No merge or device changes were performed.
+
 ## Physical Pi observations
 
 Reported environment: Raspberry Pi 5, Debian 13 Trixie aarch64, Kodi 21.3 package `3:21.3+dfsg-1+rpt3`, Labwc/Wayland desktop and Kodi Wayland. Bluetooth devices: Pebble K380s keyboard and 8BitDo Ultimate 2 Wireless controller.

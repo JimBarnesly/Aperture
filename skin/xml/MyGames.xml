@@ -162,8 +162,10 @@
         <width>1760</width>
         <height>550</height>
         <orientation>horizontal</orientation>
-        <viewtype label="Consoles">icon</viewtype>
-        <visible>String.IsEqual(Container.PluginName,plugin.games.aperture)</visible>
+        <!-- Share a view type with the game list so Kodi falls back to the
+             eligible Aperture view when Back restores a directory. -->
+        <viewtype label="Consoles">list</viewtype>
+        <visible>String.IsEqual(Container.PluginName,plugin.games.aperture) + String.IsEqual(Container.Property(Aperture.View),systems)</visible>
         <scrolltime>220</scrolltime>
         <onup>59</onup>
         <ondown>59</ondown>
@@ -298,7 +300,7 @@
         <width>780</width>
         <height>560</height>
         <viewtype label="Game list">list</viewtype>
-        <visible>String.IsEqual(Container.PluginName,plugin.games.aperture)</visible>
+        <visible>String.IsEqual(Container.PluginName,plugin.games.aperture) + String.IsEqual(Container.Property(Aperture.View),games)</visible>
         <scrolltime>160</scrolltime>
         <onleft>60</onleft>
         <onright>60</onright>
