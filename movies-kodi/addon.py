@@ -70,7 +70,7 @@ def main():
         if not xbmcvfs.exists(path):
             raise RuntimeError('Source unavailable')
         folders, files = xbmcvfs.listdir(path)
-        extensions = tuple(xbmc.getSupportedMedia('video').lower().split('|'))
+        extensions = tuple(ext for ext in xbmc.getSupportedMedia('video').lower().split('|') if ext)
         prefix = path.rstrip('/')+'/'
         items = [{'file': prefix+n+'/', 'label': n, 'filetype': 'directory'} for n in folders]
         items += [{'file': prefix+n, 'label': n, 'filetype': 'file'} for n in files if n.lower().endswith(extensions)]

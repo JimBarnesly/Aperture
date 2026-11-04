@@ -44,6 +44,12 @@ class MovieSkinTests(unittest.TestCase):
         self.assertTrue(any('poster' in n.text for n in dynamic))
         self.assertTrue(all(n.get('fallback') for n in dynamic))
 
+    def test_no_filler_plot_or_unsupported_arrow_glyphs(self):
+        labels = [node.text or '' for node in self.tree.iter('label')]
+        self.assertFalse(any('Your collection. A world of stories.' in label for label in labels))
+        self.assertFalse(any('←' in label or '→' in label for label in labels))
+        self.assertTrue(any(label.startswith('Left / Right  Browse') for label in labels))
+
     def test_focus_is_visible_and_filmstrip_fits(self):
         self.assertEqual(self.view.findtext('orientation'), 'horizontal')
         for name in ('itemlayout','focusedlayout'):

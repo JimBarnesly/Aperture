@@ -263,16 +263,6 @@
         <textcolor>FFD1DCDF</textcolor>
         <visible>!String.IsEmpty(ListItem.Plot)</visible>
       </control>
-      <control type="textbox">
-        <left>84</left>
-        <top>422</top>
-        <width>1000</width>
-        <height>100</height>
-        <font>font27</font>
-        <label>Your collection. A world of stories.[CR]Choose a film and make a night of it.</label>
-        <textcolor>FFD1DCDF</textcolor>
-        <visible>String.IsEmpty(ListItem.Plot)</visible>
-      </control>
       <control type="label">
         <left>84</left>
         <top>567</top>
@@ -407,7 +397,7 @@
         <width>1450</width>
         <height>35</height>
         <font>font20_title</font>
-        <label>←  →   Browse       •       Select  Play / Open       •       Back  Return       •       Menu  Options</label>
+        <label>Left / Right  Browse       •       Select  Play / Open       •       Back  Return       •       Menu  Options</label>
         <textcolor>FF99B0B8</textcolor>
       </control>
       <control type="label">

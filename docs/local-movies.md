@@ -17,7 +17,7 @@ Each stage preserves a backup under the Kodi profile's aperture-backups. Restart
 
 ## Artwork and information
 
-Uses metadata/art already returned by Kodi plus exact existing sidecar files (`Film-poster.jpg`, `Film-fanart.jpg`, `poster.jpg`, `fanart.jpg`, and PNG variants). No automatic internet scraping or downloads. Files without artwork get an original cinematic fallback. No made-up ratings, synopsis, runtime or genres. For extensive library metadata, configure Kodi's ordinary scraper separately with the user's permission.
+Uses metadata/art already returned by Kodi plus exact existing sidecar files (`Film-poster.jpg`, `Film-fanart.jpg`, `poster.jpg`, `fanart.jpg`, and PNG variants). Sources with sharing disabled are browsed through Kodi's local VFS without enabling sharing; that fallback uses filenames and local artwork rather than JSON-RPC library metadata. No automatic internet scraping or downloads. Files without artwork get an original cinematic fallback. No made-up ratings, synopsis, runtime or genres. For extensive library metadata, configure Kodi's ordinary scraper separately with the user's permission.
 
 ## Boundaries
 
