@@ -45,6 +45,16 @@ Raspberry Pi OS, or as root on LibreELEC. Exit Kodi first. The installers refuse
 live replacement, preserve older add-ons outside Kodi's scan directory and leave
 settings, libraries, credentials and the add-on database alone.
 
+On Raspberry Pi OS, if Estuary has a broken link to an installed font, the skin
+installer uses Python 3 to find the **exact same filename** recursively under
+`/usr/share/fonts`, then copies the font bytes into staging. This handles Debian's
+`truetype/roboto/unhinted/RobotoTTF/Roboto-Thin.ttf` layout without editing system
+files or substituting a different font. Missing, empty or ambiguous matches fail
+before replacing the old skin. Intact resources still install without Python 3.
+Use the complete checkout so `tools/build_skin.py` is present, or use the complete
+ZIP. `APERTURE_FONT_ROOT` can select one other absolute search root; it replaces,
+rather than adds to, the default. No fonts are downloaded.
+
 For an offline checkout set `APERTURE_SOURCE_DIR` to its absolute path. A custom
 profile can be supplied as `APERTURE_KODI_HOME`. The skin installer requires the
 complete matching checkout, including artwork and notices. A detached Format

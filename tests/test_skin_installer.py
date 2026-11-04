@@ -22,6 +22,8 @@ class SkinInstallerTests(unittest.TestCase):
         self.fake('pgrep','exit 1')
         self.env=dict(os.environ,PATH=str(self.bin)+':'+os.environ['PATH'],APERTURE_KODI_HOME=str(self.profile),APERTURE_SKIN_SOURCE=str(self.skin),APERTURE_SOURCE_DIR=str(ROOT))
         self.target=self.profile/'addons/skin.aperture'
+        self.fonts=self.root/'system fonts';self.fonts.mkdir()
+        self.env['APERTURE_FONT_ROOT']=str(self.fonts)
 
     def fake(self,name,script):
         p=self.bin/name;p.write_text('#!/bin/sh\n'+script+'\n');p.chmod(0o755)
@@ -69,6 +71,88 @@ class SkinInstallerTests(unittest.TestCase):
         r=self.run_install();self.assertEqual(r.returncode,0,r.stderr)
         self.assertFalse((self.target/'fonts/regular.ttf').is_symlink())
         self.assertEqual((self.target/'fonts/regular.ttf').read_bytes(),b'font bytes')
+
+    def broken_pi_font(self):
+        p=self.skin/'fonts/Roboto-Thin.ttf'
+        p.symlink_to('../../../fonts/truetype/roboto/Roboto-Thin.ttf')
+        (self.skin/'xml/Font.xml').write_text('<fonts>\n<filename>regular.ttf</filename>\n<filename>Roboto-Thin.ttf</filename>\n<filename>arial.ttf</filename>\n</fonts>')
+        actual=self.fonts/'truetype/roboto/unhinted/RobotoTTF/Roboto-Thin.ttf'
+        actual.parent.mkdir(parents=True)
+        return p,actual
+
+    def assert_previous_preserved(self, result):
+        self.assertNotEqual(result.returncode,0)
+        self.assertEqual((self.target/'keep.txt').read_text(),'old skin')
+        self.assertFalse((self.profile/'.aperture-skin-install.lock').exists())
+        self.assertEqual(list(self.profile.glob('.aperture-skin.*')),[])
+        self.assertFalse((self.profile/'aperture-backups').exists())
+
+    def without_python(self):
+        # Only the installer's shell utilities, with no ambient Python search path.
+        for name in ('sh','id','grep','dirname','mkdir','mktemp','cp','sed','sha256sum','sort','mv','rm','rmdir','cat'):
+            (self.bin/name).symlink_to(shutil.which(name))
+        self.env['PATH']=str(self.bin)
+
+    def test_pi_relocated_font_is_materialized_without_system_or_profile_edits(self):
+        self.existing();link,actual=self.broken_pi_font();actual.write_bytes(b'Pi Roboto Thin fixture')
+        license_file=self.skin/'fonts/LICENSE.txt';license_file.write_text('Original font license')
+        user=self.profile/'userdata';user.mkdir();(user/'guisettings.xml').write_text('existing settings')
+        (user/'Database').mkdir();(user/'Database/Addons.db').write_bytes(b'existing database')
+        r=self.run_install();self.assertEqual(r.returncode,0,r.stderr)
+        installed=self.target/'fonts/Roboto-Thin.ttf'
+        self.assertFalse(installed.is_symlink());self.assertEqual(installed.read_bytes(),actual.read_bytes())
+        self.assertTrue(link.is_symlink());self.assertFalse(link.exists())
+        self.assertEqual(actual.read_bytes(),b'Pi Roboto Thin fixture')
+        self.assertEqual((self.target/'fonts/LICENSE.txt').read_text(),'Original font license')
+        self.assertEqual((user/'guisettings.xml').read_text(),'existing settings')
+        self.assertEqual((user/'Database/Addons.db').read_bytes(),b'existing database')
+        self.assertEqual(len(list((self.profile/'aperture-backups').glob('*/skin.aperture/keep.txt'))),1)
+
+    def test_missing_relocated_font_preserves_previous_and_cleans_stage(self):
+        self.existing();self.broken_pi_font()
+        r=self.run_install();self.assert_previous_preserved(r)
+        self.assertIn('Unresolved distribution resource',r.stderr)
+
+    def test_ambiguous_relocated_font_preserves_previous(self):
+        self.existing();_,actual=self.broken_pi_font();actual.write_bytes(b'first')
+        (self.fonts/'Roboto-Thin.ttf').write_bytes(b'other')
+        r=self.run_install();self.assert_previous_preserved(r)
+        self.assertIn('Ambiguous distribution font',r.stderr)
+
+    def test_empty_relocated_font_preserves_previous(self):
+        self.existing();_,actual=self.broken_pi_font();actual.touch()
+        r=self.run_install();self.assert_previous_preserved(r)
+        self.assertIn('Empty distribution font',r.stderr)
+
+    def test_missing_non_font_does_not_search_font_root(self):
+        self.existing();(self.skin/'missing.png').symlink_to('absent.png')
+        (self.fonts/'missing.png').write_bytes(b'not the resource')
+        r=self.run_install();self.assert_previous_preserved(r)
+        self.assertIn('Unresolved distribution resource',r.stderr)
+
+    def test_pythonless_install_still_materializes_intact_links(self):
+        self.without_python();link=self.skin/'fonts/regular.ttf';link.unlink()
+        real=self.root/'real font.ttf';real.write_bytes(b'valid installed font');link.symlink_to(real)
+        r=self.run_install();self.assertEqual(r.returncode,0,r.stderr)
+        self.assertFalse((self.target/'fonts/regular.ttf').is_symlink())
+        self.assertEqual((self.target/'fonts/regular.ttf').read_bytes(),real.read_bytes())
+
+    def test_pythonless_broken_font_preserves_previous(self):
+        self.existing();self.broken_pi_font();self.without_python()
+        r=self.run_install();self.assert_previous_preserved(r)
+        self.assertIn('use Python 3 with the complete checkout',r.stderr)
+
+    def test_intact_directory_symlink_remains_supported(self):
+        actual=self.root/'distribution media';actual.mkdir();(actual/'image.png').write_bytes(b'image fixture')
+        (self.skin/'media').symlink_to(actual,target_is_directory=True)
+        r=self.run_install();self.assertEqual(r.returncode,0,r.stderr)
+        self.assertFalse((self.target/'media').is_symlink())
+        self.assertEqual((self.target/'media/image.png').read_bytes(),b'image fixture')
+
+    def test_relative_font_root_refused_before_profile_creation(self):
+        self.env['APERTURE_FONT_ROOT']='relative/fonts'
+        r=self.run_install();self.assertNotEqual(r.returncode,0)
+        self.assertFalse(self.profile.exists())
 
     def test_failed_swap_restores_previous_skin(self):
         self.existing()

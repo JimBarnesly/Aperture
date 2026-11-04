@@ -5,6 +5,11 @@
 - Unit tests: manifest/GUI contract, complete fonts, focus graph, deterministic
   packaging, safe installer swap/rollback, missing downloads/resources, settings
   preservation, Format metadata/IDs/order/failure handling.
+- Installer font regression: disposable profiles reproduce a broken Estuary
+  Roboto-Thin link with the font under the Pi OS RobotoTTF layout. Tests verify
+  exact-name resolution, rejection of missing/empty/ambiguous matches, source and
+  profile-setting preservation, cleanup, rollback, and Python-free intact links.
+  These filesystem fixtures are not tests on a physical Raspberry Pi.
 - Real GUI: official Kodi 21.3, isolated fresh profile, accepted Aperture switch,
   repeated native navigation, cancel/back, recovery to Estuary, timeout rollback.
 - Format GUI fixture: synthetic original tones and artwork on loopback only.

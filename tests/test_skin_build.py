@@ -1,7 +1,10 @@
 import importlib.util
+import subprocess
+import sys
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -61,6 +64,46 @@ class SkinBuildTests(unittest.TestCase):
         self.assemble()
         self.assertFalse((self.out/'fonts/regular.ttf').is_symlink())
         self.assertEqual((self.out/'fonts/regular.ttf').read_bytes(),b'official font fixture')
+
+    def test_exact_font_name_resolution_and_canonical_deduplication(self):
+        link=self.source/'fonts/regular.ttf';link.unlink();link.symlink_to('missing.ttf')
+        roots=self.root/'fonts';roots.mkdir();actual=roots/'regular.ttf';actual.write_bytes(b'exact')
+        alias=roots/'other';alias.mkdir();(alias/'regular.ttf').symlink_to(actual)
+        build.copy_skin(self.source,self.out,[roots,roots])
+        self.assertEqual((self.out/'fonts/regular.ttf').read_bytes(),b'exact')
+        self.assertTrue(link.is_symlink());self.assertFalse(link.exists())
+
+    def test_font_name_is_literal_not_a_glob(self):
+        (self.source/'fonts/f[1].ttf').symlink_to('missing.ttf')
+        roots=self.root/'fonts';roots.mkdir();(roots/'f1.ttf').write_bytes(b'wrong name')
+        (roots/'f[1].ttf').write_bytes(b'literal name')
+        build.copy_skin(self.source,self.out,[roots])
+        self.assertEqual((self.out/'fonts/f[1].ttf').read_bytes(),b'literal name')
+
+    def test_regular_empty_font_is_rejected(self):
+        (self.source/'fonts/regular.ttf').write_bytes(b'')
+        with self.assertRaisesRegex(ValueError,'Empty distribution font'):
+            build.copy_skin(self.source,self.out)
+
+    def test_copy_only_cannot_replace_existing_directory(self):
+        self.out.mkdir();(self.out/'keep').write_text('valuable')
+        r=subprocess.run([sys.executable,str(ROOT/'tools/build_skin.py'),'--copy-only','--source',str(self.source),'--output',str(self.out)],text=True,capture_output=True)
+        self.assertNotEqual(r.returncode,0)
+        self.assertEqual((self.out/'keep').read_text(),'valuable')
+
+    def test_copy_only_uses_only_explicit_font_root_and_does_not_assemble(self):
+        link=self.source/'fonts/regular.ttf';link.unlink();link.symlink_to('missing.ttf')
+        roots=self.root/'fonts';roots.mkdir();(roots/'regular.ttf').write_bytes(b'explicit font')
+        r=subprocess.run([sys.executable,str(ROOT/'tools/build_skin.py'),'--copy-only','--source',str(self.source),'--output',str(self.out),'--font-root',str(roots)],text=True,capture_output=True)
+        self.assertEqual(r.returncode,0,r.stderr)
+        self.assertEqual(ET.parse(self.out/'addon.xml').getroot().get('id'),'skin.estuary')
+        self.assertFalse((self.out/'APERTURE_BUILD.json').exists())
+        self.assertEqual((self.out/'fonts/regular.ttf').read_bytes(),b'explicit font')
+
+    def test_explicit_font_root_replaces_default_search_path(self):
+        with patch.object(sys, 'argv', ['build_skin.py','--copy-only','--font-root',str(self.root)]), patch.object(build,'copy_skin') as copy:
+            build.main()
+        self.assertEqual(copy.call_args.args[2],[self.root])
 
     def test_missing_resource_does_not_replace_good_output(self):
         self.assemble()

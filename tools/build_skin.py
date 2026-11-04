@@ -25,14 +25,21 @@ def copy_skin(source: Path, destination: Path, font_roots=()):
     shutil.copytree(source, destination, symlinks=True)
     for original in source.rglob('*'):
         if not original.is_symlink():
+            if original.suffix.lower() in ('.ttf', '.otf') and original.is_file() and original.stat().st_size == 0:
+                raise ValueError(f'Empty distribution font: {original.name}')
             continue
         target = original.resolve()
         if not target.is_file() and original.suffix.lower() in ('.ttf', '.otf'):
-            matches = sorted({p.resolve() for root in font_roots for p in Path(root).rglob(original.name) if p.is_file()})
-            if len(matches) == 1:
+            matches = sorted({p.resolve() for root in font_roots for p in Path(root).rglob('*')
+                              if p.name == original.name and p.is_file()})
+            if len(matches) > 1:
+                raise ValueError(f'Ambiguous distribution font: {original.name}; found {len(matches)} distinct files')
+            if matches:
                 target = matches[0]
         if not target.is_file():
             raise ValueError(f'Unresolved distribution resource: {original}')
+        if original.suffix.lower() in ('.ttf', '.otf') and target.stat().st_size == 0:
+            raise ValueError(f'Empty distribution font: {original.name}')
         copied = destination / original.relative_to(source)
         copied.unlink()
         shutil.copy2(target, copied)
@@ -153,10 +160,20 @@ def package_format(source: Path, output: Path):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--source', type=Path, default=Path('/usr/share/kodi/addons/skin.estuary'))
-    parser.add_argument('--font-root', action='append', type=Path, default=[Path('/usr/share/fonts')])
+    parser.add_argument('--font-root', action='append', type=Path,
+                        help='Search root for exact missing font filenames; repeatable (default: /usr/share/fonts)')
     parser.add_argument('--output', type=Path, default=ROOT / 'build' / ADDON_ID)
+    parser.add_argument('--copy-only', action='store_true',
+                        help='Materialize Estuary resources into a new output directory only; used by install.sh')
     args = parser.parse_args()
-    assemble(args.source, args.output, ROOT / 'skin/xml/Home.xml', args.font_root)
+    font_roots = args.font_root if args.font_root is not None else [Path('/usr/share/fonts')]
+    if args.copy_only:
+        try:
+            copy_skin(args.source, args.output, font_roots)
+        except (OSError, ValueError, RuntimeError) as exc:
+            parser.exit(1, f'ERROR: {exc}\n')
+        return
+    assemble(args.source, args.output, ROOT / 'skin/xml/Home.xml', font_roots)
     archive = ROOT / 'dist' / f'{ADDON_ID}-{VERSION}.zip'
     digest = package(args.output, archive)
     format_version = ET.parse(ROOT / 'format-kodi/addon.xml').getroot().get('version')

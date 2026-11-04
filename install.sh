@@ -44,6 +44,10 @@ for file in xml/Home.xml xml/Font.xml xml/Settings.xml xml/SettingsCategory.xml 
   [ -f "$SOURCE/$file" ] || fail "Incomplete Estuary source: $file"
 done
 
+SOURCE_DIR=${APERTURE_SOURCE_DIR:-$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)}
+FONT_ROOT=${APERTURE_FONT_ROOT:-/usr/share/fonts}
+case "$FONT_ROOT" in /*) ;; *) fail 'Font search root must be an absolute path' ;; esac
+
 mkdir -p "$KODI_HOME"
 LOCK=$KODI_HOME/.aperture-skin-install.lock
 mkdir "$LOCK" 2>/dev/null || fail "Another skin installation is running: $LOCK"
@@ -64,13 +68,25 @@ trap cleanup EXIT
 trap 'exit 130' HUP INT TERM
 STAGE=$(mktemp -d "$KODI_HOME/.aperture-skin.XXXXXX")
 TMP=$STAGE/skin.aperture
-# Dereference relative distribution font links before changing the add-on location.
-cp -RL "$SOURCE" "$TMP" || fail 'A distribution asset is missing. No skin was replaced; use the verified complete ZIP.'
+# Preserve the Python-free path for intact distro resources (including directory
+# links). On Debian/Pi OS a broken font link can point at an old package layout.
+# Retry only in staging, using the ZIP builder's exact-name, unique-match lookup.
+# Never repair system links, download fonts or replace an arbitrary font face.
+if ! cp -RL "$SOURCE" "$TMP" 2>"$STAGE/copy.log"; then
+  rm -rf "$TMP"
+  if command -v python3 >/dev/null 2>&1 && [ -f "$SOURCE_DIR/tools/build_skin.py" ]; then
+    printf 'Resolving distribution resources from installed system fonts...\n'
+    python3 "$SOURCE_DIR/tools/build_skin.py" --copy-only --source "$SOURCE" --output "$TMP" --font-root "$FONT_ROOT" ||
+      fail 'Could not resolve distribution assets. No skin was replaced; use the verified complete ZIP.'
+  else
+    cat "$STAGE/copy.log" >&2
+    fail 'A distribution asset is missing. No skin was replaced; use Python 3 with the complete checkout to resolve fonts, or install the verified complete ZIP.'
+  fi
+fi
 sed -i '/<addon /s/id="skin.estuary"/id="skin.aperture"/; /<addon /s/name="Estuary"/name="Aperture"/; /<addon /s/version="[^"]*"/version="4.0.1~rc1"/' "$TMP/addon.xml"
 
 if [ "$BASELINE" -eq 0 ]; then
   # Use one complete, matching source checkout, never moving remote fragments.
-  SOURCE_DIR=${APERTURE_SOURCE_DIR:-$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)}
   [ -f "$SOURCE_DIR/skin/xml/Home.xml" ] || fail 'Use the complete source checkout or install the complete ZIP through Kodi.'
   HOME_SHA=c49bbd527ba24c512192bcfbb97845ae7c9105c1b10e97f9217531e2927ed25b
   cp "$SOURCE_DIR/skin/xml/Home.xml" "$STAGE/Home.xml"
