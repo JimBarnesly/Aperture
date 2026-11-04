@@ -33,7 +33,9 @@ touch "$XAUTHORITY"; xauth -f "$XAUTHORITY" add "$DISPLAY" . "$(python3 -c 'impo
 Xvfb "$DISPLAY" -auth "$XAUTHORITY" -screen 0 1280x720x24 -nolisten tcp +extension GLX +render > "$OUT/xvfb.log" 2>&1 & X_PID=$!
 for _ in {1..100}; do xdpyinfo >/dev/null 2>&1 && pactl info >/dev/null 2>&1 && break; sleep .1; done
 xdpyinfo >/dev/null; pactl info > "$OUT/pulse-info.txt"
-"$KODI_BIN" --windowing=x11 --gl-interface=glx --audio-backend=pulseaudio --debug -fs > "$OUT/kodi.stdout" 2>&1 & K_PID=$!
+GL_INTERFACE=glx
+[[ "$(uname -m)" != aarch64 ]] || GL_INTERFACE=egl
+timeout --kill-after=5s 180s gdb --batch --return-child-result -ex run -ex 'thread apply all bt 20' --args "$KODI_BIN" --windowing=x11 --gl-interface="$GL_INTERFACE" --audio-backend=pulseaudio --debug -fs > "$OUT/kodi.stdout" 2>&1 & K_PID=$!
 for _ in {1..1800}; do
   [[ -f "$OUT/result.json" ]] && break
   kill -0 "$K_PID" 2>/dev/null || { echo 'Kodi exited without test result'; cat "$OUT/kodi.stdout"; exit 1; }

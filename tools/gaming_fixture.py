@@ -58,6 +58,7 @@ def prepare(root,runtime,out,pcsx):
 <setting id="services.zeroconf">false</setting><setting id="services.airplay">false</setting>
 <setting id="services.upnpserver">false</setting><setting id="addons.unknownsources">false</setting>
 <setting id="audiooutput.audiodevice">PULSE:Default</setting><setting id="screensaver.mode"></setting>
+<resolutions/><viewstates/><skinsettings/>
 </settings>''')
     (userdata/'advancedsettings.xml').write_text('<advancedsettings><loglevel hide="false">1</loglevel></advancedsettings>')
     (out/'fixture.json').write_text(__import__('json').dumps({'runtime':str(runtime),'roms':str(roms),'commercial_data':False}))
