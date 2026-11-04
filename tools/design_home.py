@@ -8,7 +8,6 @@ MEDIA=ROOT/'skin/media/aperture';MEDIA.mkdir(parents=True,exist_ok=True)
 for name,fill,outline in [('card',(247,250,248,226),(255,255,255,155)),('card-focus',(252,255,254,249),(82,211,228,255)),('power',(17,36,40,200),(213,236,237,70)),('power-focus',(241,254,255,250),(82,211,228,255))]:
  im=Image.new('RGBA',(360,156),(0,0,0,0));d=ImageDraw.Draw(im)
  d.rounded_rectangle((3,4,356,151),radius=22,fill=fill,outline=outline,width=4 if 'focus' in name else 2)
- d.rounded_rectangle((12,11,347,74),radius=14,fill=(255,255,255,45))
  im.save(MEDIA/(name+'.png'))
 im=Image.new('RGBA',(920,1080),(0,0,0,0));d=ImageDraw.Draw(im)
 for x in range(920):
@@ -59,7 +58,7 @@ for ident,label,icon,description,(x,y) in items:
  title=control(menu,'group',visible=f'Control.HasFocus({ident})');E.SubElement(title,'animation',{'effect':'fade','time':'160'}).text='VisibleChange'
  control(title,'label',left=74,top=372,width=600,height=110,font='font60',textcolor='FFF6FCFC',label=label)
  control(title,'textbox',left=80,top=490,width=510,height=128,font='font13',textcolor='FFD0DEE0',label=description)
- b=control(menu,'button',ident,left=x,top=y,width=320,height=148,label=label,font='font32',textcolor='FF224C59',focusedcolor='FF103D48',align='center',aligny='bottom',textoffsety=19,texturefocus='aperture/card-focus.png',texturenofocus='aperture/card.png')
+ b=control(menu,'button',ident,left=x,top=y,width=320,height=148,label=label,font='font32',textcolor='FF224C59',focusedcolor='FF103D48',align='center',aligny='top',textoffsety=88,texturefocus='aperture/card-focus.png',texturenofocus='aperture/card.png')
  l,r,u,d=edges[ident]
  for k,v in [('onleft',l),('onright',r),('onup',u),('ondown',d)]:E.SubElement(b,k).text=str(v)
  if ident==103:
@@ -67,6 +66,6 @@ for ident,label,icon,description,(x,y) in items:
   E.SubElement(b,'onclick',{'condition':'!System.AddonIsEnabled(plugin.audio.aperture.format)'}).text='ActivateWindow(Music)'
  else:E.SubElement(b,'onclick').text=actions[ident]
  control(menu,'image',left=x+124,top=y+12,width=72,height=72,texture='aperture/'+icon+'.png')
-power=control(menu,'button',106,left=76,top=922,width=214,height=70,label='Power',font='font13',textcolor='FFE0EFF1',focusedcolor='FF103D48',texturefocus='aperture/power-focus.png',texturenofocus='aperture/power.png',onleft=105,onright=103,onup=102,ondown=103,onclick='ActivateWindow(ShutdownMenu)')
+power=control(menu,'button',106,left=76,top=922,width=214,height=70,label='Power',font='font13',align='center',aligny='center',textcolor='FFE0EFF1',focusedcolor='FF103D48',texturefocus='aperture/power-focus.png',texturenofocus='aperture/power.png',onleft=105,onright=103,onup=102,ondown=103,onclick='ActivateWindow(ShutdownMenu)')
 control(menu,'label',left=80,top=1013,width=530,height=34,font='font10',textcolor='FF91AEB5',label='Choose a channel. Make the evening yours.')
 E.indent(win,space='  ');E.ElementTree(win).write(ROOT/'skin/xml/Home.xml',encoding='utf-8',xml_declaration=True)

@@ -84,8 +84,8 @@
         <textcolor>FF224C59</textcolor>
         <focusedcolor>FF103D48</focusedcolor>
         <align>center</align>
-        <aligny>bottom</aligny>
-        <textoffsety>19</textoffsety>
+        <aligny>top</aligny>
+        <textoffsety>88</textoffsety>
         <texturefocus>aperture/card-focus.png</texturefocus>
         <texturenofocus>aperture/card.png</texturenofocus>
         <onleft>101</onleft>
@@ -134,8 +134,8 @@
         <textcolor>FF224C59</textcolor>
         <focusedcolor>FF103D48</focusedcolor>
         <align>center</align>
-        <aligny>bottom</aligny>
-        <textoffsety>19</textoffsety>
+        <aligny>top</aligny>
+        <textoffsety>88</textoffsety>
         <texturefocus>aperture/card-focus.png</texturefocus>
         <texturenofocus>aperture/card.png</texturenofocus>
         <onleft>103</onleft>
@@ -183,8 +183,8 @@
         <textcolor>FF224C59</textcolor>
         <focusedcolor>FF103D48</focusedcolor>
         <align>center</align>
-        <aligny>bottom</aligny>
-        <textoffsety>19</textoffsety>
+        <aligny>top</aligny>
+        <textoffsety>88</textoffsety>
         <texturefocus>aperture/card-focus.png</texturefocus>
         <texturenofocus>aperture/card.png</texturenofocus>
         <onleft>100</onleft>
@@ -232,8 +232,8 @@
         <textcolor>FF224C59</textcolor>
         <focusedcolor>FF103D48</focusedcolor>
         <align>center</align>
-        <aligny>bottom</aligny>
-        <textoffsety>19</textoffsety>
+        <aligny>top</aligny>
+        <textoffsety>88</textoffsety>
         <texturefocus>aperture/card-focus.png</texturefocus>
         <texturenofocus>aperture/card.png</texturenofocus>
         <onleft>105</onleft>
@@ -281,8 +281,8 @@
         <textcolor>FF224C59</textcolor>
         <focusedcolor>FF103D48</focusedcolor>
         <align>center</align>
-        <aligny>bottom</aligny>
-        <textoffsety>19</textoffsety>
+        <aligny>top</aligny>
+        <textoffsety>88</textoffsety>
         <texturefocus>aperture/card-focus.png</texturefocus>
         <texturenofocus>aperture/card.png</texturenofocus>
         <onleft>102</onleft>
@@ -330,8 +330,8 @@
         <textcolor>FF224C59</textcolor>
         <focusedcolor>FF103D48</focusedcolor>
         <align>center</align>
-        <aligny>bottom</aligny>
-        <textoffsety>19</textoffsety>
+        <aligny>top</aligny>
+        <textoffsety>88</textoffsety>
         <texturefocus>aperture/card-focus.png</texturefocus>
         <texturenofocus>aperture/card.png</texturenofocus>
         <onleft>104</onleft>
@@ -354,6 +354,8 @@
         <height>70</height>
         <label>Power</label>
         <font>font13</font>
+        <align>center</align>
+        <aligny>center</aligny>
         <textcolor>FFE0EFF1</textcolor>
         <focusedcolor>FF103D48</focusedcolor>
         <texturefocus>aperture/power-focus.png</texturefocus>

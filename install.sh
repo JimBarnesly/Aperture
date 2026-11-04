@@ -72,7 +72,7 @@ if [ "$BASELINE" -eq 0 ]; then
   # Use one complete, matching source checkout, never moving remote fragments.
   SOURCE_DIR=${APERTURE_SOURCE_DIR:-$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)}
   [ -f "$SOURCE_DIR/skin/xml/Home.xml" ] || fail 'Use the complete source checkout or install the complete ZIP through Kodi.'
-  HOME_SHA=583de3abda10af1329b50ca710e5f7b2a7edf8d254e52412a7a2749016d9db88
+  HOME_SHA=8b21b23052021cdaf1cf206fd63ff30b825cb304a8f320b81802d6c49bafd156
   cp "$SOURCE_DIR/skin/xml/Home.xml" "$STAGE/Home.xml"
   printf '%s  %s\n' "$HOME_SHA" "$STAGE/Home.xml" | sha256sum -c - >/dev/null || fail 'Home.xml integrity check failed'
   [ -d "$SOURCE_DIR/skin/media/aperture" ] || fail 'Matching Aperture artwork missing'

@@ -344,6 +344,10 @@ for node in ET.parse(os.environ['APERTURE_SKIN_HOME']).getroot().iter('control')
 
 def focus(target):
     current=wait_for('Home before focus navigation',lambda s:s.get('window')==HOME and s.get('skin')=='skin.aperture')
+    # Home enters before its opening animation accepts input. Wait for the
+    # complete source-defined reveal, then inspect a fresh stable focus.
+    time.sleep(.85)
+    current=settle_focus()
     start=current['focus']; todo=deque([(start,[])]); visited={start}; path=None
     while todo:
         at,route=todo.popleft()
