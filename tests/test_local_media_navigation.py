@@ -35,8 +35,18 @@ class LocalMediaNavigationTests(unittest.TestCase):
         enabled = 'System.AddonIsEnabled(plugin.audio.aperture.format)'
         self.assertEqual(self.buttons['204'].findtext('enable'), enabled)
         self.assertEqual(self.actions(204), {enabled: 'ActivateWindow(Music,plugin://plugin.audio.aperture.format/,return)'})
-        labels = [node.text for node in self.home.iter('label')]
-        self.assertIn('Install or enable the Format add-on to stream music', labels)
+        self.assertEqual(self.buttons['204'].findtext('label'), 'Format streaming')
+
+    def test_music_choices_have_no_box_or_explanatory_copy(self):
+        group = next(node for node in self.home.iter('control')
+                     if node.find("control[@id='203']") is not None)
+        self.assertEqual([node.findtext('label') for node in group.findall("control[@type='button']")],
+                         ['Local music', 'Format streaming'])
+        self.assertEqual(group.findall("control[@type='label']"), [])
+        # Only narrow focus markers remain, never a filled background panel.
+        for node in group.findall("control[@type='image']"):
+            self.assertEqual(node.findtext('texture'), 'aperture/focus-marker.png')
+            self.assertEqual(node.findtext('width'), '5')
 
     def test_choice_back_and_left_both_return_to_music(self):
         for ident in ('203', '204'):

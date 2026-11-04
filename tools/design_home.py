@@ -63,20 +63,15 @@ control(menu,'button',106,left=365,top=942,width=250,height=70,label='Power',fon
 # This is a contextual choice inside Music, not another home destination or a
 # second media database. Kodi owns the source paths and the local library.
 music=control(menu,'group',visible='Control.HasFocus(103) | Control.HasFocus(203) | Control.HasFocus(204)')
-panel=control(music,'image',left=740,top=416,width=1000,height=302)
-E.SubElement(panel,'texture',{'colordiffuse':'EB13262D'}).text='colors/white.png'
 for ident,label,y,action in (
     (203,'Local music',444,'ActivateWindow(Music,library://music/,return)'),
     (204,'Format streaming',566,'ActivateWindow(Music,plugin://plugin.audio.aperture.format/,return)'),
 ):
-    b=control(music,'button',ident,left=785,top=y,width=910,height=70,label=label,font='font32',textcolor='FFB9CBCF',focusedcolor='FFF4FCFD',disabledcolor='FF6C8189',texturefocus='',texturenofocus='',onleft=103,onright=ident,onup=103 if ident==203 else 203,ondown=204 if ident==203 else 103,onback=103)
+    b=control(music,'button',ident,left=785,top=y,width=910,height=70,label=label,font='font32',textcolor='FFB9CBCF',focusedcolor='FFF4FCFD',disabledcolor='FF6C8189',shadowcolor='E6000000',texturefocus='',texturenofocus='',onleft=103,onright=ident,onup=103 if ident==203 else 203,ondown=204 if ident==203 else 103,onback=103)
     if ident==204:
         E.SubElement(b,'enable').text='System.AddonIsEnabled(plugin.audio.aperture.format)'
         E.SubElement(b,'onclick',{'condition':'System.AddonIsEnabled(plugin.audio.aperture.format)'}).text=action
     else:
         E.SubElement(b,'onclick').text=action
     control(music,'image',left=760,top=y+10,width=5,height=50,texture='aperture/focus-marker.png',visible=f'Control.HasFocus({ident})')
-control(music,'label',left=785,top=514,width=910,height=36,font='font13',textcolor='FF9DB2B9',label='Albums, artists and Files from your Kodi sources')
-control(music,'label',left=785,top=636,width=910,height=36,font='font13',textcolor='FF9DB2B9',label='Music from your Format server',visible='System.AddonIsEnabled(plugin.audio.aperture.format)')
-control(music,'label',left=785,top=636,width=910,height=36,font='font13',textcolor='FF9DB2B9',label='Install or enable the Format add-on to stream music',visible='!System.AddonIsEnabled(plugin.audio.aperture.format)')
 E.indent(win,space='  '); E.ElementTree(win).write(ROOT/'skin/xml/Home.xml',encoding='utf-8',xml_declaration=True)

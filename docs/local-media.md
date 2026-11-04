@@ -5,7 +5,7 @@ Aperture keeps one **Music** home item. Select it, or press Right, to choose:
 - **Local music**: Kodi's music root, with Albums and Artists when scanned and
   **Files** for browsing your existing drives and adding a music source.
 - **Format streaming**: the independent Format add-on and its configured server.
-  This choice is disabled with an explanation when the add-on is unavailable.
+  This choice is disabled when the add-on is unavailable.
 
 Left or Back returns from either choice to the Music home item. Local music
 always opens the native root even if Format was the last music page visited.

@@ -386,13 +386,6 @@
       </control>
       <control type="group">
         <visible>Control.HasFocus(103) | Control.HasFocus(203) | Control.HasFocus(204)</visible>
-        <control type="image">
-          <left>740</left>
-          <top>416</top>
-          <width>1000</width>
-          <height>302</height>
-          <texture colordiffuse="EB13262D">colors/white.png</texture>
-        </control>
         <control type="button" id="203">
           <left>785</left>
           <top>444</top>
@@ -403,6 +396,7 @@
           <textcolor>FFB9CBCF</textcolor>
           <focusedcolor>FFF4FCFD</focusedcolor>
           <disabledcolor>FF6C8189</disabledcolor>
+          <shadowcolor>E6000000</shadowcolor>
           <texturefocus />
           <texturenofocus />
           <onleft>103</onleft>
@@ -430,6 +424,7 @@
           <textcolor>FFB9CBCF</textcolor>
           <focusedcolor>FFF4FCFD</focusedcolor>
           <disabledcolor>FF6C8189</disabledcolor>
+          <shadowcolor>E6000000</shadowcolor>
           <texturefocus />
           <texturenofocus />
           <onleft>103</onleft>
@@ -447,35 +442,6 @@
           <height>50</height>
           <texture>aperture/focus-marker.png</texture>
           <visible>Control.HasFocus(204)</visible>
-        </control>
-        <control type="label">
-          <left>785</left>
-          <top>514</top>
-          <width>910</width>
-          <height>36</height>
-          <font>font13</font>
-          <textcolor>FF9DB2B9</textcolor>
-          <label>Albums, artists and Files from your Kodi sources</label>
-        </control>
-        <control type="label">
-          <left>785</left>
-          <top>636</top>
-          <width>910</width>
-          <height>36</height>
-          <font>font13</font>
-          <textcolor>FF9DB2B9</textcolor>
-          <label>Music from your Format server</label>
-          <visible>System.AddonIsEnabled(plugin.audio.aperture.format)</visible>
-        </control>
-        <control type="label">
-          <left>785</left>
-          <top>636</top>
-          <width>910</width>
-          <height>36</height>
-          <font>font13</font>
-          <textcolor>FF9DB2B9</textcolor>
-          <label>Install or enable the Format add-on to stream music</label>
-          <visible>!System.AddonIsEnabled(plugin.audio.aperture.format)</visible>
         </control>
       </control>
     </control>
