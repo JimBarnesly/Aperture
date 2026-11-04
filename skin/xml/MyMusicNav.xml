@@ -131,7 +131,7 @@
         <width>1740</width>
         <height>88</height>
         <font>font60</font>
-        <label>$INFO[Container.FolderName]</label>
+        <label>$INFO[Container.Property(Aperture.FormatTitle)]</label>
         <textcolor>FFE4F5F5</textcolor>
         <scroll>true</scroll>
       </control>

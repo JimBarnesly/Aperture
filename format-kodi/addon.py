@@ -235,10 +235,11 @@ def album_context(album):
             ("Configure Format server", "Addon.OpenSettings({})".format(ADDON_ID))]
 
 
-def set_view(handle, mode, content="files", category="Format", notice=""):
+def set_view(handle, mode, content="files", category="Music", notice=""):
     xbmcplugin.setContent(handle, content)
     xbmcplugin.setPluginCategory(handle, category)
     xbmcplugin.setProperty(handle, "Aperture.FormatView", mode)
+    xbmcplugin.setProperty(handle, "Aperture.FormatTitle", category)
     xbmcplugin.setProperty(handle, "Aperture.FormatNotice", notice)
     xbmcplugin.addSortMethod(handle, xbmcplugin.SORT_METHOD_NONE)
 
@@ -284,7 +285,7 @@ def root(handle):
 
 
 def albums(handle, server, data, artist=None):
-    set_view(handle, "albums", "albums", display(artist, "Format albums"))
+    set_view(handle, "albums", "albums", display(artist, "Albums"))
     count = 0
     for album in sorted(data["albums"], key=lambda item: (text(item.get("artist")).casefold(),
                                                          text(item.get("title")).casefold())):
@@ -332,7 +333,7 @@ def add_album(handle, server, album, prefix=""):
 
 
 def artists(handle, server, data):
-    set_view(handle, "menu", "artists", "Format artists")
+    set_view(handle, "menu", "artists", "Artists")
     grouped = {}
     for album in data["albums"]:
         if album.get("id") is None or not track_ids(album):
@@ -481,7 +482,7 @@ def acquisition_detail(source):
 
 def downloads(handle, server):
     allowed, notice = write_access(server)
-    set_view(handle, "downloads", "files", "Format downloads", notice)
+    set_view(handle, "downloads", "files", "Downloads", notice)
     menu_item(handle, "Refresh downloads", "downloads", True, detail="Refresh status only")
     if not allowed:
         menu_item(handle, notice)

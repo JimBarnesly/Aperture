@@ -35,6 +35,8 @@ class MusicSkinTests(unittest.TestCase):
         self.assertTrue(any(node.text == 'View_50_List' for node in self.root.iter('include')))
         labels = [node.text for node in self.root.iter('label')]
         self.assertIn('$INFO[Container.Property(Aperture.FormatNotice)]', labels)
+        self.assertIn('$INFO[Container.Property(Aperture.FormatTitle)]', labels)
+        self.assertNotIn('$INFO[Container.FolderName]', labels)
         self.assertNotIn('Local music', labels)
         self.assertNotIn('Format streaming', labels)
 

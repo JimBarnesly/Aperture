@@ -69,13 +69,37 @@ def settled_observation(settle_focus, music, wait_music, description, predicate,
     return wait_music(description, predicate, after=sequence)
 
 
+def navigate_root(press, wait_for, settle_focus, max_steps=12):
+    """Use real folder history; ActivateWindow ignores an already-active Music window."""
+    for _ in range(max_steps):
+        current = settle_focus()
+        if current.get("dialog") != 9999:
+            raise AssertionError("Unexpected dialog while returning to Format root: " + repr(current))
+        if current.get("window") != 10502:
+            before = press("k")
+            wait_for("Enter Format root from outside Music", lambda s: s.get("window") == 10502
+                     and s.get("dialog") == 9999 and route_is(s.get("folder", ""), None), after=before)
+            continue
+        if route_is(current.get("folder", ""), None):
+            return current
+        folder = urlsplit(current.get("folder", ""))
+        if folder.scheme == "plugin" and folder.netloc == ADDON_ID:
+            previous = (current.get("window"), current.get("folder"))
+            before = press("BackSpace")
+            wait_for("Back through Format history toward root", lambda s: s.get("dialog") == 9999
+                     and (s.get("window"), s.get("folder")) != previous, after=before)
+        else:
+            # A failed directory can leave Music at its unrelated native root.
+            # Leave that window before activating Format; do not claim it is root.
+            before = press("Escape")
+            wait_for("Leave unrelated Music window before reopening Format", lambda s: s.get("dialog") == 9999
+                     and s.get("window") != 10502, after=before)
+    raise AssertionError("Format history did not reach the exact root: " + repr(settle_focus()))
+
+
 def reopen_albums(press, wait_for, settle_focus, find_label):
     """Recover from Kodi discarding a failed directory, through native UI."""
-    settle_focus()
-    before = press("k")
-    wait_for("Format root reopened after outage", lambda s: s.get("window") == 10502
-             and s.get("dialog") == 9999 and route_is(s.get("folder", ""), None), after=before)
-    settle_focus()
+    navigate_root(press, wait_for, settle_focus)
     find_label("Albums", "Down", 5)
     before = press("Return")
     wait_for("Format Albums reopened after outage", lambda s: s.get("window") == 10502
@@ -180,10 +204,7 @@ def run(hooks):
                              lambda s: route_is(s.get("folder", ""), action, **parameters) and view_is(s, mode))
 
     def root_menu():
-        settle_focus()
-        before = press("k")
-        wait_for("Unified Format root", lambda s: s.get("window") == 10502
-                 and s.get("dialog") == 9999 and route_is(s.get("folder", ""), None), after=before)
+        navigate_root(press, wait_for, settle_focus)
         actual = wait_view(None, "menu")
         if [label for label in actual["labels"] if label in ROOT_LABELS] != ROOT_LABELS:
             raise AssertionError("Unified Format root labels/order are wrong: " + repr(actual))

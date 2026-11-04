@@ -66,6 +66,19 @@ class WorkflowTest(unittest.TestCase):
     def property(self, key):
         return [call.args[2] for call in self.xbmcplugin.setProperty.call_args_list if call.args[1] == key][-1]
 
+    def test_directory_title_tracks_current_navigation_category(self):
+        for action, params, expected in (
+                ("root", {}, "Music"), ("albums", {}, "Albums"),
+                ("artists", {}, "Artists"), ("downloads", {}, "Downloads"),
+                ("artist", {"artist": "Artist"}, "Artist"),
+                ("album", {"album_id": DATA["albums"][0]["id"]}, "Double Album"),
+                ("search", {"q": "Guest"}, "Library: Guest"),
+                ("catalog_album", {"album_id": CATALOG_ID}, "Test Album")):
+            with self.subTest(action=action):
+                self.run_action(action, **params)
+                self.assertEqual(self.property("Aperture.FormatTitle"), expected)
+                self.xbmcplugin.setPluginCategory.assert_called_with(7, expected)
+
     def test_root_prompts_are_nonfolder_actions_without_history_entries(self):
         self.run_action("root")
         for _, url, item, folder in self.items():

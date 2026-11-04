@@ -109,7 +109,7 @@ if [ "$BASELINE" -eq 0 ]; then
   printf '%s  %s\n' "$MOVIES_SHA" "$SOURCE_DIR/skin/xml/MyVideoNav.xml" | sha256sum -c - >/dev/null || fail 'MyVideoNav.xml integrity check failed'
   cp "$SOURCE_DIR/skin/xml/MyVideoNav.xml" "$TMP/xml/MyVideoNav.xml"
   [ -f "$SOURCE_DIR/skin/xml/MyMusicNav.xml" ] || fail 'Matching music browser XML missing'
-  MUSIC_SHA=44ee4a0204b11bef5a3cadf37a7eb704d1c8b8c1731fadc58a34d3368d45c291
+  MUSIC_SHA=97ee5dfd944cadf31c0a8a6b0d27e53cdd818c1e52766d5e22655ada1b2d6865
   printf '%s  %s\n' "$MUSIC_SHA" "$SOURCE_DIR/skin/xml/MyMusicNav.xml" | sha256sum -c - >/dev/null || fail 'MyMusicNav.xml integrity check failed'
   cp "$SOURCE_DIR/skin/xml/MyMusicNav.xml" "$TMP/xml/MyMusicNav.xml"
   cp -R "$SOURCE_DIR/skin/media/." "$TMP/media/"

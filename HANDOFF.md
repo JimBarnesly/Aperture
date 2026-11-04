@@ -12,7 +12,7 @@ This note is not deployment permission or a claim of physical-device acceptance.
   [menus](https://github.com/JimBarnesly/Aperture/actions/runs/41868502565),
   [Movies](https://github.com/JimBarnesly/Aperture/actions/runs/41868502657) and
   [casting](https://github.com/JimBarnesly/Aperture/actions/runs/41868519928) workflows passed.
-- This integration candidate extends that baseline. 331 local tests and complete
+- This integration candidate extends that baseline. 336 local tests and complete
   Omega skin assembly pass. Check native CI at the exact commit containing this
   note before testing an installation. Historical runs do not certify newer code.
 
@@ -39,6 +39,17 @@ checkout with Kodi stopped. Preserve Estuary, backups and existing settings.
 Reuse a healthy existing server. Do not rerun gaming setup or modify media as
 part of this update. Synthetic CI does not prove physical audio, storage,
 controller or provider operation. No animation/background changes are included.
+
+## First integrated GUI run
+
+At `7bb3687ba9a28420adc5f58b2154299f6babf0b2`, the native run verified direct
+Music entry, album shelves, track order, Back, playback and offline recovery.
+It then [stopped in test navigation](https://github.com/JimBarnesly/Aperture/actions/runs/41927968556)
+before catalogue/download acceptance: reactivating the active Music window did
+not return to the root. The harness now traverses actual Back history instead.
+This candidate also gives each Music section a stable contextual heading.
+The full corrected native run is still required; do not treat partial coverage
+as a pass or infer real provider/device acceptance.
 
 ## Other implementation boundaries
 

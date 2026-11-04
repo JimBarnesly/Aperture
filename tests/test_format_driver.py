@@ -224,8 +224,11 @@ class DriverTest(unittest.TestCase):
         keys, observed_labels = [], []
         def press(key):
             keys.append(key)
-            if key == "k":
-                current["folder"] = "plugin://plugin.audio.aperture.format/"
+            if key == "Escape":
+                current.update(window=10000, folder="")
+            elif key == "k":
+                self.assertNotEqual(current["window"], 10502)
+                current.update(window=10502, folder="plugin://plugin.audio.aperture.format/")
             elif key == "Return":
                 self.assertEqual(observed_labels, ["Albums"])
                 current["folder"] = "plugin://plugin.audio.aperture.format/?action=albums"
@@ -239,8 +242,8 @@ class DriverTest(unittest.TestCase):
             observed_labels.append(label)
         settle = Mock(return_value=current)
         driver.reopen_albums(press, wait, settle, find_label)
-        self.assertEqual(keys, ["k", "Return"])
-        self.assertEqual(settle.call_count, 3)
+        self.assertEqual(keys, ["Escape", "k", "Return"])
+        self.assertEqual(settle.call_count, 4)
         self.assertTrue(driver.route_is(current["folder"], "albums"))
 
     def test_recovery_root_does_not_accept_unrelated_music_root(self):
@@ -249,8 +252,66 @@ class DriverTest(unittest.TestCase):
                 raise AssertionError("Still unrelated Music root")
         find = Mock()
         with self.assertRaisesRegex(AssertionError, "unrelated Music root"):
-            driver.reopen_albums(Mock(return_value=1), wait, Mock(), find)
+            driver.reopen_albums(Mock(return_value=1), wait,
+                                 Mock(return_value={"window":10502, "dialog":9999, "folder":""}), find)
         find.assert_not_called()
+
+    def test_root_navigation_uses_back_when_active_music_ignores_activatewindow(self):
+        root = "plugin://plugin.audio.aperture.format/"
+        artists = root + "?action=artists"
+        artist = root + "?action=artist&artist=A%20SYNTHETIC%20QA"
+        current = {"window":10502, "dialog":9999, "folder":artist, "focus":64, "sequence":1}
+        keys, transitions = [], []
+        def press(key):
+            keys.append(key)
+            before = current["sequence"]
+            current["sequence"] += 1
+            if key == "k":
+                # Real Kodi ignores ActivateWindow for the already-active Music
+                # window. Fresh sequence is not a successful root transition.
+                return before
+            self.assertEqual(key, "BackSpace")
+            current.update(folder=artists if current["folder"] == artist else root, focus=63)
+            return before
+        def wait(description, predicate, after):
+            self.assertTrue(predicate(current), description + ": " + repr(current))
+            self.assertGreater(current["sequence"], after)
+            transitions.append(current["folder"])
+            return dict(current)
+        result = driver.navigate_root(press, wait, lambda:dict(current))
+        self.assertEqual(keys, ["BackSpace", "BackSpace"])
+        self.assertEqual(transitions, [artists, root])
+        self.assertTrue(driver.route_is(result["folder"], None))
+        self.assertEqual(result["focus"], 63)
+
+    def test_root_navigation_already_at_exact_root_does_not_press_any_key(self):
+        current = {"window":10502, "dialog":9999, "folder":"plugin://plugin.audio.aperture.format/"}
+        press, wait = Mock(), Mock()
+        self.assertEqual(driver.navigate_root(press, wait, lambda:dict(current)), current)
+        press.assert_not_called()
+        wait.assert_not_called()
+
+    def test_root_navigation_rejects_unchanged_back_despite_new_observation(self):
+        current = {"window":10502, "dialog":9999,
+                   "folder":"plugin://plugin.audio.aperture.format/?action=artists", "sequence":1}
+        keys = []
+        def press(key):
+            keys.append(key)
+            current["sequence"] += 1
+            return current["sequence"] - 1
+        def wait(description, predicate, after):
+            self.assertGreater(current["sequence"], after)
+            if not predicate(current):
+                raise AssertionError("Back did not change the folder")
+        with self.assertRaisesRegex(AssertionError, "did not change"):
+            driver.navigate_root(press, wait, lambda:dict(current))
+        self.assertEqual(keys, ["BackSpace"])
+
+    def test_root_navigation_never_silently_dismisses_an_unexpected_dialog(self):
+        press = Mock()
+        with self.assertRaisesRegex(AssertionError, "Unexpected dialog"):
+            driver.navigate_root(press, Mock(), lambda:{"window":10502, "dialog":10100})
+        press.assert_not_called()
 
     def test_recovery_http_evidence_must_belong_to_recovery_interval(self):
         def row(at, status=200, path="/api/library"):
