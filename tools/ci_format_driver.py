@@ -124,6 +124,8 @@ def run(hooks):
             if current.get("window") == 10000 and current.get("dialog") == 9999:
                 return
             position = gui_position(current)[:3]
+            # PreviousMenu intentionally leaves the Music window for Home.
+            # Parent-directory navigation inside Format uses BackSpace below.
             before = press("Escape")
             wait_for("Back changes Format folder or window", lambda s: gui_position(s)[:3] != position, after=before)
         raise AssertionError("Format did not return Home")
@@ -155,8 +157,11 @@ def run(hooks):
         checks.append({"check": "displayed-track-order", "titles": observed})
         screenshot("format-02-track-order")
         sequence = music()["sequence"]
-        before = press("Escape")
-        wait_for("Back to Format albums", lambda s: route_is(s.get("folder", ""), "albums"), after=before)
+        # Kodi maps Escape to PreviousMenu (which leaves the Music window).
+        # BackSpace is Back: return from album tracks to the parent album list.
+        before = press("BackSpace")
+        wait_for("Back to Format albums", lambda s: s.get("window") == 10502 and s.get("dialog") == 9999
+                 and route_is(s.get("folder", ""), "albums"), after=before)
         find_title(album_title, "albums", after=sequence)
         before = press("c")
         wait_for("Album context menu", lambda s: s.get("dialog") == 10106, after=before)

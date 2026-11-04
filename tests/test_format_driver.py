@@ -113,6 +113,64 @@ class DriverTest(unittest.TestCase):
                     driver.run(hooks)
             self.assertEqual(keys, ["j"])
 
+    def test_album_parent_back_uses_backspace_not_previous_menu(self):
+        # Model Kodi's distinct Back/PreviousMenu actions while exercising the
+        # real driver through the ordered track list and album context menu.
+        with tempfile.TemporaryDirectory(prefix="aperture-kodi-smoke.") as directory:
+            runtime = Path(directory)
+            out = runtime / "out"
+            out.mkdir()
+            title, tracks = "SYNTHETIC QA Double", ["Disc 1 Track 1", "Disc 2 Track 1"]
+            config = {"runtime": str(runtime), "album_title": title, "album_id": "fixture-album",
+                      "expected_titles": tracks, "expected_ids": ["track-1", "track-2"]}
+            (out / "format-expected.json").write_text(json.dumps(config))
+            albums = "plugin://plugin.audio.aperture.format/?action=albums"
+            album = "plugin://plugin.audio.aperture.format/?action=album&album_id=fixture-album"
+            actual = {"sequence": 1, "time": time.time(), "pid": os.getpid(), "enabled": True,
+                      "folder": "", "focused_title": "", "art": "/api/cover?id=fixture"}
+            gui = {"window": 10000, "dialog": 9999}
+            keys = []
+            def publish(*args):
+                actual["sequence"] += 1
+                actual["time"] = time.time()
+                (out / "format-state.json").write_text(json.dumps(actual))
+            publish()
+            def settle():
+                publish()
+                return gui
+            def press(key):
+                keys.append(key)
+                if key in ("j", "BackSpace"):
+                    actual.update(folder=albums, focused_title=title)
+                    gui.update(window=10502, folder=albums)
+                elif key == "Return":
+                    actual.update(folder=album, focused_title=tracks[0])
+                    gui.update(window=10502, folder=album)
+                elif key == "Down":
+                    actual["focused_title"] = tracks[1]
+                elif key == "Escape":
+                    actual.update(folder="", focused_title="")
+                    gui.update(window=10000, folder="")
+                elif key == "c":
+                    gui["dialog"] = 10106
+                else:
+                    raise AssertionError("Unexpected key: " + key)
+                publish()
+                return 1
+            def wait_for(description, predicate, after):
+                self.assertTrue(predicate(gui), description + ": " + repr(gui))
+                return gui
+            hooks = {"state": lambda: gui, "wait_for": wait_for, "press": press,
+                     "screenshot": Mock(), "find_label": Mock(side_effect=RuntimeError("Album context reached")),
+                     "settle_focus": settle}
+            env = {"APERTURE_SMOKE_OUT": str(out), "KODI_DATA": str(runtime / "data"),
+                   "APERTURE_KODI_PID": str(os.getpid())}
+            with patch.dict(os.environ, env), patch.object(driver.time, "sleep", side_effect=publish):
+                with self.assertRaisesRegex(RuntimeError, "Album context reached"):
+                    driver.run(hooks)
+            self.assertEqual(keys, ["j", "Return", "Down", "BackSpace", "c"])
+            self.assertTrue(driver.route_is(gui["folder"], "albums"))
+
     def test_new_sequence_alone_is_not_a_gui_transition(self):
         original = {"window": 10502, "folder": "albums", "focus": 55, "list_item": "Album", "sequence": 1}
         self.assertEqual(driver.gui_position(original), driver.gui_position(dict(original, sequence=2)))
