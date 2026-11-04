@@ -47,7 +47,9 @@ def prepare(root,runtime,out,pcsx):
     shutil.copy2(root/'tools/gaming_qa_service.py',service/'service.py')
     manifest=runtime/'system/system/addon-manifest.xml'; tree=ET.parse(manifest)
     for name in ('game.libretro','peripheral.joystick',PREFIX+'nestopia',PREFIX+'pcsxrearmed',LIBRARY_ID,'service.aperture.gamingqa'):
-        if not any(e.text==name for e in tree.getroot().findall('addon')): ET.SubElement(tree.getroot(),'addon').text=name
+        if not any(e.text==name for e in tree.getroot().findall('addon')):
+            attrs={'optional':'true'} if name.startswith(('game.libretro','peripheral.')) else {}
+            ET.SubElement(tree.getroot(),'addon',attrs).text=name
     tree.write(manifest,encoding='utf-8',xml_declaration=True)
     roms=runtime/'roms'; make_nes(roms/'nes/Aperture Palette Probe.nes'); make_psx(roms/'psx/Aperture GPU Probe.exe')
     set_rom_root(runtime/'data',roms)

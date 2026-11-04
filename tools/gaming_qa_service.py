@@ -29,6 +29,8 @@ def capture(name):
     xbmc.executebuiltin('TakeScreenshot('+str(out/(name+'.png'))+',sync)')
 try:
     until('Home',lambda:xbmcgui.getCurrentWindowId()==10000)
+    for addon in ('game.libretro','peripheral.joystick','game.libretro.aperture.nestopia','game.libretro.aperture.pcsxrearmed'):
+        rpc('Addons.SetAddonEnabled',{'addonid':addon,'enabled':True})
     until('core enabled',lambda:xbmc.getCondVisibility('System.AddonIsEnabled(game.libretro.aperture.nestopia)'))
     systems=rpc('Files.GetDirectory',{'directory':'plugin://plugin.games.aperture/','media':'files'})['files']
     if not any('Nintendo' in item['label'] for item in systems): raise RuntimeError('NES system missing from actual plugin root')

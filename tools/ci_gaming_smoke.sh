@@ -17,6 +17,7 @@ export KODI_BIN_HOME=$(dirname "$KODI_BIN") KODI_BINADDON_PATH="$(dirname "$KODI
 "$KODI_BIN" --version > "$OUT/kodi-version.txt"
 grep -Eq "Center 21\.([0-9]+)" "$OUT/kodi-version.txt" || { echo "Kodi21 required" >&2; exit 2; }
 python3 "$ROOT/tools/build_pcsx_core.py" --output-dir "$RUNTIME/pcsx" > "$OUT/pcsx-build.log" 2>&1
+cp "$RUNTIME/pcsx/provenance.json" "$OUT/pcsx-provenance.json"
 python3 "$ROOT/tools/gaming_fixture.py" --root "$ROOT" --runtime "$RUNTIME" --out "$OUT" --pcsx "$RUNTIME/pcsx/pcsx_rearmed_libretro.so"
 export PULSE_RUNTIME_PATH="$RUNTIME/pulse" PULSE_STATE_PATH="$RUNTIME/pulse-state" PULSE_SERVER="unix:$RUNTIME/pulse/native" PULSE_COOKIE="$RUNTIME/pulse/cookie"
 mkdir -m 700 "$PULSE_RUNTIME_PATH" "$PULSE_STATE_PATH"
