@@ -95,15 +95,15 @@ class AdapterTests(unittest.TestCase):
     def one_game(self):
         return scan_library(str(self.root)).libraries[0].games[0]
 
-    def test_root_contains_only_populated_systems_plus_explicit_actions(self):
+    def test_root_lists_system_folders_without_scanning_games(self):
         self.put("nes/Game.nes")
         (self.root / "snes").mkdir()
         self.run_plugin()
         systems = [(uri, item, folder) for uri, item, folder in self.directory_items()
                    if "Aperture.System" in item.properties]
-        self.assertEqual(len(systems), 1)
+        self.assertEqual(len(systems), 2)
         self.assertEqual(systems[0][1].properties["Aperture.System"], "nes")
-        self.assertEqual(systems[0][1].properties["Aperture.GameCount"], "1")
+        self.assertEqual(systems[0][1].properties["Aperture.GameCount"], "")
         self.assertTrue(systems[0][2])
         self.plugin_api.setContent.assert_called_once_with(42, "games")
         self.plugin_api.endOfDirectory.assert_called_once_with(42, succeeded=True, updateListing=False, cacheToDisc=False)

@@ -122,10 +122,11 @@ def reference_path(manifest, reference, boundary):
 class LocalFileSystem:
     """Never follow symlinks; only regular files and real directories count."""
 
-    def listdir(self, path):
+    def listdir(self, path, check_cancel=lambda: None):
         directories, files = [], []
         with os.scandir(path) as entries:
             for entry in entries:
+                check_cancel()
                 if entry.is_symlink():
                     continue
                 if entry.is_dir(follow_symlinks=False):
@@ -153,7 +154,8 @@ class LocalFileSystem:
 
 
 def scan_library(root, filesystem=None, cancelled: Callable[[], bool] = lambda: False,
-                 system_id=None, max_depth=32, max_entries=100000):
+                 system_id=None, max_depth=32, max_entries=100000,
+                 systems_only=False, progress=lambda count: None):
     """Return only populated systems, sorted by name, with immutable game lists.
 
     Root errors fail visibly. Unreadable subfolders/descriptors are reported as
@@ -175,8 +177,10 @@ def scan_library(root, filesystem=None, cancelled: Callable[[], bool] = lambda: 
     def listing(path):
         nonlocal remaining
         check_cancel()
-        directories, files = filesystem.listdir(path)
+        directories, files = (filesystem.listdir(path, check_cancel=check_cancel)
+                              if isinstance(filesystem, LocalFileSystem) else filesystem.listdir(path))
         remaining -= len(directories) + len(files)
+        progress(max_entries - remaining)
         if remaining < 0:
             raise ScanError("Scan limit exceeded; choose a smaller ROM root")
         return sorted(set(directories)), sorted(set(files))
@@ -279,10 +283,10 @@ def scan_library(root, filesystem=None, cancelled: Callable[[], bool] = lambda: 
         if not filesystem.safe(boundary, root):
             issues.append(ScanIssue("unsafe_path", boundary))
             continue
-        games = games_for(system, boundary, walk(boundary))
+        games = [] if systems_only else games_for(system, boundary, walk(boundary))
         grouped.setdefault(system.id, []).extend(games)
     libraries = [SystemLibrary(SYSTEM_BY_ID[key], tuple(sorted(games, key=lambda game: (game.title.casefold(), game.path))))
-                 for key, games in grouped.items() if games]
+                 for key, games in grouped.items() if games or systems_only]
     libraries.sort(key=lambda library: library.system.name.casefold())
     check_cancel()
     return ScanResult(tuple(libraries), tuple(issues))

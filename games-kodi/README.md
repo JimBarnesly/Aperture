@@ -67,8 +67,7 @@ ROMs/                    ← select this folder
 | `psx` | `ps1` | `.cue .chd .iso .pbp .exe .m3u .m3u8` |
 | `arcade` | — | `.zip` |
 
-Aliases combine under one system. Unknown folders, root-level files, empty
-systems, hidden entries, and unrelated extensions are omitted. `.bin` in
+Aliases combine under one system. Unknown folders, root-level files, hidden entries, and unrelated extensions are omitted. `.bin` in
 `megadrive` is a cartridge candidate; `.bin` in `psx` is a disc sidecar and is
 never a standalone game. Archives are not expanded or searched; `.zip` is only
 listed under `arcade`, where ROM-set/core-version requirements still apply.
@@ -76,8 +75,8 @@ Other platforms and archives are intentionally outside this initial catalog.
 Child names containing path separators, `:`, `|`, `?`, `#`, control characters,
 or encoded traversal are conservatively omitted to avoid VFS interpretation.
 
-The root shows **only populated system tiles**, plus clearly labelled settings
-and playback-help actions. Counts represent game entries, not individual discs.
+The root shows **recognised system folders immediately**, plus clearly labelled settings
+and playback-help actions. Game entries are enumerated only when a system is opened.
 
 ## CUE and multi-disc handling
 
@@ -195,3 +194,12 @@ exercise missing/multiple cores, exit RetroPlayer back to the same list, and
 select/cancel a multi-disc game. No Kodi runtime is assumed by the unit suite.
 
 License: GPL-3.0-or-later; see the bundled `LICENSE.txt` and repository `LICENSE`.
+
+### Large HDD collections
+
+Opening the library lists recognised immediate system folders without walking
+every ROM or reading every CUE/M3U first. Empty recognised folders may appear;
+open a system to scan its games. Counts are not invented before that scan.
+Selected-system scans display an updating entry count and can be cancelled,
+including while a large local directory is being enumerated. A blocked filesystem
+operation can still delay cancellation; the add-on does not forcibly unmount disks.

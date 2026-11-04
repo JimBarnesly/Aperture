@@ -5,6 +5,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
 
 import hashlib
 import os
+import time
 from urllib.parse import parse_qs, unquote, urlencode, urlsplit
 
 import xbmc
@@ -94,10 +95,17 @@ class Plugin:
             return scan_library("")
         progress = xbmcgui.DialogProgress()
         progress.create(self.text(32000), self.text(32010))
+        last_update = [0.0]
+        def report(count):
+            now = time.monotonic()
+            if now - last_update[0] >= .2:
+                progress.update(0, "Checking {:,} entries…".format(count))
+                last_update[0] = now
         try:
             return scan_library(root, filesystem,
                                 cancelled=lambda: self.monitor.abortRequested() or progress.iscanceled(),
-                                system_id=system_id)
+                                system_id=system_id, systems_only=system_id is None,
+                                progress=report)
         finally:
             progress.close()
 
@@ -156,10 +164,10 @@ class Plugin:
             else:
                 for library in result.libraries:
                     item = xbmcgui.ListItem(label=library.system.name,
-                                            label2=str(len(library.games)), offscreen=True)
+                                            label2="", offscreen=True)
                     item.setProperty("IsPlayable", "false")
                     item.setProperty("Aperture.System", library.system.id)
-                    item.setProperty("Aperture.GameCount", str(len(library.games)))
+                    item.setProperty("Aperture.GameCount", "")
                     item.setArt({"icon": "DefaultAddonGame.png"})
                     items.append((url(action="system", system=library.system.id), item, True))
             if result.issues:

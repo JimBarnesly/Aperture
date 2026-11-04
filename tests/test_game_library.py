@@ -215,5 +215,33 @@ class DiscoveryTests(unittest.TestCase):
             join_path("/roms", "../escape")
 
 
+class LazyDiscoveryTests(unittest.TestCase):
+    def test_system_menu_never_traverses_or_reads_roms(self):
+        fs=MemoryVFS({"/roms": (["psx", "nes", "music"], [])})
+        result=scan_library("/roms",fs,systems_only=True)
+        self.assertEqual({x.system.id for x in result.libraries},{"nes","psx"})
+        self.assertTrue(all(not x.games for x in result.libraries))
+        self.assertEqual(fs.reads,[])
+        self.assertEqual(result.issues,())
+
+    def test_selected_system_progress_reports_entry_counts(self):
+        fs=MemoryVFS({"/roms": (["nes","psx"],[]),"/roms/nes": ([],["a.nes","b.nes"])})
+        counts=[]
+        result=scan_library("/roms",fs,system_id="nes",progress=counts.append)
+        self.assertEqual(counts,[2,4])
+        self.assertEqual(len(result.libraries[0].games),2)
+
+    def test_local_listing_can_cancel_before_full_directory_is_read(self):
+        with tempfile.TemporaryDirectory() as folder:
+            for n in range(100): (Path(folder)/str(n)).touch()
+            calls=[]
+            def cancel():
+                calls.append(1)
+                if len(calls)==3: raise ScanCancelled()
+            with self.assertRaises(ScanCancelled):
+                LocalFileSystem().listdir(folder,check_cancel=cancel)
+            self.assertEqual(len(calls),3)
+
+
 if __name__ == "__main__":
     unittest.main()
