@@ -42,6 +42,8 @@ try:
         game=next((x for x in listing if x['label']==title),None)
         if not game: raise RuntimeError('Synthetic game absent from actual plugin list: '+title)
         # Exercise the directory launch action and native core selection, not a direct ROM bypass.
+        until('no modal before browsing',lambda:not xbmc.getCondVisibility('System.HasModalDialog'))
+        monitor.waitForAbort(.3)
         xbmc.executebuiltin('ActivateWindow(Games,'+folder+',return)')
         until('Games directory',lambda:xbmcgui.getCurrentWindowId()==10821 and xbmc.getInfoLabel('Container.FolderPath')==folder and not xbmc.getCondVisibility('System.HasModalDialog'))
         monitor.waitForAbort(.6)
@@ -61,8 +63,8 @@ try:
             checks.append({'check':'real-game-play-'+system+'-'+str(cycle),'players':players,'window':xbmcgui.getCurrentWindowId()})
             xbmc.Player().stop()
             until('game stopped '+system,lambda:not any(p['type']=='game' for p in active()))
-            xbmc.executebuiltin('ActivateWindow(Games,'+folder+',return)')
-            until('return to Games',lambda:xbmcgui.getCurrentWindowId()==10821)
+            until('return to Games',lambda:xbmcgui.getCurrentWindowId()==10821 and not xbmc.getCondVisibility('System.HasModalDialog'))
+            monitor.waitForAbort(.6)
             checks.append({'check':'exit-back-to-games-'+system+'-'+str(cycle),'window':xbmcgui.getCurrentWindowId()})
     result={'status':'passed','checks':checks,'limitations':['Synthetic original NES/PSX programs only','No physical Pi, 8BitDo, Bluetooth, BIOS or commercial-game testing','No audible hardware-output test']}
     (out/'result.json').write_text(json.dumps(result,indent=2))
