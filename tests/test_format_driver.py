@@ -354,6 +354,30 @@ class DriverTest(unittest.TestCase):
             with self.subTest(rows=rows), self.assertRaisesRegex(AssertionError, "mutation"):
                 driver.assert_mock_mutations(rows, [] if rows == [acquire] else ["/api/acquire-album"], "synthetic")
 
+    def test_protected_health_proof_requires_all_cases_and_independent_queue_permissions(self):
+        protected = {"readOnly":True, "capabilities":{"acquire":True, "cancel":True, "prioritize":True,
+                                                       "editMetadata":False, "deleteMedia":False, "repair":False}}
+        revoked = dict(protected, capabilities=dict(protected["capabilities"], acquire=False))
+        def observed(health, status=200):
+            return {"method":"GET", "path":"/api/health", "status":status, "health":health}
+        health_rows = [observed(protected), observed(revoked), observed({}),
+                       observed({"readOnly":False, "capabilities":[]}), observed(protected, 503)]
+        posts = [{"method":"POST", "path":path, "status":202, "id":["synthetic"], "health":health}
+                 for path, health in (("/api/acquire-album", protected), ("/api/acquisitions/prioritize", revoked),
+                                      ("/api/acquisitions/cancel", revoked))]
+        cases = driver.assert_protected_health_evidence(health_rows + posts)
+        self.assertEqual(len(cases), 5)
+        self.assertTrue(all(cases.values()))
+        for index in range(len(health_rows)):
+            with self.subTest(missing=index), self.assertRaisesRegex(AssertionError, "Missing native permission"):
+                driver.assert_protected_health_evidence(health_rows[:index] + health_rows[index + 1:] + posts)
+        for bad_health in (None, [], {"readOnly":False}, dict(protected, capabilities=[]),
+                           dict(protected, readOnly=False), protected,
+                           dict(revoked, capabilities=dict(revoked["capabilities"], cancel=False)),
+                           dict(revoked, capabilities=dict(revoked["capabilities"], deleteMedia=True))):
+            with self.subTest(health=bad_health), self.assertRaisesRegex(AssertionError, "protected per-action"):
+                driver.assert_protected_health_evidence(health_rows + [dict(posts[-1], health=bad_health)])
+
 
 if __name__ == "__main__":
     unittest.main()

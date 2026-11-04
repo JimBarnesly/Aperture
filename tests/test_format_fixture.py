@@ -62,7 +62,7 @@ class FixtureTest(unittest.TestCase):
                 self.assertEqual(config["expected_ids"], fixture.TRACK_IDS)
                 self.assertEqual(config["album_title"], fixture.fixture_library()["albums"][0]["title"])
                 self.assertEqual(config["catalog_id"], fixture.CATALOG_ID)
-                self.assertEqual(json.loads((runtime / "format-fixture/health.json").read_text()), {"readOnly":False})
+                self.assertEqual(json.loads((runtime / "format-fixture/health.json").read_text()), fixture.fixture_health())
                 self.assertEqual(json.loads((runtime / "format-fixture/acquisitions.json").read_text()), [])
                 self.assertIn('"focused_title":xbmc.getInfoLabel("ListItem.Title")', fixture.OBSERVER_SOURCE)
                 self.assertIn('Container.Property(Aperture.FormatView)', fixture.OBSERVER_SOURCE)
@@ -92,7 +92,7 @@ class FixtureHTTPTest(unittest.TestCase):
         self.files.mkdir()
         self.out.mkdir()
         fixture.atomic(self.files / "library.json", fixture.fixture_library())
-        fixture.atomic(self.files / "health.json", {"readOnly":False})
+        fixture.atomic(self.files / "health.json", fixture.fixture_health())
         fixture.atomic(self.files / "acquisitions.json", [])
         fixture.write_wav(self.files / "tone.wav", 220)
         (self.files / "cover.png").write_bytes(fixture.cover_png())
@@ -125,7 +125,9 @@ class FixtureHTTPTest(unittest.TestCase):
         return [json.loads(line) for line in (self.out / "format-requests.jsonl").read_text().splitlines()]
 
     def test_read_only_browsing_cannot_queue_or_contact_a_provider(self):
-        self.assertFalse(self.request("/api/health")[1]["readOnly"])
+        health = self.request("/api/health")[1]
+        self.assertTrue(health["readOnly"])
+        self.assertEqual(health["capabilities"], fixture.fixture_health()["capabilities"])
         self.assertEqual(self.request("/api/library")[1], fixture.fixture_library())
         catalogue = self.request("/api/catalog/search", q=fixture.ARTIST)[1]
         self.assertEqual(catalogue, fixture.fixture_catalogue())
@@ -139,6 +141,8 @@ class FixtureHTTPTest(unittest.TestCase):
         status, item = self.request("/api/acquire-album", "POST", id=fixture.CATALOG_ID)
         self.assertEqual((status, item["status"], item["id"]), (202, "queued", fixture.CATALOG_ID))
         self.assertEqual(self.request("/api/acquisitions")[1], [item])
+        # Acquisition permission is independent of controlling existing jobs.
+        fixture.atomic(self.files / "health.json", fixture.fixture_health(acquire=False))
         status, item = self.request("/api/acquisitions/prioritize", "POST", id=fixture.CATALOG_ID)
         self.assertEqual((status, item["priority"]), (202, 100))
         status, item = self.request("/api/acquisitions/cancel", "POST", id=fixture.CATALOG_ID)
@@ -150,6 +154,37 @@ class FixtureHTTPTest(unittest.TestCase):
         posts = [row for row in self.requests() if row["method"] == "POST"]
         self.assertEqual([row["status"] for row in posts], [202, 202, 202, 404])
         self.assertTrue(all(row["id"] == [fixture.CATALOG_ID] for row in posts))
+        self.assertTrue(all(row["health"]["readOnly"] is True for row in posts))
+        self.assertFalse(posts[1]["health"]["capabilities"]["acquire"])
+        self.assertTrue(posts[1]["health"]["capabilities"]["prioritize"])
+        self.assertTrue(posts[2]["health"]["capabilities"]["cancel"])
+
+    def test_legacy_write_access_only_when_capabilities_are_absent(self):
+        fixture.atomic(self.files / "health.json", {"readOnly":False})
+        self.assertEqual(self.request("/api/acquire-album", "POST", id=fixture.CATALOG_ID)[0], 202)
+        for capabilities in (None, [], "true", {}, {"cancel":1}, {"cancel":"true"}, {"acquire":True}):
+            with self.subTest(capabilities=capabilities):
+                fixture.atomic(self.files / "health.json", {"readOnly":False, "capabilities":capabilities})
+                self.assertEqual(self.request("/api/acquisitions/cancel", "POST", id=fixture.CATALOG_ID)[0], 403)
+        fixture.atomic(self.files / "health.json", {"readOnly":False})
+        self.assertEqual(self.request("/api/acquisitions/cancel", "POST", id=fixture.CATALOG_ID)[0], 202)
+
+    def test_each_capability_is_independent_and_unknown_health_fails_closed(self):
+        paths = fixture.WRITE_CAPABILITIES
+        for path, action in paths.items():
+            for value in (False, None, 0, 1, "true", "false", [], {}):
+                with self.subTest(action=action, value=value):
+                    health = fixture.fixture_health(**{action:value})
+                    self.assertFalse(fixture.fixture_write_allowed(health, path))
+                    for other_path, other_action in paths.items():
+                        if other_action != action:
+                            self.assertTrue(fixture.fixture_write_allowed(health, other_path))
+        for health in (None, [], "true", {}, {"readOnly":True}, {"readOnly":"false"}):
+            fixture.atomic(self.files / "health.json", health)
+            self.assertEqual(self.request("/api/health")[0], 200)
+            self.assertEqual(self.request("/api/acquire-album", "POST", id=fixture.CATALOG_ID)[0], 403)
+        self.assertEqual(json.loads((self.files / "acquisitions.json").read_text()), [])
+        self.assertFalse(fixture.fixture_write_allowed(fixture.fixture_health(), "/api/library/trash-album"))
 
     def test_readonly_unknown_and_invalid_writes_fail_closed_and_are_logged(self):
         for health in ({"readOnly":True}, {}, {"readOnly":"false"}):

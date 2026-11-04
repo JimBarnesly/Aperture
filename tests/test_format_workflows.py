@@ -2,6 +2,7 @@
 import copy
 import io
 import json
+from itertools import product
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from unittest.mock import patch
@@ -65,6 +66,196 @@ class WorkflowTest(unittest.TestCase):
 
     def property(self, key):
         return [call.args[2] for call in self.xbmcplugin.setProperty.call_args_list if call.args[1] == key][-1]
+
+    def test_publishing_download_has_no_cancel_action(self):
+        self.responses["/api/health"] = {"readOnly": True,
+            "capabilities": {"acquire": True, "cancel": True, "prioritize": True}}
+        self.responses["/api/acquisitions"] = [dict(QUEUED, status="running", publicationStarted=True)]
+        self.run_action("downloads")
+        row = next(entry for entry in self.items()
+                   if entry[2].properties.get("Aperture.FormatStatus") == "Running")
+        self.assertFalse(row[2].context)
+        self.assertEqual(parse_qs(urlsplit(row[1]).query)["action"], ["noop"])
+        self.assertFalse(self.posts())
+
+    def test_stale_cancel_rechecks_publication_before_confirmation(self):
+        self.responses["/api/acquisitions"] = [dict(QUEUED, status="running", publicationStarted=True)]
+        for action in (None, "cancel_download"):
+            with self.subTest(action=action):
+                with self.assertRaisesRegex(self.addon.FormatError, "being finalised"):
+                    self.addon.download_action(SERVER, ACQUISITION_ID, action)
+        self.xbmcgui.Dialog.return_value.select.assert_not_called()
+        self.xbmcgui.Dialog.return_value.yesno.assert_not_called()
+        self.assertFalse(self.posts())
+
+    def test_protected_server_explicitly_allows_only_acquisition(self):
+        self.responses["/api/health"] = {
+            "readOnly": True, "capabilities": {"acquire": True, "cancel": False, "prioritize": False,
+                "editMetadata": False, "deleteMedia": False, "repair": False},
+            "downloads": {"enabled": True, "ready": True, "reason": None}}
+        self.run_action("catalog_album", album_id=CATALOG_ID)
+        self.assertIn("Download album", self.labels())
+        self.xbmcgui.Dialog.return_value.yesno.return_value = True
+        self.run_action("acquire", handle=-1, album_id=CATALOG_ID)
+        self.assertEqual(self.posts(), [("POST", "/api/acquire-album", {"id": [CATALOG_ID]})])
+        for action in ("cancel_download", "prioritize_download"):
+            with self.assertRaises(self.addon.FormatError):
+                self.addon.download_action(SERVER, ACQUISITION_ID, action)
+        self.assertEqual(len(self.posts()), 1)
+
+    def test_explicit_capability_keys_are_independent_in_download_ui(self):
+        for acquire, cancel, prioritize in product((False, True), repeat=3):
+            with self.subTest(acquire=acquire, cancel=cancel, prioritize=prioritize):
+                self.xbmcplugin.addDirectoryItem.reset_mock()
+                self.responses["/api/health"] = {"readOnly": True, "capabilities": {
+                    "acquire": acquire, "cancel": cancel, "prioritize": prioritize}}
+                self.run_action("downloads")
+                row = next(entry for entry in self.items()
+                           if entry[2].properties.get("Aperture.FormatStatus") == "Queued")
+                labels = (["Cancel download"] if cancel else []) + (["Move to front"] if prioritize else [])
+                self.assertEqual([entry[0] for entry in row[2].context], labels)
+                self.assertEqual(parse_qs(urlsplit(row[1]).query)["action"], ["download" if labels else "noop"])
+                self.assertFalse(row[3])
+                self.assertFalse(self.posts())
+
+    def test_explicit_denial_overrides_broad_readwrite_legacy_field(self):
+        self.responses["/api/health"] = {"readOnly": False, "capabilities": {"acquire": False}}
+        permissions, _ = self.addon.download_access(SERVER)
+        self.assertEqual(permissions, {"acquire": False, "cancel": False, "prioritize": False})
+        with self.assertRaises(self.addon.FormatError):
+            self.addon.acquire(SERVER, CATALOG_ID)
+        self.assertFalse(self.posts())
+        self.xbmcgui.Dialog.return_value.yesno.assert_not_called()
+
+    def test_present_malformed_capabilities_never_use_legacy_fallback(self):
+        for malformed in (None, [], "true", True, 1, {}):
+            with self.subTest(malformed=malformed):
+                self.responses["/api/health"] = {"readOnly": False, "capabilities": malformed}
+                permissions, _ = self.addon.download_access(SERVER)
+                self.assertEqual(permissions, {"acquire": False, "cancel": False, "prioritize": False})
+        self.assertFalse(self.posts())
+
+    def test_nonboolean_and_missing_capability_values_fail_closed(self):
+        for value in (1, 0, "true", "false", None, [], {}):
+            with self.subTest(value=value):
+                self.responses["/api/health"] = {"readOnly": False, "capabilities": {
+                    "acquire": value, "cancel": True}}
+                permissions, _ = self.addon.download_access(SERVER)
+                self.assertEqual(permissions, {"acquire": False, "cancel": True, "prioritize": False})
+        self.assertFalse(self.posts())
+
+    def test_legacy_fallback_requires_wholly_absent_capabilities(self):
+        for read_only in (True, False, 0, 1, None, "false"):
+            with self.subTest(read_only=read_only):
+                self.responses["/api/health"] = {"readOnly": read_only}
+                permissions, _ = self.addon.download_access(SERVER)
+                self.assertEqual(permissions, {key: read_only is False for key in ("acquire", "cancel", "prioritize")})
+        self.responses["/api/health"] = {}
+        self.assertFalse(any(self.addon.download_access(SERVER)[0].values()))
+
+    def test_readiness_and_unrelated_capabilities_never_grant_actions(self):
+        self.responses["/api/health"] = {"readOnly": False, "capabilities": {
+            "editMetadata": True, "deleteMedia": True, "repair": True},
+            "downloads": {"enabled": True, "ready": True, "reason": None}}
+        self.assertFalse(any(self.addon.download_access(SERVER)[0].values()))
+        self.assertFalse(self.posts())
+
+    def test_readiness_diagnostics_do_not_override_authoritative_capability(self):
+        self.responses["/api/health"] = {"readOnly": True, "capabilities": {"acquire": True},
+            "downloads": {"enabled": False, "ready": False, "reason": "disabled"}}
+        permissions, notices = self.addon.download_access(SERVER)
+        self.assertTrue(permissions["acquire"])
+        self.assertEqual(notices["acquire"], "Downloads are saved to your Format server.")
+
+    def test_known_download_reasons_are_safe_and_controls_remain_independent(self):
+        for reason in self.addon.DOWNLOAD_REASON_NOTICES:
+            with self.subTest(reason=reason):
+                self.responses["/api/health"] = {"readOnly": True,
+                    "capabilities": {"acquire": False, "cancel": True, "prioritize": True},
+                    "downloads": {"enabled": True, "ready": False, "reason": reason}}
+                permissions, notices = self.addon.download_access(SERVER)
+                self.assertEqual(notices["acquire"], self.addon.DOWNLOAD_REASON_NOTICES[reason])
+                self.assertEqual(permissions, {"acquire": False, "cancel": True, "prioritize": True})
+                self.assertNotIn("does not allow", notices["acquire"])
+
+    def test_unknown_and_malformed_download_reasons_are_never_displayed(self):
+        for details in ({"reason": "secret http://private.invalid/token"}, {"reason": ["secret"]},
+                        {"reason": {"secret": True}}, None, "secret"):
+            with self.subTest(details=details):
+                self.responses["/api/health"] = {"readOnly": False, "capabilities": {"acquire": False},
+                                                "downloads": details}
+                _, notices = self.addon.download_access(SERVER)
+                self.assertIn("has not enabled album acquisition", notices["acquire"])
+                self.assertNotIn("secret", str(notices))
+                self.assertNotIn("private", str(notices))
+
+    def test_acquire_capability_revoked_while_confirmation_is_open(self):
+        self.responses["/api/health"] = {"readOnly": True, "capabilities": {"acquire": True}}
+        def revoke(*args):
+            self.responses["/api/health"]["capabilities"]["acquire"] = False
+            return True
+        self.xbmcgui.Dialog.return_value.yesno.side_effect = revoke
+        self.run_action("acquire", handle=-1, album_id=CATALOG_ID)
+        self.assertFalse(self.posts())
+        self.assertIn("has not enabled", self.xbmcgui.Dialog.return_value.ok.call_args.args[1])
+        self.xbmc.executebuiltin.assert_not_called()
+
+    def test_each_control_rechecks_its_capability_after_confirmation(self):
+        for action, capability in (("cancel_download", "cancel"), ("prioritize_download", "prioritize")):
+            with self.subTest(action=action):
+                self.responses["/api/health"] = {"readOnly": False, "capabilities": {
+                    "acquire": True, "cancel": True, "prioritize": True}}
+                def revoke(*args):
+                    self.responses["/api/health"]["capabilities"][capability] = False
+                    return True
+                self.xbmcgui.Dialog.return_value.yesno.side_effect = revoke
+                self.run_action(action, handle=-1, acquisition_id=ACQUISITION_ID)
+                self.assertFalse(self.posts())
+                self.assertIn("does not allow", self.xbmcgui.Dialog.return_value.ok.call_args.args[1])
+        self.xbmc.executebuiltin.assert_not_called()
+
+    def test_queue_controls_work_when_acquisition_is_blocked(self):
+        self.responses["/api/health"] = {"readOnly": True,
+            "capabilities": {"acquire": False, "cancel": True, "prioritize": True},
+            "downloads": {"enabled": True, "ready": False, "reason": "storage_unavailable"}}
+        self.xbmcgui.Dialog.return_value.yesno.return_value = True
+        self.run_action("prioritize_download", handle=-1, acquisition_id=ACQUISITION_ID)
+        self.run_action("cancel_download", handle=-1, acquisition_id=ACQUISITION_ID)
+        self.assertEqual([call[1] for call in self.posts()], ["/api/acquisitions/prioritize", "/api/acquisitions/cancel"])
+
+    def test_action_dialog_exposes_only_permitted_control(self):
+        for capability, label in (("cancel", "Cancel download"), ("prioritize", "Move to front")):
+            with self.subTest(capability=capability):
+                self.responses["/api/health"] = {"readOnly": True, "capabilities": {capability: True}}
+                self.xbmcgui.Dialog.return_value.select.reset_mock()
+                self.run_action("download", handle=-1, acquisition_id=ACQUISITION_ID)
+                self.xbmcgui.Dialog.return_value.select.assert_called_once_with("Download actions", [label])
+                self.assertFalse(self.posts())
+
+    def test_priority_permission_does_not_offer_controls_for_running_item(self):
+        self.responses["/api/health"] = {"readOnly": True, "capabilities": {"prioritize": True}}
+        self.responses["/api/acquisitions"] = [dict(QUEUED, status="running")]
+        self.run_action("downloads")
+        row = next(entry for entry in self.items() if entry[2].properties.get("Aperture.FormatStatus") == "Running")
+        self.assertFalse(row[2].context)
+        self.assertEqual(parse_qs(urlsplit(row[1]).query)["action"], ["noop"])
+        with self.assertRaises(self.addon.FormatError):
+            self.addon.download_action(SERVER, ACQUISITION_ID)
+        self.assertFalse(self.posts())
+
+    def test_mutation_endpoint_maps_to_only_its_own_capability(self):
+        for endpoint, capability in self.addon.MUTATION_CAPABILITIES.items():
+            with self.subTest(endpoint=endpoint):
+                self.calls.clear()
+                self.responses["/api/health"] = {"readOnly": True, "capabilities": {capability: True}}
+                self.addon.mutate(SERVER, endpoint, ACQUISITION_ID)
+                self.assertEqual(self.posts(), [("POST", endpoint, {"id": [ACQUISITION_ID]})])
+                self.calls.clear()
+                self.responses["/api/health"] = {"readOnly": False,
+                    "capabilities": {key: key != capability for key in ("acquire", "cancel", "prioritize")}}
+                with self.assertRaises(self.addon.FormatError):
+                    self.addon.mutate(SERVER, endpoint, ACQUISITION_ID)
+                self.assertFalse(self.posts())
 
     def test_directory_title_tracks_current_navigation_category(self):
         for action, params, expected in (
@@ -200,7 +391,7 @@ class WorkflowTest(unittest.TestCase):
                        URLError("http://secret.invalid/token")):
             with self.subTest(health=health):
                 self.responses["/api/health"] = health
-                self.assertFalse(self.addon.write_access(SERVER)[0])
+                self.assertFalse(self.addon.download_access(SERVER)[0]["acquire"])
                 with self.assertRaises(self.addon.FormatError):
                     self.addon.acquire(SERVER, CATALOG_ID)
         self.assertFalse(self.posts())

@@ -82,17 +82,25 @@ There is no need to rerun gaming, movie scanning or OS setup for this update.
 
 ## Download boundary on the Pi
 
-The current Pi server deliberately reports `readOnly: true`. Browsing, playback
-and download/publication status work; acquisition, cancellation and prioritising
-are disabled. The skin does not turn them on or silently fall back to another
-server. Unsupported or unreachable capability checks also fail closed.
+The verified default Pi server disables acquisition, cancellation and
+prioritising while leaving browsing, playback and publication status available.
+The skin does not turn writes on or silently fall back to another server.
 
-A download-enabled Pi deployment is not complete merely by turning read-only off.
-It needs a verified writable destination, enough disk space, authorised provider
-access and compatible staging/publication. The current server uses a filesystem
-rename from staging; system-disk staging cannot be atomically renamed onto an
-external HDD. Preserve the protected profile until this is deliberately resolved.
-The existing unauthenticated Format API must not be exposed to an untrusted LAN.
+Newer servers can report separate `capabilities.acquire`, `capabilities.cancel`
+and `capabilities.prioritize` booleans. Each action requires its own exact `true`
+value, even when other actions are enabled. A server can keep `readOnly: true`
+for existing-library protection while explicitly allowing new downloads. A
+present capability object is authoritative: missing or malformed values never
+fall back to the broad read-only flag. Only older servers that omit the object
+entirely use `readOnly: false` as the legacy permission signal. Unreachable
+health checks fail closed; readiness text is never permission.
+
+A download-enabled Pi deployment is not complete merely by changing a flag.
+It needs a separately verified server build, a dedicated writable destination,
+enough disk space, authorised provider access and compatible staging/publication
+on the same filesystem and mount boundary. Preserve the protected profile until
+that path is tested. The existing unauthenticated Format API must not be exposed
+to an untrusted LAN.
 
 ## Acceptance and reporting
 
@@ -103,7 +111,7 @@ physical Pi performance, audible output, provider credentials or real acquisitio
 
 On the Pi verify Music enters Format without the old chooser; actual album art,
 artists and search; complete album order and playback/Stop; Back/reopen; offline
-recovery; and the honest read-only Downloads message. Keep existing files, saves
+recovery; and Downloads controls or a truthful disabled/readiness message. Keep existing files, saves
 and metadata unchanged. Record exact source/install versions and pass/fail steps.
 Public feedback should contain only sanitised technical evidence, never media
 paths, personal album lists, hostnames, device IDs, tokens or unredacted logs.

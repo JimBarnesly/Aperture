@@ -1,6 +1,6 @@
 # Aperture technical handoff
 
-Updated: 2026-11-04 22:44 UTC. Public, sanitised project status only.
+Updated: 2026-11-04 23:07 UTC. Public, sanitised project status only.
 This note is not deployment permission or a claim of physical-device acceptance.
 
 ## Branch and verification
@@ -12,8 +12,8 @@ This note is not deployment permission or a claim of physical-device acceptance.
   [menus](https://github.com/JimBarnesly/Aperture/actions/runs/41868502565),
   [Movies](https://github.com/JimBarnesly/Aperture/actions/runs/41868502657) and
   [casting](https://github.com/JimBarnesly/Aperture/actions/runs/41868519928) workflows passed.
-- This integration candidate extends that baseline. 336 local tests and complete
-  Omega skin assembly pass. Check native CI at the exact commit containing this
+- This integration candidate extends that baseline. 357 local regression tests
+  and complete Omega skin assembly pass. Check native CI at the exact commit containing this
   note before testing an installation. Historical runs do not certify newer code.
 
 ## Unified Format music candidate
@@ -28,8 +28,10 @@ capability at action time, rejects redirects and never automatically retries an
 uncertain write. Non-folder actions preserve Kodi Back history. Published-only
 playback, ordered releases and server publication validation remain intact.
 
-The protected Pi profile remains read-only. Acquisition, cancellation and
-prioritisation are disabled there. A writable deployment also needs compatible
+The default protected Pi profile keeps download actions disabled. New servers
+can grant acquire, cancel and prioritise independently while protecting existing
+media. Each capability is checked again after confirmation. Missing or malformed
+capabilities fail closed. An opt-in server profile still needs separately verified
 staging/publication and authorised provider access; changing a flag is not enough.
 The skin does not change server permissions, expose the API to a LAN, or grant
 operator access. See [Format installation and acceptance](docs/format-integration.md).
@@ -48,8 +50,15 @@ It then [stopped in test navigation](https://github.com/JimBarnesly/Aperture/act
 before catalogue/download acceptance: reactivating the active Music window did
 not return to the root. The harness now traverses actual Back history instead.
 This candidate also gives each Music section a stable contextual heading.
-The full corrected native run is still required; do not treat partial coverage
-as a pass or infer real provider/device acceptance.
+At `0175b226a144c8792f802bb8414ea08ee8eed80b`, native navigation reached
+Artists and verified the corrected Back path and contextual heading. The next
+check counted a legitimate Back refresh in the cancelled-search baseline; that
+measurement now begins after returning to the root. The
+[deployment-gate feedback](https://github.com/JimBarnesly/Aperture/pull/5#issuecomment-6644386749)
+correctly withheld installation at that failing commit. Native coverage also checks
+protected per-action permissions, malformed/failed health and revocation while
+a confirmation is open. A complete corrected run remains required; partial
+coverage is not a pass or proof of real provider/device acceptance.
 
 ## Other implementation boundaries
 

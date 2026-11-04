@@ -23,7 +23,22 @@ MAX_QUERY_LENGTH = 200
 ACQUISITION_STATES = frozenset(("queued", "resolving", "running", "complete", "failed", "cancelled", "cancelling"))
 CANCELLABLE_STATES = frozenset(("queued", "resolving", "running"))
 SHADOW_STATES = frozenset(("detected", "queued", "resolving", "running", "incomplete", "validating", "published", "failed", "cancelled", "cancelling", "retry_wait", "identifying", "acquiring", "needs_attention", "missing_local_files", "legacy_published_needs_attention"))
-WRITE_ENDPOINTS = frozenset(("/api/acquire-album", "/api/acquisitions/cancel", "/api/acquisitions/prioritize"))
+MUTATION_CAPABILITIES = {
+    "/api/acquire-album": "acquire",
+    "/api/acquisitions/cancel": "cancel",
+    "/api/acquisitions/prioritize": "prioritize",
+}
+WRITE_ENDPOINTS = frozenset(MUTATION_CAPABILITIES)
+DOWNLOAD_REASON_NOTICES = {
+    "disabled": "Downloading disabled on this Format server. Browsing and status are still available.",
+    "unsafe_configuration": "Downloading unavailable: the Format server's download configuration needs attention.",
+    "storage_unavailable": "Downloading unavailable: the Format server's music storage is unavailable.",
+    "downloader_unavailable": "Downloading unavailable: the Format server's downloader is unavailable.",
+}
+DOWNLOAD_ACTIONS = (
+    ("Cancel download", "cancel_download", "cancel", "/api/acquisitions/cancel"),
+    ("Move to front", "prioritize_download", "prioritize", "/api/acquisitions/prioritize"),
+)
 READ_ENDPOINTS = frozenset(("/api/library", "/api/health", "/api/catalog/search", "/api/catalog/album", "/api/acquisitions", "/api/shadow-albums"))
 
 
@@ -124,29 +139,59 @@ def identifier(value):
     return isinstance(value, str) and 0 < len(value) <= 2048 and not any(ord(c) < 32 for c in value)
 
 
-def write_access(server):
+def download_access(server):
+    """Read independent capabilities; readiness text never grants permission."""
+    permissions = {capability: False for capability in MUTATION_CAPABILITIES.values()}
+    unavailable = "Downloading unavailable: cannot verify Format server permissions. Browsing and status are still available."
     try:
         health = request_json(server, "/api/health", maximum=64 * 1024)
     except FormatError:
-        return False, "Downloading unavailable: cannot verify Format server permissions. Browsing and status are still available."
-    if isinstance(health, dict) and health.get("readOnly") is False:
-        return True, "Downloads are saved to your Format server."
-    if isinstance(health, dict) and health.get("readOnly") is True:
-        return False, "Downloading disabled: this Format server is read-only. Browsing and status are still available."
-    return False, "Downloading unavailable: the Format server did not confirm write access."
+        return permissions, {key: unavailable for key in permissions}
+    if not isinstance(health, dict):
+        return permissions, {key: unavailable for key in permissions}
+    if "capabilities" in health:
+        capabilities = health["capabilities"]
+        if isinstance(capabilities, dict):
+            permissions = {key: capabilities.get(key) is True for key in permissions}
+        # Presence is authoritative, including malformed objects and missing keys.
+        # A broad readOnly:false must never override a narrow capability denial.
+        notices = {
+            "acquire": "Downloading unavailable: this Format server has not enabled album acquisition. Browsing and status are still available.",
+            "cancel": "This Format server does not allow cancelling downloads.",
+            "prioritize": "This Format server does not allow changing download priority.",
+        }
+        downloads = health.get("downloads")
+        reason = downloads.get("reason") if isinstance(downloads, dict) else None
+        if not permissions["acquire"] and isinstance(reason, str) and reason in DOWNLOAD_REASON_NOTICES:
+            notices["acquire"] = DOWNLOAD_REASON_NOTICES[reason]
+    elif health.get("readOnly") is False:
+        # Compatibility with older servers that do not expose capabilities at all.
+        permissions = {key: True for key in permissions}
+        notices = {key: "Downloads are saved to your Format server." for key in permissions}
+    elif health.get("readOnly") is True:
+        message = "Downloading disabled: this Format server is read-only. Browsing and status are still available."
+        notices = {key: message for key in permissions}
+    else:
+        message = "Downloading unavailable: the Format server did not confirm download permissions."
+        notices = {key: message for key in permissions}
+    if permissions["acquire"]:
+        notices["acquire"] = "Downloads are saved to your Format server."
+    return permissions, notices
 
 
-def require_write_access(server):
-    allowed, notice = write_access(server)
-    if not allowed:
-        raise FormatError(notice)
+def require_capability(server, capability):
+    if capability not in MUTATION_CAPABILITIES.values():
+        raise FormatError("This Format download action is not supported.")
+    permissions, notices = download_access(server)
+    if not permissions[capability]:
+        raise FormatError(notices[capability])
 
 
 def mutate(server, endpoint, item_id):
     if endpoint not in WRITE_ENDPOINTS or not identifier(item_id):
         raise FormatError("This Format download action is invalid.")
     # Recheck after the confirmation dialog: permission can change while it is open.
-    require_write_access(server)
+    require_capability(server, MUTATION_CAPABILITIES[endpoint])
     try:
         result = request_json(server, endpoint, {"id": item_id}, post=True, maximum=256 * 1024)
         if (not isinstance(result, dict) or not identifier(result.get("id"))
@@ -394,7 +439,8 @@ def find_music(handle, server, query):
             or (data.get("artist") is not None and not isinstance(data.get("artist"), dict))):
         raise FormatError("Format returned an unsupported artist catalogue.")
     artist = data.get("artist") or {}
-    _, notice = write_access(server)
+    _, notices = download_access(server)
+    notice = notices["acquire"]
     set_view(handle, "catalog", "files", "Find music: " + display(artist.get("name"), query),
              "Artist catalogue: up to 100 studio album releases. " + notice)
     menu_item(handle, "Artist catalogue: up to 100 studio album releases", detail=notice)
@@ -429,9 +475,10 @@ def catalogue_preview(server, album_id):
 
 def catalogue_album(handle, server, album_id):
     album = catalogue_preview(server, album_id)
-    allowed, notice = write_access(server)
+    permissions, notices = download_access(server)
+    notice = notices["acquire"]
     set_view(handle, "catalog", "files", display(album["title"]), notice)
-    if allowed:
+    if permissions["acquire"]:
         menu_item(handle, "Download album", "acquire", False,
                   detail="Download to your Format server", album_id=album["id"],
                   source=album, status="Available to download")
@@ -445,7 +492,7 @@ def catalogue_album(handle, server, album_id):
 
 
 def acquire(server, album_id):
-    require_write_access(server)
+    require_capability(server, "acquire")
     album = catalogue_preview(server, album_id)
     message = "Download {} - {} to your Format server? Only download music you have the right to obtain.".format(
         display(album["artist"]), display(album["title"]))
@@ -480,11 +527,23 @@ def acquisition_detail(source):
     return state.capitalize(), detail, str(progress) if state in ("running", "complete") else ""
 
 
+def available_download_actions(item, permissions):
+    state = item.get("status")
+    if (not isinstance(state, str) or state not in CANCELLABLE_STATES
+            or item.get("cancelRequested") is True):
+        return []
+    return [action for action in DOWNLOAD_ACTIONS
+            if permissions.get(action[2]) is True
+            and ((action[2] == "cancel" and item.get("publicationStarted") is not True)
+                 or (action[2] == "prioritize" and state == "queued"))]
+
+
 def downloads(handle, server):
-    allowed, notice = write_access(server)
+    permissions, notices = download_access(server)
+    notice = notices["acquire"]
     set_view(handle, "downloads", "files", "Downloads", notice)
     menu_item(handle, "Refresh downloads", "downloads", True, detail="Refresh status only")
-    if not allowed:
+    if not permissions["acquire"]:
         menu_item(handle, notice)
     # Each source can still be useful when the other is temporarily unavailable.
     for endpoint, shadow in (("/api/acquisitions", False), ("/api/shadow-albums", True)):
@@ -511,21 +570,26 @@ def downloads(handle, server):
             label = "{} - {} | {}".format(display(source.get("artist"), "Unknown artist"),
                                           display(source.get("title"), "Untitled"), state)
             item_id = source.get("id")
-            interactive = (not shadow and allowed and identifier(item_id)
-                           and isinstance(source.get("status"), str) and source["status"] in CANCELLABLE_STATES
-                           and source.get("cancelRequested") is not True)
-            actions = []
-            if interactive:
-                actions = [("Cancel download", "RunPlugin({})".format(plugin_url("cancel_download", acquisition_id=item_id)))]
-                if source.get("status") == "queued":
-                    actions.append(("Move to front", "RunPlugin({})".format(plugin_url("prioritize_download", acquisition_id=item_id))))
+            choices = available_download_actions(source, permissions) if not shadow and identifier(item_id) else []
+            interactive = bool(choices)
+            actions = [(choice[0], "RunPlugin({})".format(plugin_url(choice[1], acquisition_id=item_id)))
+                       for choice in choices]
             menu_item(handle, label, "download" if interactive else "noop", False,
                       detail=detail, source=source, status=state, progress=progress, context=actions,
                       **({"acquisition_id": item_id} if interactive else {}))
 
 
 def download_action(server, item_id, action=None):
-    require_write_access(server)
+    permissions, notices = download_access(server)
+    by_action = {choice[1]: choice for choice in DOWNLOAD_ACTIONS}
+    if action is not None:
+        if action not in by_action:
+            raise FormatError("This download action is not supported.")
+        capability = by_action[action][2]
+        if not permissions[capability]:
+            raise FormatError(notices[capability])
+    elif not permissions["cancel"] and not permissions["prioritize"]:
+        raise FormatError("Download controls are unavailable. Browsing and status are still available.")
     if not identifier(item_id):
         raise FormatError("Select a download from the current Downloads list.")
     matches = [item for item in status_list(server, "/api/acquisitions") if item.get("id") == item_id]
@@ -533,23 +597,25 @@ def download_action(server, item_id, action=None):
             or matches[0]["status"] not in CANCELLABLE_STATES or matches[0].get("cancelRequested") is True):
         raise FormatError("This download is no longer active or queued. Refresh Downloads.")
     item = matches[0]
+    if action == "cancel_download" and item.get("publicationStarted") is True:
+        raise FormatError("This album is being finalised and can no longer be cancelled. Refresh Downloads.")
+    choices = available_download_actions(item, permissions)
+    if not choices:
+        if item.get("publicationStarted") is True:
+            raise FormatError("This album is being finalised. Download controls are no longer available.")
+        raise FormatError("No permitted controls are available for this download. Refresh Downloads.")
     if action is None:
-        choices = [("Cancel download", "cancel_download")]
-        if item["status"] == "queued":
-            choices.append(("Move to front", "prioritize_download"))
         selected = xbmcgui.Dialog().select("Download actions", [choice[0] for choice in choices])
         if type(selected) is not int or not 0 <= selected < len(choices):
             return False
         action = choices[selected][1]
-    if action not in ("cancel_download", "prioritize_download"):
-        raise FormatError("This download action is not supported.")
-    if action == "prioritize_download" and item["status"] != "queued":
+    choice = by_action[action]
+    if choice not in choices:
         raise FormatError("Only queued downloads can move to the front. Refresh Downloads.")
-    title = "Cancel download" if action == "cancel_download" else "Move to front"
+    title, _, _, endpoint = choice
     message = "{}: {} - {}?".format(title, display(item.get("artist"), "Unknown artist"), display(item.get("title"), "Untitled"))
     if xbmcgui.Dialog().yesno(title, message) is not True:
         return False
-    endpoint = "/api/acquisitions/cancel" if action == "cancel_download" else "/api/acquisitions/prioritize"
     mutate(server, endpoint, item_id)
     return True
 

@@ -41,6 +41,49 @@ def assert_mock_mutations(requests, expected_paths, identifier):
     return rows
 
 
+def assert_protected_health_evidence(requests):
+    """Prove health cases and per-action permissions from actual fixture requests."""
+    cases = {name:False for name in ("protected-ready", "acquire-revoked", "missing-contract",
+                                     "malformed-capabilities", "health-unavailable")}
+    for row in requests:
+        if row.get("path") != "/api/health":
+            continue
+        if row.get("status") == 503:
+            cases["health-unavailable"] = True
+            continue
+        if row.get("status") != 200:
+            continue
+        health = row.get("health")
+        if health == {}:
+            cases["missing-contract"] = True
+        if not isinstance(health, dict):
+            continue
+        capabilities = health.get("capabilities")
+        if "capabilities" in health and not isinstance(capabilities, dict) and health.get("readOnly") is False:
+            cases["malformed-capabilities"] = True
+        if not isinstance(capabilities, dict) or health.get("readOnly") is not True:
+            continue
+        if capabilities.get("cancel") is True and capabilities.get("prioritize") is True:
+            if capabilities.get("acquire") is True:
+                cases["protected-ready"] = True
+            elif capabilities.get("acquire") is False:
+                cases["acquire-revoked"] = True
+    if not all(cases.values()):
+        raise AssertionError("Missing native permission cases: " + repr(cases))
+    actions = {"/api/acquire-album":"acquire", "/api/acquisitions/cancel":"cancel",
+               "/api/acquisitions/prioritize":"prioritize"}
+    for row in mutation_requests(requests):
+        health = row.get("health")
+        capabilities = health.get("capabilities") if isinstance(health, dict) else None
+        action = actions.get(row.get("path"))
+        if (not isinstance(health, dict) or not isinstance(capabilities, dict)
+                or health.get("readOnly") is not True or action is None or capabilities.get(action) is not True
+                or any(capabilities.get(key) is not False for key in ("editMetadata", "deleteMedia", "repair"))
+                or (action in ("cancel", "prioritize") and capabilities.get("acquire") is not False)):
+            raise AssertionError("Mutation did not respect protected per-action permissions: " + repr(row))
+    return cases
+
+
 def route_is(folder, action, **parameters):
     """Match the actual plugin route, never an action-name substring."""
     parsed = urlsplit(folder)
@@ -279,6 +322,12 @@ def run(hooks):
         temporary.write_text(json.dumps(value))
         temporary.replace(path)
 
+    def protected_health(acquire=True):
+        value = json.loads(json.dumps(config["protected_health"]))
+        value["capabilities"]["acquire"] = acquire
+        value["downloads"].update(ready=acquire, reason=None if acquire else "downloader_unavailable")
+        health(value)
+
     def unified_integration():
         root_state = root_menu()
         screenshot("format-06-unified-root")
@@ -295,6 +344,9 @@ def run(hooks):
         screenshot("format-07-artist-albums")
         checks.append({"check":"unified-root-and-artists", "root":root_state, "artist":artist_state})
 
+        # Returning through Artists legitimately refetches its library. Measure
+        # prompt cancellation only once that native Back navigation has finished.
+        root_menu()
         baseline = len(read_requests())
         prompt_search("Search library", "search")
         prompt_search("Find music", "find_music")
@@ -337,19 +389,19 @@ def run(hooks):
         # Even explicit approval is insufficient if permissions change while
         # its dialog is open. The action must recheck health before POST.
         start_acquire()
-        health({"readOnly":True})
+        protected_health(acquire=False)
         find_label("Yes", "Right", 3)
         before = press("Return")
         wait_for("Permission changed during confirmation blocks POST", lambda s: s.get("dialog") == 12002, after=before)
         settle_focus()
-        screenshot("format-12-read-only-action-blocked")
+        screenshot("format-12-acquire-capability-revoked")
         before = press("Return")
-        wait_for("Read-only message dismissed", lambda s: s.get("dialog") == 9999, after=before)
-        readonly = preview()
-        if "Download album" in readonly["labels"]:
-            raise AssertionError("Read-only catalogue offers Download album")
-        screenshot("format-13-read-only-preview")
-        health({"readOnly":False})
+        wait_for("Permission message dismissed", lambda s: s.get("dialog") == 9999, after=before)
+        revoked = preview()
+        if "Download album" in revoked["labels"]:
+            raise AssertionError("Revoked acquisition capability offers Download album")
+        screenshot("format-13-acquisition-disabled-preview")
+        protected_health()
         failed_health = runtime / "format-fixture/health-offline"
         failed_health.write_text("SYNTHETIC QA unavailable health\n")
         unavailable = preview()
@@ -357,10 +409,22 @@ def run(hooks):
             raise AssertionError("Unavailable health offered Download album")
         screenshot("format-14-health-unavailable")
         failed_health.unlink()
+        health({})
+        missing = preview()
+        if "Download album" in missing["labels"]:
+            raise AssertionError("Missing permission contract offered Download album")
+        screenshot("format-14b-missing-health-contract")
+        health({"readOnly":False, "capabilities":[]})
+        malformed = preview()
+        if "Download album" in malformed["labels"]:
+            raise AssertionError("Malformed capabilities fell back to readOnly false")
+        screenshot("format-14c-malformed-capabilities")
         assert_mock_mutations(read_requests(), [], config["catalog_id"])
-        checks.append({"check":"catalogue-preview-decline-readonly-failclosed", "preview":preview_state,
-                       "readonly":readonly, "health_unavailable":unavailable, "mutations":[]})
+        checks.append({"check":"catalogue-preview-decline-capability-failclosed", "preview":preview_state,
+                       "acquire_revoked":revoked, "health_unavailable":unavailable,
+                       "missing_contract":missing, "malformed_capabilities":malformed, "mutations":[]})
 
+        protected_health()
         preview()
         start_acquire()
         confirmation(True, "format-15-confirm-synthetic-acquisition")
@@ -370,6 +434,9 @@ def run(hooks):
         screenshot("format-16-queued-download")
         expected = ["/api/acquire-album"]
         assert_mock_mutations(read_requests(), expected, config["catalog_id"])
+        protected_health(acquire=False)
+        press("l")
+        wait_view("downloads", "downloads")
         queued_action()  # Escape out of the action picker must be a no-op.
         queued_action("Move to front")
         confirmation(False)
@@ -404,7 +471,8 @@ def run(hooks):
         if len(items) != 1 or items[0]["id"] != config["catalog_id"] or items[0]["status"] != "cancelled" or items[0].get("priority") != 100:
             raise AssertionError("Native confirmed actions did not update the synthetic queue correctly")
         checks.append({"check":"explicit-mock-acquisition-prioritize-cancel-and-no-replay",
-                       "mutations":mutations, "acquisitions":items, "state":actual})
+                       "mutations":mutations, "acquisitions":items, "state":actual,
+                       "health_cases":assert_protected_health_evidence(read_requests())})
         return_home()
 
     def return_home():
@@ -541,7 +609,7 @@ def run(hooks):
         assert_mock_mutations(read_requests(), ["/api/acquire-album", "/api/acquisitions/prioritize",
                                                 "/api/acquisitions/cancel"], config["catalog_id"])
         result = {"status":"passed", "label":"SYNTHETIC QA", "checks":checks,
-                  "scope":"Real Kodi unified Format root, artists/library search, native album shelf and track list, ordered playback, catalogue preview, cancelled prompts, read-only/health-failure write restrictions, explicit mock acquisition/priority/cancel, no mutation replay and HTTP-outage recovery",
+                  "scope":"Real Kodi unified Format root, artists/library search, native album shelf and track list, ordered playback, catalogue preview, cancelled prompts, protected per-action capabilities and malformed/unavailable health restrictions, explicit mock acquisition/priority/cancel, no mutation replay and HTTP-outage recovery",
                   "limitations":["Synthetic loopback server, not the user's Format server", "Mock acquisition queue only; no provider or downloaded media", "Clocked discard sink, not audible hardware output", "No physical Pi acceptance"]}
         (out / "format-result.json").write_text(json.dumps(result, indent=2) + "\n")
         print("PASS: real Kodi Format synthetic browse/playback/recovery", flush=True)

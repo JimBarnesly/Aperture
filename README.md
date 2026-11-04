@@ -73,13 +73,16 @@ use `http://127.0.0.1:4534`; the client does not guess a server or install one.
 Native album shelves, artists, library search, ordered playback, catalogue search
 and download status share Format's existing backend with its standalone UI.
 
-Download actions require an explicitly writable server, an explicit action in
-Kodi and a confirmation. Read-only or unsupported servers remain read-only;
-unknown capability is never treated as permission. Acquisition, cancellation and
-prioritisation are not enabled by changing the skin. No automatic acquisition,
-metadata rewriting, deletion, upload, operator privileges or LAN exposure is added.
-The current protected Pi deployment disables download writes. A writable Pi
-profile needs a separately verified destination/staging setup and provider access.
+Download actions require the matching explicit server capability, an action in
+Kodi and a confirmation. Acquisition, cancellation and prioritisation are checked
+independently, including after confirmation. A protected server can permit new
+downloads while keeping existing-library edits disabled. Missing or malformed
+capabilities fail closed; older servers without a capability object use their
+explicit read-only flag. Changing the skin does not enable server permissions.
+No automatic acquisition, metadata rewriting, deletion, upload, operator
+privileges or LAN exposure is added. The verified default Pi deployment disables
+download writes. An opt-in download profile needs separate server verification,
+a safe destination/staging setup and authorised provider access.
 
 The native Kodi client does not embed a web browser or clone Format's database.
 Game systems and receiver services remain separate; generic Kodi is not a

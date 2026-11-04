@@ -29,6 +29,8 @@ LABEL = "SYNTHETIC QA"
 ARTIST = "A SYNTHETIC QA"
 CATALOG_ID = "synthetic-catalog%00album, A & B"
 CATALOG_TITLE = "SYNTHETIC QA Mock Download"
+WRITE_CAPABILITIES = {"/api/acquire-album":"acquire", "/api/acquisitions/cancel":"cancel",
+                      "/api/acquisitions/prioritize":"prioritize"}
 ALBUM_ID = "synthetic%00double,album"
 TRACK_IDS = ["SYNTHETIC QA/Disc 1/01, A & B.wav", "SYNTHETIC QA/Disc 1/02.wav",
              "SYNTHETIC QA/Disc 2/01.wav", "SYNTHETIC QA/Disc 2/02.wav"]
@@ -136,6 +138,26 @@ def fixture_preview():
                        "artist":ARTIST, "duration":30} for i in range(2)]}
 
 
+def fixture_health(**actions):
+    capabilities = {"acquire":True, "cancel":True, "prioritize":True,
+                    "editMetadata":False, "deleteMedia":False, "repair":False}
+    capabilities.update(actions)
+    return {"readOnly":True, "capabilities":capabilities,
+            "downloads":{"enabled":True, "ready":capabilities["acquire"] is True,
+                         "reason":None if capabilities["acquire"] is True else "downloader_unavailable"}}
+
+
+def fixture_write_allowed(health, path):
+    action = WRITE_CAPABILITIES.get(path)
+    if action is None or not isinstance(health, dict):
+        return False
+    if "capabilities" in health:
+        capabilities = health["capabilities"]
+        return isinstance(capabilities, dict) and capabilities.get(action) is True
+    # Only a legacy server with no capabilities contract uses this fallback.
+    return health.get("readOnly") is False
+
+
 def write_wav(path, frequency):
     rate = 8000
     # Quiet original sine tone; no downloaded or copyrighted source audio.
@@ -186,7 +208,7 @@ def prepare(runtime, out, root=ROOT):
     fixture.mkdir()
     library = fixture_library()
     atomic(fixture / "library.json", library)
-    atomic(fixture / "health.json", {"readOnly":False})
+    atomic(fixture / "health.json", fixture_health())
     atomic(fixture / "acquisitions.json", [])
     files = {}
     for index, identifier in enumerate(TRACK_IDS):
@@ -195,7 +217,7 @@ def prepare(runtime, out, root=ROOT):
         files[identifier] = name
     (fixture / "cover.png").write_bytes(cover_png())
     config = {"label":LABEL, "token":uuid.uuid4().hex, "runtime":str(runtime), "out":str(out), "files":files,
-              "artist":ARTIST, "catalog_id":CATALOG_ID, "catalog_title":CATALOG_TITLE,
+              "artist":ARTIST, "catalog_id":CATALOG_ID, "catalog_title":CATALOG_TITLE, "protected_health":fixture_health(),
               "catalog_tracks":[track["title"] for track in fixture_preview()["tracks"]],
               "expected_ids":TRACK_IDS, "album_id":ALBUM_ID, "album_title":library["albums"][0]["title"], "expected_titles":["SYNTHETIC QA Disc {} Track {}".format(i // 2 + 1, i % 2 + 1) for i in range(4)]}
     atomic(marker, config)
@@ -299,7 +321,9 @@ def fixture_handler(config, fixture, out):
             with lock, (out / "format-requests.jsonl").open("a") as log:
                 log.write(json.dumps({"time":time.time(), "path":url.path, "query":query,
                                       "id":query.get("id"), "status":status,
-                                      "method":self.command}) + "\n")
+                                      "method":self.command,
+                                      "health":getattr(self, "fixture_health", None)
+                                      if url.path == "/api/health" or self.command not in ("GET", "HEAD") else None}) + "\n")
             self.send_response(status)
             self.send_header("Content-Type", mime)
             self.send_header("Content-Length", str(len(payload)))
@@ -322,12 +346,13 @@ def fixture_handler(config, fixture, out):
             if (fixture / "offline").exists():
                 return data({"error":"SYNTHETIC QA offline"}, 503)
             health = json.loads((fixture / "health.json").read_text())
-            writes = ("/api/acquire-album", "/api/acquisitions/cancel", "/api/acquisitions/prioritize")
+            self.fixture_health = health
+            writes = WRITE_CAPABILITIES
             if self.command not in ("GET", "HEAD"):
-                if health.get("readOnly") is not False:
-                    return data({"error":"This Format server is in read-only mode."}, 403)
                 if self.command != "POST" or path not in writes:
                     return data({"error":"Not a supported mock acquisition action"}, 405)
+                if not fixture_write_allowed(health, path):
+                    return data({"error":"This Format action is not permitted."}, 403)
                 if identifier != CATALOG_ID or set(query) != {"id"} or len(query["id"]) != 1:
                     return data({"error":"Not a synthetic catalogue album"}, 404)
                 items = json.loads((fixture / "acquisitions.json").read_text())
@@ -351,7 +376,8 @@ def fixture_handler(config, fixture, out):
             if path == "/api/health":
                 if (fixture / "health-offline").exists():
                     return data({"error":"SYNTHETIC QA health unavailable"}, 503)
-                return data(dict(health, initialLibraryScanComplete=True, albums=1, tracks=4))
+                return data(dict(health, initialLibraryScanComplete=True, albums=1, tracks=4)
+                            if isinstance(health, dict) else health)
             if path == "/api/catalog/search":
                 if query.get("q", [""])[0].strip().casefold() != ARTIST.casefold():
                     return data({"artist":None, "albums":[]})

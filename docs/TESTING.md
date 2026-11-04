@@ -25,8 +25,11 @@
   its separate gaming acceptance, not the fresh ZIP phase.
 - Format GUI fixture: synthetic original tones, artwork and mock acquisition
   state on loopback only. Covers native album/list views, artists/search,
-  catalogue preview, declined/confirmed actions, read-only permission changes,
-  queue state, ordered playback and offline recovery.
+  catalogue preview, declined/confirmed actions, independent protected-mode
+  capabilities, permission revocation while confirming, missing/malformed/failed
+  health, queue-only controls, ordered playback and offline recovery. Exactly
+  three permitted mock POSTs are required; navigation and cancelled actions
+  must not replay writes.
   This fixture is not a replacement for anyone's library or proof of access to
   their Format server. Clocked discard audio is not an audible-output test.
 
