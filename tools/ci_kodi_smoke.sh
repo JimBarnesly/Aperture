@@ -412,7 +412,9 @@ try:
             focus(control); before=press('Return')
             if control == 103:
                 wait_for('Music choice opens on Local music', lambda s:s.get('window')==HOME and s.get('focus')==203, after=before)
-                before=press('Escape')
+                # Kodi maps BackSpace/controller B to Back, which invokes the
+                # focused control's onback. Escape is PreviousMenu instead.
+                before=press('BackSpace')
                 wait_for('Music choice Back returns to Music', lambda s:s.get('window')==HOME and s.get('focus')==103, after=before)
                 before=press('Right')
                 wait_for('Music choice reopens after Back', lambda s:s.get('window')==HOME and s.get('focus')==203, after=before)

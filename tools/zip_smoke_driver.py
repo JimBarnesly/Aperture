@@ -298,7 +298,8 @@ class Driver:
         self.focus_home(103)
         before = self.key('Return')
         self.wait('ZIP-installed Music choice', lambda s:s.get('window') == 10000 and s.get('focus') == 203, after=before)
-        before = self.key('Escape')
+        # Exercise the same Back action as controller B; Escape is PreviousMenu.
+        before = self.key('BackSpace')
         self.wait('Music choice cancels to Home Music', lambda s:s.get('window') == 10000 and s.get('focus') == 103, after=before)
         before = self.key('Right')
         self.wait('Music choice reopens', lambda s:s.get('window') == 10000 and s.get('focus') == 203, after=before)

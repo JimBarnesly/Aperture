@@ -5,6 +5,7 @@ from pathlib import Path
 import time
 import traceback
 import subprocess
+import platform
 import xbmc
 import xbmcgui
 
@@ -27,7 +28,11 @@ def until(description,predicate,timeout=35):
     raise RuntimeError('Timed out '+description)
 def active(): return [{'type':'game'}] if xbmc.Player().isPlayingGame() else []
 def capture(name):
-    subprocess.run(['import', '-window', 'root', str(out/(name+'.png'))], check=True, timeout=10)
+    if platform.machine() in ('x86_64','amd64'):
+        xbmc.executebuiltin('TakeScreenshot('+str(out/(name+'.png'))+',sync)')
+        until('native screenshot',lambda:(out/(name+'.png')).exists(),timeout=8)
+    else:
+        subprocess.run(['import', '-window', 'root', str(out/(name+'.png'))], check=True, timeout=10)
 try:
     until('Home',lambda:xbmcgui.getCurrentWindowId()==10000)
     for addon in ('game.libretro','peripheral.joystick','game.libretro.aperture.nestopia','game.libretro.aperture.pcsxrearmed'):

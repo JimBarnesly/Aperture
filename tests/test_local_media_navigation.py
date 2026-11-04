@@ -98,6 +98,12 @@ class LocalMediaNavigationTests(unittest.TestCase):
         self.assertIn('ZIP-installed local music', zipper)
         self.assertIn('Format choice focused', zipper)
 
+    def test_choice_cancel_uses_controller_equivalent_back_not_previousmenu(self):
+        smoke = (ROOT / 'tools/ci_kodi_smoke.sh').read_text()
+        self.assertIn("before=press('BackSpace')\n                wait_for('Music choice Back returns to Music'", smoke)
+        zipper = (ROOT / 'tools/zip_smoke_driver.py').read_text()
+        self.assertIn("before = self.key('BackSpace')\n        self.wait('Music choice cancels to Home Music'", zipper)
+
 
 if __name__ == '__main__':
     unittest.main()
