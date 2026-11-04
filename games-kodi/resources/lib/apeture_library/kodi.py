@@ -126,8 +126,9 @@ class Plugin:
             tag = item.getGameInfoTag()
             tag.setTitle(game.title)
             tag.setPlatform(SYSTEM_BY_ID[game.system_id].name)
-        item.setArt({"icon": "DefaultAddonGame.png"})
+        item.setArt(dict({"icon": "DefaultAddonGame.png"}, **dict(game.artwork)))
         item.setProperty("Aperture.System", game.system_id)
+        item.setProperty("Aperture.SystemName", SYSTEM_BY_ID[game.system_id].name)
         item.setProperty("Aperture.DiscCount", str(len(game.discs) or 1))
         # Do not hard-code a gameclient or invent a game MIME type. Kodi's
         # GameInfoTag marks this as a game and triggers its native core chooser.
@@ -147,6 +148,7 @@ class Plugin:
             xbmcplugin.endOfDirectory(self.handle, succeeded=False, cacheToDisc=False)
 
     def directory(self, system_id=None, update=False):
+        xbmcplugin.setProperty(self.handle, "Aperture.View", "games" if system_id else "systems")
         xbmcplugin.setContent(self.handle, "games")
         xbmcplugin.setPluginCategory(self.handle, self.text(32000))
         items = []
@@ -167,6 +169,7 @@ class Plugin:
                                             label2="", offscreen=True)
                     item.setProperty("IsPlayable", "false")
                     item.setProperty("Aperture.System", library.system.id)
+                    item.setProperty("Aperture.SystemName", library.system.name)
                     item.setProperty("Aperture.GameCount", "")
                     item.setArt({"icon": "DefaultAddonGame.png"})
                     items.append((url(action="system", system=library.system.id), item, True))
@@ -191,6 +194,8 @@ class Plugin:
         xbmcplugin.setProperty(self.handle, "Aperture.LibraryState", state)
         xbmcplugin.addDirectoryItems(self.handle, items, totalItems=len(items))
         xbmcplugin.endOfDirectory(self.handle, succeeded=True, updateListing=update, cacheToDisc=False)
+        if xbmc.getSkinDir() == "skin.aperture":
+            xbmc.executebuiltin("Container.SetViewMode({})".format(60 if system_id else 59))
 
     def error(self, exc):
         xbmc.log("Aperture: operation failed ({})".format(type(exc).__name__), xbmc.LOGERROR)

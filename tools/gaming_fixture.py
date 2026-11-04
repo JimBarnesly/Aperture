@@ -36,9 +36,10 @@ def make_psx(path):
     path.parent.mkdir(parents=True,exist_ok=True); path.write_bytes(header+payload)
 
 def prepare(root,runtime,out,pcsx):
-    from build_skin import copy_skin
+    from build_skin import copy_skin, assemble
     copy_skin(Path('/usr/share/kodi'),runtime/'system',font_roots=(Path('/usr/share/fonts'),))
     addons=runtime/'system/addons'
+    assemble(addons/'skin.estuary',addons/'skin.aperture',root/'skin/xml/Home.xml')
     nestopia=CORES[0]
     # The exact installed signed-package library is discovered by dpkg.
     from setup_gaming import installed_core
@@ -51,7 +52,7 @@ def prepare(root,runtime,out,pcsx):
     (service/'addon.xml').write_text('<addon id="service.aperture.gamingqa" name="Gaming QA" version="1.0.0" provider-name="Aperture"><requires><import addon="xbmc.python" version="3.0.1"/></requires><extension point="xbmc.service" library="service.py"/><extension point="xbmc.addon.metadata"><platform>all</platform><license>GPL-3.0-or-later</license></extension></addon>')
     shutil.copy2(root/'tools/gaming_qa_service.py',service/'service.py')
     manifest=runtime/'system/system/addon-manifest.xml'; tree=ET.parse(manifest)
-    for name in ('game.libretro','peripheral.joystick',PREFIX+'nestopia',PREFIX+'pcsxrearmed',LIBRARY_ID,'service.aperture.gamingqa'):
+    for name in ('game.libretro','peripheral.joystick',PREFIX+'nestopia',PREFIX+'pcsxrearmed',LIBRARY_ID,'service.aperture.gamingqa','skin.aperture'):
         if not any(e.text==name for e in tree.getroot().findall('addon')):
             attrs={'optional':'true'} if name.startswith(('game.libretro','peripheral.')) else {}
             ET.SubElement(tree.getroot(),'addon',attrs).text=name
@@ -60,7 +61,7 @@ def prepare(root,runtime,out,pcsx):
     set_rom_root(runtime/'data',roms)
     userdata=runtime/'data/userdata'
     (userdata/'guisettings.xml').write_text('''<settings version="2">
-<setting id="lookandfeel.skin">skin.estuary</setting>
+<setting id="lookandfeel.skin">skin.aperture</setting>
 <setting id="services.webserver">false</setting><setting id="services.esenabled">false</setting>
 <setting id="services.zeroconf">false</setting><setting id="services.airplay">false</setting>
 <setting id="services.upnpserver">false</setting><setting id="addons.unknownsources">false</setting>

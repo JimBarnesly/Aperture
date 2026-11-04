@@ -243,5 +243,15 @@ class LazyDiscoveryTests(unittest.TestCase):
             self.assertEqual(len(calls),3)
 
 
+class LocalArtworkTests(unittest.TestCase):
+    def test_only_matching_existing_local_artwork_is_used(self):
+        fs=MemoryVFS({"/roms":(["nes"],[]),"/roms/nes":(["images"],["Demo.nes","Other.nes"]),
+                      "/roms/nes/images":([],["Demo-image.png","Demo-boxart.jpg","Unrelated.png"])})
+        games=scan_library("/roms",fs,system_id="nes").libraries[0].games
+        self.assertEqual(dict(games[0].artwork),{"thumb":"/roms/nes/images/Demo-image.png","poster":"/roms/nes/images/Demo-boxart.jpg"})
+        self.assertEqual(games[1].artwork,())
+        self.assertEqual(fs.reads,[])
+
+
 if __name__ == "__main__":
     unittest.main()

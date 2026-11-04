@@ -106,6 +106,9 @@ def assemble(source: Path, output: Path, home: Path, font_roots=()):
             ET.SubElement(metadata, 'description', {'lang': 'en_GB'}).text = 'Native media navigation and Format music on a complete Kodi Omega Estuary foundation.'
         tree.write(staged / 'addon.xml', encoding='utf-8', xml_declaration=True)
         shutil.copy2(home, staged / 'xml/Home.xml')
+        games = ROOT / 'skin/xml/MyGames.xml'
+        if games.is_file():
+            shutil.copy2(games, staged / 'xml/MyGames.xml')
         for folder in ('media', 'licenses'):
             extra=ROOT/'skin'/folder
             if extra.is_dir(): shutil.copytree(extra, staged/folder, dirs_exist_ok=True)

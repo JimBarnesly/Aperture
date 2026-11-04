@@ -35,6 +35,7 @@ class Game:
     title: str
     path: str
     discs: Tuple[str, ...] = ()
+    artwork: Tuple[Tuple[str, str], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -262,11 +263,28 @@ def scan_library(root, filesystem=None, cancelled: Callable[[], bool] = lambda: 
                 issues.append(ScanIssue("invalid_playlist", path))
         hidden = {member for members in cue_members.values() for member in members}
         hidden.update(member for members in playlists.values() for member in members)
+        images={p.casefold():p for p in sorted(all_files) if extension(p) in (".png", ".jpg", ".jpeg")}
+        def artwork(path):
+            stem=posixpath.splitext(filename(path))[0]
+            folder=path.rsplit("/",1)[0]
+            result=[]
+            for kind,suffixes in (("thumb",("", "-image", "-thumb")),("poster",("-boxart", "-cover"))):
+                found=None
+                for parent in (folder, join_path(folder,"images"), join_path(boundary,"images")):
+                    for suffix in suffixes:
+                        for ext in (".png", ".jpg", ".jpeg"):
+                            candidate=join_path(parent,stem+suffix+ext).casefold()
+                            if candidate in images:
+                                found=images[candidate]; break
+                        if found: break
+                    if found: break
+                if found: result.append((kind,found))
+            return tuple(result)
         games = []
         for path in sorted(candidates - hidden):
             if extension(path) in PLAYLIST_EXTENSIONS and path not in playlists:
                 continue
-            games.append(Game(system.id, posixpath.splitext(filename(path))[0], path, playlists.get(path, ())))
+            games.append(Game(system.id, posixpath.splitext(filename(path))[0], path, playlists.get(path, ()), artwork(path)))
         return games
 
     check_cancel()

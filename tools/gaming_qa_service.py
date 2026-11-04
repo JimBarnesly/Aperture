@@ -64,8 +64,16 @@ try:
         # Exercise the directory launch action and native core selection, not a direct ROM bypass.
         until('no modal before browsing',lambda:not xbmc.getCondVisibility('System.HasModalDialog'))
         monitor.waitForAbort(.3)
-        xbmc.executebuiltin('ActivateWindow(Games,'+folder+',return)')
-        until('Games directory',lambda:xbmcgui.getCurrentWindowId()==10821 and xbmc.getInfoLabel('Container.FolderPath')==folder and not xbmc.getCondVisibility('System.HasModalDialog'))
+        xbmc.executebuiltin('ActivateWindow(Games,plugin://plugin.games.aperture/,return)')
+        until('console cards',lambda:xbmcgui.getCurrentWindowId()==10821 and xbmc.getCondVisibility('Control.IsVisible(59)') and not xbmc.getCondVisibility('System.HasModalDialog'))
+        monitor.waitForAbort(.4)
+        for _ in range(12):
+            if xbmc.getInfoLabel('ListItem.Property(Aperture.System)')==system: break
+            rpc('Input.Right'); monitor.waitForAbort(.2)
+        if xbmc.getInfoLabel('ListItem.Property(Aperture.System)')!=system: raise RuntimeError('Cannot focus console '+system)
+        capture(system+'-console-cards')
+        rpc('Input.Select')
+        until('Games directory',lambda:xbmcgui.getCurrentWindowId()==10821 and xbmc.getInfoLabel('Container.FolderPath')==folder and xbmc.getCondVisibility('Control.IsVisible(60)') and not xbmc.getCondVisibility('System.HasModalDialog'))
         monitor.waitForAbort(.6)
         for cycle in range(1):
             # Navigate and select the actual listed action as a controller would.
@@ -74,6 +82,7 @@ try:
                 rpc('Input.Down')
                 monitor.waitForAbort(.2)
             if xbmc.getInfoLabel('ListItem.Label') != title: raise RuntimeError('Cannot focus game action '+title)
+            capture(system+'-game-browser')
             rpc('Input.Select')
             until('RetroPlayer active '+system,lambda:any(p['type']=='game' for p in active()))
             monitor.waitForAbort(8)

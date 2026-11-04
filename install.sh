@@ -94,6 +94,10 @@ if [ "$BASELINE" -eq 0 ]; then
   [ -d "$SOURCE_DIR/skin/media/aperture" ] || fail 'Matching Aperture artwork missing'
   [ -f "$SOURCE_DIR/skin/licenses/MediaStream-CC-BY-SA-3.0.txt" ] || fail 'Artwork attribution missing'
   cp "$STAGE/Home.xml" "$TMP/xml/Home.xml"
+  [ -f "$SOURCE_DIR/skin/xml/MyGames.xml" ] || fail 'Matching game browser XML missing'
+  GAMES_SHA=b37bdad96419ef0f3c8533638e43b7535f2e495707e314500d3592e93de232ba
+  printf '%s  %s\n' "$GAMES_SHA" "$SOURCE_DIR/skin/xml/MyGames.xml" | sha256sum -c - >/dev/null || fail 'MyGames.xml integrity check failed'
+  cp "$SOURCE_DIR/skin/xml/MyGames.xml" "$TMP/xml/MyGames.xml"
   cp -R "$SOURCE_DIR/skin/media/." "$TMP/media/"
   mkdir -p "$TMP/licenses"
   cp -R "$SOURCE_DIR/skin/licenses/." "$TMP/licenses/"

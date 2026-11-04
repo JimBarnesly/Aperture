@@ -101,3 +101,17 @@ The dedicated CI workflow builds PCSX from pinned source and attempts actual Kod
 NES/PSX playback on x86_64 and ARM64 using original tiny hardware-test programs,
 with start/stop and screenshots. Consult the exact commit's CI result;
 prepared tests do not mean they passed. Cloud ARM64 is not a physical Pi 5.
+
+## Updating only the browser and skin
+
+When the cores already work, exit Kodi normally and use a verified complete
+checkout. `python3 tools/update_game_library.py` updates only the existing browser,
+with backup/rollback, leaving the ROM-root setting, emulators, BIOS and saves alone.
+Then `sh install.sh` updates the skin. Neither command needs sudo or rebuilds cores.
+
+The Aperture console view uses original bundled illustrations and a horizontal
+strip. Games use a readable list and an artwork panel. Existing local sidecars
+are supported: `Game.png`/`.jpg`, or `images/Game-image.png`, `Game-thumb.png`,
+`Game-boxart.png`, `Game-cover.png` (JPEG variants also supported). No covers or
+metadata are downloaded, and missing pictures show the console illustration.
+Other skins and native Kodi game sources retain normal browsing.

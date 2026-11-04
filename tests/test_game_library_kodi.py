@@ -64,7 +64,7 @@ class AdapterTests(unittest.TestCase):
         self.vfs = Mock()
         self.vfs.translatePath.return_value = str(self.root)
         self.player = Mock()
-        self.xbmc = types.SimpleNamespace(Player=lambda: self.player, Monitor=lambda: self.monitor, log=Mock(),
+        self.xbmc = types.SimpleNamespace(getSkinDir=lambda: "skin.estuary", executebuiltin=Mock(), Player=lambda: self.player, Monitor=lambda: self.monitor, log=Mock(),
                                          LOGWARNING=2, LOGERROR=3)
         modules = {
             "xbmc": self.xbmc,
