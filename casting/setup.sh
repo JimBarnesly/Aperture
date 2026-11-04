@@ -8,6 +8,10 @@ for cmd in node npm mpv pactl systemctl; do
   command -v "$cmd" >/dev/null || { echo "Missing $cmd. Install the appropriate Raspberry Pi OS package first."; exit 1; }
 done
 node -e 'if(Number(process.versions.node.split(".")[0])<20)process.exit(1)' || { echo 'Node 20 or newer required. Do not upgrade the OS just for casting.'; exit 1; }
+node_bin=$(node -p 'process.execPath')
+case "$node_bin" in /*) ;; *) echo 'Cannot resolve an absolute Node executable.'; exit 1;; esac
+case "$node_bin" in *[!a-zA-Z0-9_./-]*) echo 'Unsupported Node executable path.'; exit 1;; esac
+node_dir=$(dirname -- "$node_bin")
 pactl info >/dev/null || { echo 'No working PulseAudio/PipeWire session for this user. Do not run this installer with sudo.'; exit 1; }
 [ -n "${XDG_RUNTIME_DIR:-}" ] && [ -S "$XDG_RUNTIME_DIR/bus" ] || { echo 'No active user session bus. Log into the Pi desktop first.'; exit 1; }
 [ "$mode" = --install ] || { echo 'Basic prerequisites present. This does not verify casting or audio.'; exit 0; }
@@ -32,7 +36,7 @@ mkdir -p "$HOME/.config/systemd/user"
 unit="$HOME/.config/systemd/user/aperture-cast.service"
 [ ! -e "$unit" ] || cp "$unit" "$unit.backup.$(date +%Y%m%d%H%M%S)"
 # Use a wrapper so shell path quoting is not confused with systemd command syntax.
-printf '#!/bin/sh\ncd "%s"\nexec node receiver.mjs\n' "$work" > "$work/run.sh"
+printf '#!/bin/sh\nPATH="%s:/usr/local/bin:/usr/bin:/bin"\nexport PATH\ncd "%s"\nexec "%s" receiver.mjs\n' "$node_dir" "$work" "$node_bin" > "$work/run.sh"
 chmod 700 "$work/run.sh"
 cat > "$unit" <<UNIT
 [Unit]
