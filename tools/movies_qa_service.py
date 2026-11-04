@@ -38,6 +38,9 @@ def until(description,predicate,timeout=35):
 
 
 def capture(name):
+    # Let focus, artwork crossfade and scrolling labels settle before visual QA.
+    if monitor.waitForAbort(1.0):
+        raise RuntimeError('Kodi exited before screenshot '+name)
     target=OUT/(name+'.png')
     xbmc.executebuiltin('TakeScreenshot('+str(target)+',sync)')
     until('screenshot '+name,lambda:target.exists() and target.stat().st_size>0,8)
