@@ -171,6 +171,46 @@ class DriverTest(unittest.TestCase):
             self.assertEqual(keys, ["j", "Return", "Down", "BackSpace", "c"])
             self.assertTrue(driver.route_is(gui["folder"], "albums"))
 
+    def test_recovery_reopens_root_then_selects_albums_from_empty_music_root(self):
+        current = {"window": 10502, "dialog": 9999, "folder": ""}
+        keys, observed_labels = [], []
+        def press(key):
+            keys.append(key)
+            if key == "k":
+                current["folder"] = "plugin://plugin.audio.aperture.format/"
+            elif key == "Return":
+                self.assertEqual(observed_labels, ["Albums"])
+                current["folder"] = "plugin://plugin.audio.aperture.format/?action=albums"
+            else:
+                raise AssertionError("Recovery must navigate, not refresh the empty Music root")
+            return len(keys)
+        def wait(description, predicate, after):
+            self.assertTrue(predicate(current), description)
+        def find_label(label, direction, max_steps):
+            self.assertTrue(driver.route_is(current["folder"], None))
+            observed_labels.append(label)
+        settle = Mock(return_value=current)
+        driver.reopen_albums(press, wait, settle, find_label)
+        self.assertEqual(keys, ["k", "Return"])
+        self.assertEqual(settle.call_count, 3)
+        self.assertTrue(driver.route_is(current["folder"], "albums"))
+
+    def test_recovery_root_does_not_accept_unrelated_music_root(self):
+        def wait(description, predicate, after):
+            if not predicate({"window": 10502, "dialog": 9999, "folder": ""}):
+                raise AssertionError("Still unrelated Music root")
+        find = Mock()
+        with self.assertRaisesRegex(AssertionError, "unrelated Music root"):
+            driver.reopen_albums(Mock(return_value=1), wait, Mock(), find)
+        find.assert_not_called()
+
+    def test_recovery_http_evidence_must_belong_to_recovery_interval(self):
+        def row(at, status=200, path="/api/library"):
+            return {"time": at, "status": status, "path": path}
+        self.assertFalse(driver.successful_recovery_request([row(9), row(13)], 10, 12))
+        self.assertFalse(driver.successful_recovery_request([row(11, 503), row(11, path="/api/cover")], 10, 12))
+        self.assertTrue(driver.successful_recovery_request([row(11)], 10, 12))
+
     def test_new_sequence_alone_is_not_a_gui_transition(self):
         original = {"window": 10502, "folder": "albums", "focus": 55, "list_item": "Album", "sequence": 1}
         self.assertEqual(driver.gui_position(original), driver.gui_position(dict(original, sequence=2)))

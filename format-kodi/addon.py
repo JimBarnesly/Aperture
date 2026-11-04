@@ -125,6 +125,9 @@ def find_album(data, album_id):
 
 def set_metadata(item, source, album, is_album=False):
     tag = item.getMusicInfoTag()
+    # Container content does not set the individual item's native media type.
+    # Kodi 20+ exposes this separately from local music database identifiers.
+    tag.setMediaType("album" if is_album else "song")
     tag.setTitle(text(source.get("title"), "Untitled"))
     tag.setAlbum(text(album.get("title"), "Untitled"))
     tag.setArtist(text(source.get("artist"), text(album.get("artist"), "Unknown artist")))

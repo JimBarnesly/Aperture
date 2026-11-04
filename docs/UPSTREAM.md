@@ -27,5 +27,5 @@ Licence: https://creativecommons.org/licenses/by-sa/3.0/
 
 The upstream tree does not identify the photographer separately. This records
 package provenance rather than claiming independent photo-rights clearance.
-No original MediaStream font is included. The Home layout, rounded channel-card
-textures and icons are newly authored for Aperture; Kodi's existing fonts remain.
+No original MediaStream font is included. The single-menu Home layout, fading blade and focus marker are newly authored
+for Aperture; Kodi's existing fonts remain.

@@ -30,7 +30,7 @@ class FakeItem:
         self.label, self.path = label, path
         self.art, self.properties, self.context = {}, {}, []
         # Strict Kodi 21.3 InfoTagMusic API names, not an unbounded mock.
-        self.tag = MagicMock(spec_set=["setTitle", "setAlbum", "setArtist", "setAlbumArtist",
+        self.tag = MagicMock(spec_set=["setMediaType", "setTitle", "setAlbum", "setArtist", "setAlbumArtist",
                                        "setYear", "setDuration", "setGenres", "setDisc", "setTrack"])
         self.content_lookup = True
 
@@ -100,7 +100,20 @@ class FormatTest(unittest.TestCase):
         self.assertEqual(parse_qs(urlsplit(entry[2].art["thumb"]).query)["id"], [DATA["tracks"][0]["id"]])
         self.assertIn("RunPlugin(plugin://", entry[2].context[0][1])
         entry[2].tag.setAlbum.assert_called_with("Double Album")
+        entry[2].tag.setMediaType.assert_called_once_with("album")
         self.assert_directory_result(True)
+
+    def test_metadata_type_is_independent_of_local_database_ids(self):
+        for is_album, expected in ((True, "album"), (False, "song")):
+            with self.subTest(media_type=expected):
+                item = FakeItem()
+                self.addon.set_metadata(item, self.data["tracks"][0], self.data["albums"][0], is_album=is_album)
+                item.tag.setMediaType.assert_called_once_with(expected)
+                self.assertFalse(any(call[0] == "setDbId" for call in item.tag.mock_calls))
+                # Strict mock deliberately has no database-id method: inventing
+                # an ID for these remote-only items must fail this contract.
+                with self.assertRaises(AttributeError):
+                    item.tag.setDbId
 
     def test_tracks_sort_disc_then_track_and_preserve_commas(self):
         self.run_action("album", album_id=ALBUM_ID)
@@ -111,6 +124,7 @@ class FormatTest(unittest.TestCase):
             self.assertFalse(folder)
             self.assertFalse(item.content_lookup)
             self.assertEqual(item.properties["IsPlayable"], "true")
+            item.tag.setMediaType.assert_called_once_with("song")
         entries[1][2].tag.setArtist.assert_called_with("Guest")
         entries[1][2].tag.setAlbumArtist.assert_called_with("Artist")
         entries[1][2].tag.setTrack.assert_called_with(2)
@@ -121,6 +135,8 @@ class FormatTest(unittest.TestCase):
         self.run_action("play_album", handle=-1, album_id=ALBUM_ID)
         playlist = self.xbmc.PlayList.return_value
         self.assertEqual([call.args[1].label for call in playlist.add.call_args_list], ["First track", "Second track", "Second disc"])
+        for call in playlist.add.call_args_list:
+            call.args[1].tag.setMediaType.assert_called_once_with("song")
         playlist.clear.assert_called_once()
         playlist.unshuffle.assert_called_once()
         self.xbmc.Player.return_value.play.assert_called_once_with(playlist, startpos=0)

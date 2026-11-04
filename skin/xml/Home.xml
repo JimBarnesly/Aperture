@@ -12,11 +12,11 @@
       <aspectratio>scale</aspectratio>
     </control>
     <control type="group">
-      <animation effect="slide" start="-920,0" end="0,0" time="540" delay="190" tween="cubic" easing="out">WindowOpen</animation>
+      <animation effect="slide" start="-760,0" end="0,0" time="540" delay="190" tween="cubic" easing="out">WindowOpen</animation>
       <control type="image">
         <left>0</left>
         <top>0</top>
-        <width>920</width>
+        <width>760</width>
         <height>1080</height>
         <texture>aperture/blade.png</texture>
       </control>
@@ -24,27 +24,19 @@
     <control type="group">
       <animation effect="fade" start="0" end="100" time="380" delay="320" tween="cubic" easing="out">WindowOpen</animation>
       <control type="label">
-        <left>76</left>
-        <top>72</top>
-        <width>550</width>
-        <height>70</height>
+        <left>80</left>
+        <top>75</top>
+        <width>535</width>
+        <height>65</height>
         <font>font32</font>
-        <textcolor>FFF4FBFC</textcolor>
+        <textcolor>FFB9CBCF</textcolor>
+        <align>right</align>
         <label>Aperture</label>
       </control>
       <control type="label">
-        <left>80</left>
-        <top>152</top>
-        <width>520</width>
-        <height>42</height>
-        <font>font13</font>
-        <textcolor>FF9BB5BB</textcolor>
-        <label>A little space for everything you love</label>
-      </control>
-      <control type="label">
-        <left>1510</left>
+        <left>1480</left>
         <top>64</top>
-        <width>328</width>
+        <width>358</width>
         <height>80</height>
         <font>font_clock</font>
         <textcolor>FFFFFFFF</textcolor>
@@ -52,328 +44,343 @@
         <align>right</align>
         <label>$INFO[System.Time]</label>
       </control>
+      <control type="button" id="100">
+        <left>80</left>
+        <top>300</top>
+        <width>550</width>
+        <height>86</height>
+        <label>Movies</label>
+        <font>font32</font>
+        <textcolor>00000000</textcolor>
+        <focusedcolor>00000000</focusedcolor>
+        <texturefocus />
+        <texturenofocus />
+        <onleft>106</onleft>
+        <onright>100</onright>
+        <onup>106</onup>
+        <ondown>101</ondown>
+        <onclick>ActivateWindow(Videos,videodb://movies/titles/,return)</onclick>
+      </control>
+      <control type="label">
+        <left>50</left>
+        <top>300</top>
+        <width>565</width>
+        <height>86</height>
+        <font>font32</font>
+        <align>right</align>
+        <aligny>center</aligny>
+        <textcolor>FF9DB2B9</textcolor>
+        <shadowcolor>40000000</shadowcolor>
+        <label>Movies</label>
+        <visible>!Control.HasFocus(100)</visible>
+      </control>
       <control type="group">
-        <visible>Control.HasFocus(103)</visible>
-        <animation effect="fade" time="160">VisibleChange</animation>
+        <visible>Control.HasFocus(100)</visible>
+        <animation effect="fade" time="130">VisibleChange</animation>
         <control type="label">
-          <left>74</left>
-          <top>372</top>
-          <width>600</width>
-          <height>110</height>
+          <left>25</left>
+          <top>300</top>
+          <width>590</width>
+          <height>86</height>
           <font>font60</font>
-          <textcolor>FFF6FCFC</textcolor>
-          <label>Music</label>
+          <align>right</align>
+          <aligny>center</aligny>
+          <textcolor>FFF4FCFD</textcolor>
+          <shadowcolor>60000000</shadowcolor>
+          <label>Movies</label>
         </control>
-        <control type="textbox">
-          <left>80</left>
-          <top>490</top>
-          <width>510</width>
-          <height>128</height>
-          <font>font13</font>
-          <textcolor>FFD0DEE0</textcolor>
-          <label>Albums, artwork and your next good listen.</label>
+        <control type="image">
+          <left>638</left>
+          <top>314</top>
+          <width>5</width>
+          <height>58</height>
+          <texture>aperture/focus-marker.png</texture>
+        </control>
+      </control>
+      <control type="button" id="101">
+        <left>80</left>
+        <top>388</top>
+        <width>550</width>
+        <height>86</height>
+        <label>TV shows</label>
+        <font>font32</font>
+        <textcolor>00000000</textcolor>
+        <focusedcolor>00000000</focusedcolor>
+        <texturefocus />
+        <texturenofocus />
+        <onleft>106</onleft>
+        <onright>101</onright>
+        <onup>100</onup>
+        <ondown>103</ondown>
+        <onclick>ActivateWindow(Videos,videodb://tvshows/titles/,return)</onclick>
+      </control>
+      <control type="label">
+        <left>50</left>
+        <top>388</top>
+        <width>565</width>
+        <height>86</height>
+        <font>font32</font>
+        <align>right</align>
+        <aligny>center</aligny>
+        <textcolor>FF9DB2B9</textcolor>
+        <shadowcolor>40000000</shadowcolor>
+        <label>TV shows</label>
+        <visible>!Control.HasFocus(101)</visible>
+      </control>
+      <control type="group">
+        <visible>Control.HasFocus(101)</visible>
+        <animation effect="fade" time="130">VisibleChange</animation>
+        <control type="label">
+          <left>25</left>
+          <top>388</top>
+          <width>590</width>
+          <height>86</height>
+          <font>font60</font>
+          <align>right</align>
+          <aligny>center</aligny>
+          <textcolor>FFF4FCFD</textcolor>
+          <shadowcolor>60000000</shadowcolor>
+          <label>TV shows</label>
+        </control>
+        <control type="image">
+          <left>638</left>
+          <top>402</top>
+          <width>5</width>
+          <height>58</height>
+          <texture>aperture/focus-marker.png</texture>
         </control>
       </control>
       <control type="button" id="103">
-        <left>810</left>
-        <top>665</top>
-        <width>320</width>
-        <height>148</height>
+        <left>80</left>
+        <top>476</top>
+        <width>550</width>
+        <height>86</height>
         <label>Music</label>
         <font>font32</font>
-        <textcolor>FF224C59</textcolor>
-        <focusedcolor>FF103D48</focusedcolor>
-        <align>center</align>
-        <aligny>top</aligny>
-        <textoffsety>88</textoffsety>
-        <texturefocus>aperture/card-focus.png</texturefocus>
-        <texturenofocus>aperture/card.png</texturenofocus>
-        <onleft>101</onleft>
-        <onright>100</onright>
-        <onup>106</onup>
+        <textcolor>00000000</textcolor>
+        <focusedcolor>00000000</focusedcolor>
+        <texturefocus />
+        <texturenofocus />
+        <onleft>106</onleft>
+        <onright>103</onright>
+        <onup>101</onup>
         <ondown>102</ondown>
         <onclick condition="System.AddonIsEnabled(plugin.audio.aperture.format)">ActivateWindow(Music,plugin://plugin.audio.aperture.format/,return)</onclick>
         <onclick condition="!System.AddonIsEnabled(plugin.audio.aperture.format)">ActivateWindow(Music)</onclick>
       </control>
-      <control type="image">
-        <left>934</left>
-        <top>677</top>
-        <width>72</width>
-        <height>72</height>
-        <texture>aperture/music.png</texture>
-      </control>
-      <control type="group">
-        <visible>Control.HasFocus(100)</visible>
-        <animation effect="fade" time="160">VisibleChange</animation>
-        <control type="label">
-          <left>74</left>
-          <top>372</top>
-          <width>600</width>
-          <height>110</height>
-          <font>font60</font>
-          <textcolor>FFF6FCFC</textcolor>
-          <label>Movies</label>
-        </control>
-        <control type="textbox">
-          <left>80</left>
-          <top>490</top>
-          <width>510</width>
-          <height>128</height>
-          <font>font13</font>
-          <textcolor>FFD0DEE0</textcolor>
-          <label>Your film library, on the big screen.</label>
-        </control>
-      </control>
-      <control type="button" id="100">
-        <left>1154</left>
-        <top>665</top>
-        <width>320</width>
-        <height>148</height>
-        <label>Movies</label>
+      <control type="label">
+        <left>50</left>
+        <top>476</top>
+        <width>565</width>
+        <height>86</height>
         <font>font32</font>
-        <textcolor>FF224C59</textcolor>
-        <focusedcolor>FF103D48</focusedcolor>
-        <align>center</align>
-        <aligny>top</aligny>
-        <textoffsety>88</textoffsety>
-        <texturefocus>aperture/card-focus.png</texturefocus>
-        <texturenofocus>aperture/card.png</texturenofocus>
-        <onleft>103</onleft>
-        <onright>101</onright>
-        <onup>106</onup>
-        <ondown>104</ondown>
-        <onclick>ActivateWindow(Videos,videodb://movies/titles/,return)</onclick>
-      </control>
-      <control type="image">
-        <left>1278</left>
-        <top>677</top>
-        <width>72</width>
-        <height>72</height>
-        <texture>aperture/movies.png</texture>
+        <align>right</align>
+        <aligny>center</aligny>
+        <textcolor>FF9DB2B9</textcolor>
+        <shadowcolor>40000000</shadowcolor>
+        <label>Music</label>
+        <visible>!Control.HasFocus(103)</visible>
       </control>
       <control type="group">
-        <visible>Control.HasFocus(101)</visible>
-        <animation effect="fade" time="160">VisibleChange</animation>
+        <visible>Control.HasFocus(103)</visible>
+        <animation effect="fade" time="130">VisibleChange</animation>
         <control type="label">
-          <left>74</left>
-          <top>372</top>
-          <width>600</width>
-          <height>110</height>
+          <left>25</left>
+          <top>476</top>
+          <width>590</width>
+          <height>86</height>
           <font>font60</font>
-          <textcolor>FFF6FCFC</textcolor>
-          <label>TV shows</label>
+          <align>right</align>
+          <aligny>center</aligny>
+          <textcolor>FFF4FCFD</textcolor>
+          <shadowcolor>60000000</shadowcolor>
+          <label>Music</label>
         </control>
-        <control type="textbox">
-          <left>80</left>
+        <control type="image">
+          <left>638</left>
           <top>490</top>
-          <width>510</width>
-          <height>128</height>
-          <font>font13</font>
-          <textcolor>FFD0DEE0</textcolor>
-          <label>Pick up your favourite series.</label>
-        </control>
-      </control>
-      <control type="button" id="101">
-        <left>1498</left>
-        <top>665</top>
-        <width>320</width>
-        <height>148</height>
-        <label>TV shows</label>
-        <font>font32</font>
-        <textcolor>FF224C59</textcolor>
-        <focusedcolor>FF103D48</focusedcolor>
-        <align>center</align>
-        <aligny>top</aligny>
-        <textoffsety>88</textoffsety>
-        <texturefocus>aperture/card-focus.png</texturefocus>
-        <texturenofocus>aperture/card.png</texturenofocus>
-        <onleft>100</onleft>
-        <onright>103</onright>
-        <onup>106</onup>
-        <ondown>105</ondown>
-        <onclick>ActivateWindow(Videos,videodb://tvshows/titles/,return)</onclick>
-      </control>
-      <control type="image">
-        <left>1622</left>
-        <top>677</top>
-        <width>72</width>
-        <height>72</height>
-        <texture>aperture/tv.png</texture>
-      </control>
-      <control type="group">
-        <visible>Control.HasFocus(102)</visible>
-        <animation effect="fade" time="160">VisibleChange</animation>
-        <control type="label">
-          <left>74</left>
-          <top>372</top>
-          <width>600</width>
-          <height>110</height>
-          <font>font60</font>
-          <textcolor>FFF6FCFC</textcolor>
-          <label>Games</label>
-        </control>
-        <control type="textbox">
-          <left>80</left>
-          <top>490</top>
-          <width>510</width>
-          <height>128</height>
-          <font>font13</font>
-          <textcolor>FFD0DEE0</textcolor>
-          <label>Explore your Kodi game collection.</label>
+          <width>5</width>
+          <height>58</height>
+          <texture>aperture/focus-marker.png</texture>
         </control>
       </control>
       <control type="button" id="102">
-        <left>810</left>
-        <top>835</top>
-        <width>320</width>
-        <height>148</height>
+        <left>80</left>
+        <top>564</top>
+        <width>550</width>
+        <height>86</height>
         <label>Games</label>
         <font>font32</font>
-        <textcolor>FF224C59</textcolor>
-        <focusedcolor>FF103D48</focusedcolor>
-        <align>center</align>
-        <aligny>top</aligny>
-        <textoffsety>88</textoffsety>
-        <texturefocus>aperture/card-focus.png</texturefocus>
-        <texturenofocus>aperture/card.png</texturenofocus>
-        <onleft>105</onleft>
-        <onright>104</onright>
+        <textcolor>00000000</textcolor>
+        <focusedcolor>00000000</focusedcolor>
+        <texturefocus />
+        <texturenofocus />
+        <onleft>106</onleft>
+        <onright>102</onright>
         <onup>103</onup>
-        <ondown>106</ondown>
+        <ondown>104</ondown>
         <onclick>ActivateWindow(Games)</onclick>
       </control>
-      <control type="image">
-        <left>934</left>
-        <top>847</top>
-        <width>72</width>
-        <height>72</height>
-        <texture>aperture/games.png</texture>
+      <control type="label">
+        <left>50</left>
+        <top>564</top>
+        <width>565</width>
+        <height>86</height>
+        <font>font32</font>
+        <align>right</align>
+        <aligny>center</aligny>
+        <textcolor>FF9DB2B9</textcolor>
+        <shadowcolor>40000000</shadowcolor>
+        <label>Games</label>
+        <visible>!Control.HasFocus(102)</visible>
       </control>
       <control type="group">
-        <visible>Control.HasFocus(104)</visible>
-        <animation effect="fade" time="160">VisibleChange</animation>
+        <visible>Control.HasFocus(102)</visible>
+        <animation effect="fade" time="130">VisibleChange</animation>
         <control type="label">
-          <left>74</left>
-          <top>372</top>
-          <width>600</width>
-          <height>110</height>
+          <left>25</left>
+          <top>564</top>
+          <width>590</width>
+          <height>86</height>
           <font>font60</font>
-          <textcolor>FFF6FCFC</textcolor>
-          <label>Sources</label>
+          <align>right</align>
+          <aligny>center</aligny>
+          <textcolor>FFF4FCFD</textcolor>
+          <shadowcolor>60000000</shadowcolor>
+          <label>Games</label>
         </control>
-        <control type="textbox">
-          <left>80</left>
-          <top>490</top>
-          <width>510</width>
-          <height>128</height>
-          <font>font13</font>
-          <textcolor>FFD0DEE0</textcolor>
-          <label>Browse videos and connected media.</label>
+        <control type="image">
+          <left>638</left>
+          <top>578</top>
+          <width>5</width>
+          <height>58</height>
+          <texture>aperture/focus-marker.png</texture>
         </control>
       </control>
       <control type="button" id="104">
-        <left>1154</left>
-        <top>835</top>
-        <width>320</width>
-        <height>148</height>
+        <left>80</left>
+        <top>652</top>
+        <width>550</width>
+        <height>86</height>
         <label>Sources</label>
         <font>font32</font>
-        <textcolor>FF224C59</textcolor>
-        <focusedcolor>FF103D48</focusedcolor>
-        <align>center</align>
-        <aligny>top</aligny>
-        <textoffsety>88</textoffsety>
-        <texturefocus>aperture/card-focus.png</texturefocus>
-        <texturenofocus>aperture/card.png</texturenofocus>
-        <onleft>102</onleft>
-        <onright>105</onright>
-        <onup>100</onup>
-        <ondown>106</ondown>
+        <textcolor>00000000</textcolor>
+        <focusedcolor>00000000</focusedcolor>
+        <texturefocus />
+        <texturenofocus />
+        <onleft>106</onleft>
+        <onright>104</onright>
+        <onup>102</onup>
+        <ondown>105</ondown>
         <onclick>ActivateWindow(Videos)</onclick>
       </control>
-      <control type="image">
-        <left>1278</left>
-        <top>847</top>
-        <width>72</width>
-        <height>72</height>
-        <texture>aperture/files.png</texture>
+      <control type="label">
+        <left>50</left>
+        <top>652</top>
+        <width>565</width>
+        <height>86</height>
+        <font>font32</font>
+        <align>right</align>
+        <aligny>center</aligny>
+        <textcolor>FF9DB2B9</textcolor>
+        <shadowcolor>40000000</shadowcolor>
+        <label>Sources</label>
+        <visible>!Control.HasFocus(104)</visible>
       </control>
       <control type="group">
-        <visible>Control.HasFocus(105)</visible>
-        <animation effect="fade" time="160">VisibleChange</animation>
+        <visible>Control.HasFocus(104)</visible>
+        <animation effect="fade" time="130">VisibleChange</animation>
         <control type="label">
-          <left>74</left>
-          <top>372</top>
-          <width>600</width>
-          <height>110</height>
+          <left>25</left>
+          <top>652</top>
+          <width>590</width>
+          <height>86</height>
           <font>font60</font>
-          <textcolor>FFF6FCFC</textcolor>
-          <label>Settings</label>
+          <align>right</align>
+          <aligny>center</aligny>
+          <textcolor>FFF4FCFD</textcolor>
+          <shadowcolor>60000000</shadowcolor>
+          <label>Sources</label>
         </control>
-        <control type="textbox">
-          <left>80</left>
-          <top>490</top>
-          <width>510</width>
-          <height>128</height>
-          <font>font13</font>
-          <textcolor>FFD0DEE0</textcolor>
-          <label>Make yourself at home.</label>
+        <control type="image">
+          <left>638</left>
+          <top>666</top>
+          <width>5</width>
+          <height>58</height>
+          <texture>aperture/focus-marker.png</texture>
         </control>
       </control>
       <control type="button" id="105">
-        <left>1498</left>
-        <top>835</top>
-        <width>320</width>
-        <height>148</height>
+        <left>80</left>
+        <top>740</top>
+        <width>550</width>
+        <height>86</height>
         <label>Settings</label>
         <font>font32</font>
-        <textcolor>FF224C59</textcolor>
-        <focusedcolor>FF103D48</focusedcolor>
-        <align>center</align>
-        <aligny>top</aligny>
-        <textoffsety>88</textoffsety>
-        <texturefocus>aperture/card-focus.png</texturefocus>
-        <texturenofocus>aperture/card.png</texturenofocus>
-        <onleft>104</onleft>
-        <onright>102</onright>
-        <onup>101</onup>
+        <textcolor>00000000</textcolor>
+        <focusedcolor>00000000</focusedcolor>
+        <texturefocus />
+        <texturenofocus />
+        <onleft>106</onleft>
+        <onright>105</onright>
+        <onup>104</onup>
         <ondown>106</ondown>
         <onclick>ActivateWindow(Settings)</onclick>
       </control>
-      <control type="image">
-        <left>1622</left>
-        <top>847</top>
-        <width>72</width>
-        <height>72</height>
-        <texture>aperture/settings.png</texture>
+      <control type="label">
+        <left>50</left>
+        <top>740</top>
+        <width>565</width>
+        <height>86</height>
+        <font>font32</font>
+        <align>right</align>
+        <aligny>center</aligny>
+        <textcolor>FF9DB2B9</textcolor>
+        <shadowcolor>40000000</shadowcolor>
+        <label>Settings</label>
+        <visible>!Control.HasFocus(105)</visible>
+      </control>
+      <control type="group">
+        <visible>Control.HasFocus(105)</visible>
+        <animation effect="fade" time="130">VisibleChange</animation>
+        <control type="label">
+          <left>25</left>
+          <top>740</top>
+          <width>590</width>
+          <height>86</height>
+          <font>font60</font>
+          <align>right</align>
+          <aligny>center</aligny>
+          <textcolor>FFF4FCFD</textcolor>
+          <shadowcolor>60000000</shadowcolor>
+          <label>Settings</label>
+        </control>
+        <control type="image">
+          <left>638</left>
+          <top>754</top>
+          <width>5</width>
+          <height>58</height>
+          <texture>aperture/focus-marker.png</texture>
+        </control>
       </control>
       <control type="button" id="106">
-        <left>76</left>
-        <top>922</top>
-        <width>214</width>
+        <left>365</left>
+        <top>942</top>
+        <width>250</width>
         <height>70</height>
         <label>Power</label>
         <font>font13</font>
-        <align>center</align>
+        <align>right</align>
         <aligny>center</aligny>
-        <textcolor>FFE0EFF1</textcolor>
-        <focusedcolor>FF103D48</focusedcolor>
-        <texturefocus>aperture/power-focus.png</texturefocus>
-        <texturenofocus>aperture/power.png</texturenofocus>
+        <textcolor>FF8FA9B0</textcolor>
+        <focusedcolor>FFDFFBFF</focusedcolor>
+        <texturefocus />
+        <texturenofocus />
         <onleft>105</onleft>
         <onright>103</onright>
-        <onup>102</onup>
-        <ondown>103</ondown>
+        <onup>105</onup>
+        <ondown>100</ondown>
         <onclick>ActivateWindow(ShutdownMenu)</onclick>
-      </control>
-      <control type="label">
-        <left>80</left>
-        <top>1013</top>
-        <width>530</width>
-        <height>34</height>
-        <font>font10</font>
-        <textcolor>FF91AEB5</textcolor>
-        <label>Choose a channel. Make the evening yours.</label>
       </control>
     </control>
   </controls>

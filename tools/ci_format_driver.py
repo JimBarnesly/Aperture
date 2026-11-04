@@ -17,7 +17,9 @@ ADDON_ID = "plugin.audio.aperture.format"
 def route_is(folder, action, **parameters):
     """Match the actual plugin route, never an action-name substring."""
     parsed = urlsplit(folder)
-    expected = dict(action=[action], **{key: [str(value)] for key, value in parameters.items()})
+    expected = {key: [str(value)] for key, value in parameters.items()}
+    if action is not None:
+        expected["action"] = [action]
     return (parsed.scheme == "plugin" and parsed.netloc == ADDON_ID
             and parsed.path in ("", "/") and not parsed.fragment
             and parse_qs(parsed.query, keep_blank_values=True) == expected)
@@ -38,6 +40,25 @@ def settled_observation(settle_focus, music, wait_music, description, predicate,
     settle_focus()
     sequence = max(after, music().get("sequence", 0))
     return wait_music(description, predicate, after=sequence)
+
+
+def reopen_albums(press, wait_for, settle_focus, find_label):
+    """Recover from Kodi discarding a failed directory, through native UI."""
+    settle_focus()
+    before = press("k")
+    wait_for("Format root reopened after outage", lambda s: s.get("window") == 10502
+             and s.get("dialog") == 9999 and route_is(s.get("folder", ""), None), after=before)
+    settle_focus()
+    find_label("Albums", "Down", 5)
+    before = press("Return")
+    wait_for("Format Albums reopened after outage", lambda s: s.get("window") == 10502
+             and s.get("dialog") == 9999 and route_is(s.get("folder", ""), "albums"), after=before)
+    settle_focus()
+
+
+def successful_recovery_request(requests, started, completed):
+    return any(row["path"] == "/api/library" and row["status"] == 200
+               and started <= row["time"] <= completed for row in requests)
 
 
 def run(hooks):
@@ -217,12 +238,17 @@ def run(hooks):
         offline.unlink()
         recovery_started = time.time()
         sequence = music()["sequence"]
-        before = press("l")
-        wait_for("Format refresh recovered", lambda s: s.get("dialog") == 9999
-                 and route_is(s.get("folder", ""), "albums"), after=before)
-        settled_music("Refreshed album metadata proves outage recovery",
+        # Failed endOfDirectory can return Kodi to Music root (folder="").
+        # Refresh there cannot retry Format. Reopen its root and choose Albums.
+        reopen_albums(press, wait_for, settle_focus, find_label)
+        actual = find_title(album_title, "albums", after=sequence)
+        settled_music("Reopened album metadata proves outage recovery",
                    lambda s: route_is(s.get("folder", ""), "albums") and s.get("focused_title") == album_title,
-                   after=sequence)
+                   after=actual["sequence"])
+        recovery_completed = time.time()
+        requests = [json.loads(line) for line in (out / "format-requests.jsonl").read_text().splitlines()]
+        if not successful_recovery_request(requests, recovery_started, recovery_completed):
+            raise AssertionError("Recovery did not fetch a fresh library response")
         screenshot("format-05-recovered")
         return_home()
         opened_albums()
@@ -233,8 +259,6 @@ def run(hooks):
                 raise AssertionError("Kodi never fetched fixture endpoint " + endpoint)
         if not any(row["path"] == "/api/library" and row["status"] == 503 for row in requests):
             raise AssertionError("Offline test did not hit the synthetic server")
-        if not any(row["path"] == "/api/library" and row["status"] == 200 and row["time"] >= recovery_started for row in requests):
-            raise AssertionError("Recovery did not fetch a fresh library response")
         checks.append({"check":"offline-recovery-and-return", "recovered_title":album_title, "state":state()})
         result = {"status":"passed", "label":"SYNTHETIC QA", "checks":checks,
                   "scope":"Real Kodi Format browsing, artwork request, ordered queue, native playback clock, skip, back and HTTP-outage recovery",
