@@ -24,6 +24,7 @@ test('installer pins checked Node and helper PATH without enabling service',asyn
   execFileSync('/bin/sh',[fixture,'--install','192.168.1.5'],{env:{...process.env,HOME:home,PATH:bin+':/usr/bin:/bin',XDG_RUNTIME_DIR:runtime},stdio:'pipe'});
   const builds=await fs.readdir(path.join(home,'.local/share/aperture-cast'));
   const run=path.join(home,'.local/share/aperture-cast',builds[0],'run.sh');
+  await fs.access(path.join(path.dirname(run),'setup.sh'));
   const script=await fs.readFile(run,'utf8');assert.ok(script.includes(`exec "${bin}/node" receiver.mjs`));assert.ok(script.includes(`PATH="${bin}:/usr/local/bin:/usr/bin:/bin"`));
   execFileSync('/bin/sh',[run],{env:{PATH:'/nonexistent'},stdio:'pipe'});
   assert.match(await fs.readFile(path.join(root,'node.log'),'utf8'),/receiver.mjs/);

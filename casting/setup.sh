@@ -27,6 +27,7 @@ mkdir -p "$root"
 work=$(mktemp -d "$root/build.XXXXXX")
 cp "$src"/*.mjs "$src/package.json" "$src/package-lock.json" "$work/"
 cp -R "$src/test" "$work/test"
+cp "$src/setup.sh" "$work/setup.sh"
 # --install is an explicit opt-in to the pinned third-party packages below.
 # npm executes the upstream compile step required by the YouTube.js dependency.
 (cd "$work" && npm ci --no-audit --no-fund)
