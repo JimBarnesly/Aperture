@@ -99,6 +99,9 @@ def assemble(source: Path, output: Path, home: Path, font_roots=()):
             ET.SubElement(metadata, 'description', {'lang': 'en_GB'}).text = 'Native media navigation and Format music on a complete Kodi Omega Estuary foundation.'
         tree.write(staged / 'addon.xml', encoding='utf-8', xml_declaration=True)
         shutil.copy2(home, staged / 'xml/Home.xml')
+        for folder in ('media', 'licenses'):
+            extra=ROOT/'skin'/folder
+            if extra.is_dir(): shutil.copytree(extra, staged/folder, dirs_exist_ok=True)
         notice = ROOT / 'docs/UPSTREAM.md'
         if notice.exists():
             shutil.copy2(notice, staged / 'APERTURE_NOTICE.md')
@@ -125,6 +128,28 @@ def package(skin: Path, output: Path):
     return hashlib.sha256(output.read_bytes()).hexdigest()
 
 
+def package_format(source: Path, output: Path):
+    """Package the independently installable read-only Format client."""
+    import ast
+    manifest = ET.parse(source / 'addon.xml').getroot()
+    addon_id = manifest.get('id')
+    if addon_id != 'plugin.audio.aperture.format':
+        raise ValueError('Wrong Format add-on ID')
+    ast.parse((source / 'addon.py').read_text(encoding='utf-8'))
+    ET.parse(source / 'resources/settings.xml')
+    output.parent.mkdir(parents=True, exist_ok=True)
+    files = {p.relative_to(source).as_posix(): p.read_bytes() for p in source.rglob('*')
+             if p.is_file() and '__pycache__' not in p.parts and p.suffix != '.pyc'}
+    files['LICENSE'] = (ROOT / 'LICENSE').read_bytes()
+    with zipfile.ZipFile(output, 'w', compression=zipfile.ZIP_DEFLATED) as archive:
+        for name, content in sorted(files.items()):
+            entry = zipfile.ZipInfo(f'{addon_id}/{name}', (2026, 1, 1, 0, 0, 0))
+            entry.external_attr = 0o100644 << 16
+            entry.compress_type = zipfile.ZIP_DEFLATED
+            archive.writestr(entry, content)
+    return hashlib.sha256(output.read_bytes()).hexdigest()
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--source', type=Path, default=Path('/usr/share/kodi/addons/skin.estuary'))
@@ -134,7 +159,10 @@ def main():
     assemble(args.source, args.output, ROOT / 'skin/xml/Home.xml', args.font_root)
     archive = ROOT / 'dist' / f'{ADDON_ID}-{VERSION}.zip'
     digest = package(args.output, archive)
-    (archive.parent / 'checksums.json').write_text(json.dumps({archive.name: digest}, indent=2) + '\n')
+    format_version = ET.parse(ROOT / 'format-kodi/addon.xml').getroot().get('version')
+    format_archive = archive.parent / f'plugin.audio.aperture.format-{format_version}.zip'
+    format_digest = package_format(ROOT / 'format-kodi', format_archive)
+    (archive.parent / 'checksums.json').write_text(json.dumps({archive.name: digest, format_archive.name: format_digest}, indent=2) + '\n')
     print(f'{digest}  {archive}')
 
 

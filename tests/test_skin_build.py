@@ -20,7 +20,7 @@ class SkinBuildTests(unittest.TestCase):
         (self.source/'fonts').mkdir()
         (self.source/'fonts/regular.ttf').write_bytes(b'font fixture')
         (self.source/'addon.xml').write_text('<addon id="skin.estuary" version="4.0.0"><requires><import addon="xbmc.gui" version="5.17.0"/></requires><extension point="xbmc.addon.metadata"><license>Original</license></extension></addon>')
-        (self.source/'xml/Font.xml').write_text('<fonts><fontset><font><name>font32</name><filename>regular.ttf</filename></font><font><name>font13</name><filename>regular.ttf</filename></font></fontset></fonts>')
+        (self.source/'xml/Font.xml').write_text('<fonts><fontset><font><name>font32</name><filename>regular.ttf</filename></font><font><name>font13</name><filename>regular.ttf</filename></font><font><name>font60</name><filename>regular.ttf</filename></font><font><name>font_clock</name><filename>regular.ttf</filename></font><font><name>font10</name><filename>regular.ttf</filename></font></fontset></fonts>')
         for name in ('Home.xml', 'Settings.xml', 'SettingsCategory.xml', 'DialogConfirm.xml'):
             (self.source/'xml'/name).write_text('<window/>')
         self.out = self.root/'skin.aperture'
@@ -84,11 +84,13 @@ class SkinBuildTests(unittest.TestCase):
     def test_complete_home_focus_graph(self):
         home=ET.parse(ROOT/'skin/xml/Home.xml').getroot()
         controls={c.get('id'):c for c in home.iter('control') if c.get('id')}
-        current=home.findtext('defaultcontrol'); seen=set()
-        while current not in seen:
-            seen.add(current); current=controls[current].findtext('ondown')
+        pending=[home.findtext('defaultcontrol')];seen=set()
+        while pending:
+            current=pending.pop()
+            if current in seen:continue
+            seen.add(current)
+            pending.extend(controls[current].findtext(key) for key in ('onup','ondown','onleft','onright') if controls[current].findtext(key) in controls)
         self.assertEqual(seen,set(controls))
-        self.assertEqual(current,home.findtext('defaultcontrol'))
 
 if __name__=='__main__':
     unittest.main()

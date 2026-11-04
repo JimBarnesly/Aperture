@@ -10,6 +10,7 @@ ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 COMMIT="${GITHUB_SHA:-$(git -C "$ROOT" rev-parse HEAD)}"
 [[ "$COMMIT" =~ ^[[:xdigit:]]{40}$ ]] || { echo "Invalid tested commit SHA" >&2; exit 2; }
 OUT="${APERTURE_SMOKE_OUT:-$ROOT/build/kodi-smoke}"
+[[ ! -d "$OUT" || -z "$(ls -A "$OUT")" ]] || { echo "Output directory must be empty" >&2; exit 2; }
 mkdir -p "$OUT"
 OUT="$(cd -- "$OUT" && pwd)"
 RUNTIME="$(mktemp -d "${RUNNER_TEMP:-/tmp}/aperture-kodi-smoke.XXXXXXXX")"
@@ -25,7 +26,7 @@ chmod 700 "$RUNTIME" "$XDG_RUNTIME_DIR"
 # This is a brand-new HOME and no real credentials or personal media are used.
 printf '%s\n' "$RUNTIME" > "$OUT/runtime-path.txt"
 printf '{"status":"not_run","reason":"GUI checks have not completed"}\n' > "$OUT/result.json"
-KODI_PID=""; XVFB_PID=""
+KODI_PID=""; XVFB_PID=""; PULSE_PID=""; FORMAT_PID=""
 cleanup() {
   local rc=$?
   trap - EXIT
@@ -36,6 +37,8 @@ cleanup() {
     wait "$KODI_PID" 2>/dev/null || true
   fi
   if [[ -n "$XVFB_PID" ]]; then kill -TERM "$XVFB_PID" 2>/dev/null || true; wait "$XVFB_PID" 2>/dev/null || true; fi
+  if [[ -n "$PULSE_PID" ]]; then kill -TERM "$PULSE_PID" 2>/dev/null || true; wait "$PULSE_PID" 2>/dev/null || true; fi
+  if [[ -n "$FORMAT_PID" ]]; then kill -TERM "$FORMAT_PID" 2>/dev/null || true; wait "$FORMAT_PID" 2>/dev/null || true; fi
   [[ ! -f "$KODI_DATA/userdata/guisettings.xml" ]] || cp "$KODI_DATA/userdata/guisettings.xml" "$OUT/guisettings.xml"
   if [[ "$rc" -ne 0 ]]; then
     printf '\nKodi GUI smoke test FAILED (exit %s). See logs/result.json; no GUI pass is implied.\n' "$rc" >&2
@@ -52,7 +55,7 @@ PY
 }
 trap cleanup EXIT
 
-for command in python3 Xvfb xauth xdotool xdpyinfo xprop xwininfo glxinfo xwd import dpkg git; do
+for command in python3 Xvfb xauth xdotool xdpyinfo xprop xwininfo glxinfo xwd import dpkg git pulseaudio pactl; do
   command -v "$command" >/dev/null || { echo "Missing prerequisite: $command" >&2; exit 2; }
 done
 KODI_BIN="$(dpkg -L kodi-bin | grep '/kodi\.bin$' | head -1)"
@@ -119,13 +122,10 @@ try:
             window_id = xbmcgui.getCurrentWindowId()
             dialog_id = xbmcgui.getCurrentWindowDialogId()
             try:
-                dialog_focus = xbmcgui.Window(dialog_id).getFocusId() if dialog_id != 9999 else -1
-            except (RuntimeError, ValueError):
-                dialog_focus = -1
-            try:
-                focus = xbmcgui.Window(window_id).getFocusId()
-            except (RuntimeError, ValueError):
+                focus = int(xbmc.getInfoLabel('System.CurrentControlId'))
+            except (TypeError, ValueError):
                 focus = -1
+            dialog_focus = focus if dialog_id != 9999 else -1
             state = {
                 'sequence': sequence, 'time': time.time(), 'pid': os.getpid(),
                 'skin': xbmc.getSkinDir(), 'window': window_id,
@@ -184,8 +184,44 @@ cat > "$KODI_DATA/userdata/advancedsettings.xml" <<'XML'
 XML
 mkdir -p "$KODI_DATA/userdata/keymaps"
 cat > "$KODI_DATA/userdata/keymaps/ci.xml" <<'XML'
-<keymap><global><keyboard><F6>ActivateWindow(interfacesettings)</F6></keyboard></global></keymap>
+<keymap><global><keyboard><i>ActivateWindow(10032)</i></keyboard></global></keymap>
 XML
+# Synthetic loopback Format server and read-only player observer. No user data.
+python3 "$ROOT/tests/kodi_format_fixture.py" prepare --runtime "$RUNTIME" --out "$OUT"
+python3 "$ROOT/tests/kodi_format_fixture.py" serve --runtime "$RUNTIME" > "$KODI_TEMP/format-server.log" 2>&1 &
+FORMAT_PID=$!
+for _ in {1..100}; do
+  [[ -f "$OUT/format-ready.json" ]] && break
+  kill -0 "$FORMAT_PID" 2>/dev/null || { cat "$KODI_TEMP/format-server.log"; exit 3; }
+  sleep 0.1
+done
+[[ -f "$OUT/format-ready.json" ]] || { echo 'Format fixture did not become ready'; exit 3; }
+export APERTURE_FORMAT_DRIVER="$ROOT/tools/ci_format_driver.py"
+# Private, clocked discard audio; never use a host server, TCP or hardware sink.
+export PULSE_RUNTIME_PATH="$RUNTIME/pulse" PULSE_STATE_PATH="$RUNTIME/pulse-state"
+export PULSE_SERVER="unix:$RUNTIME/pulse/native" PULSE_COOKIE="$RUNTIME/pulse/cookie"
+export PULSE_CLIENTCONFIG="$RUNTIME/pulse/client.conf" PULSE_SINK=aperture_format_qa
+mkdir -m 700 "$PULSE_STATE_PATH"
+pulseaudio --daemonize=no --system=no --use-pid-file=no --exit-idle-time=-1 \
+  --high-priority=no --realtime=no --disable-shm=yes --disallow-module-loading=yes \
+  --log-target=stderr --log-level=info -n --file="$RUNTIME/pulse/default.pa" \
+  > "$KODI_TEMP/pulseaudio.log" 2>&1 &
+PULSE_PID=$!
+for _ in {1..100}; do
+  pactl info > "$OUT/pulse-info.txt" 2>/dev/null && break
+  kill -0 "$PULSE_PID" 2>/dev/null || { cat "$KODI_TEMP/pulseaudio.log"; exit 3; }
+  sleep 0.1
+done
+pactl --format=json list sinks > "$OUT/pulse-sinks.json"
+pactl --format=json list modules > "$OUT/pulse-modules.json"
+python3 - "$OUT" <<'PY'
+import json, pathlib, sys
+out=pathlib.Path(sys.argv[1])
+sinks=json.loads((out/'pulse-sinks.json').read_text())
+modules=json.loads((out/'pulse-modules.json').read_text())
+assert len(sinks)==1 and sinks[0]['name']=='aperture_format_qa', 'Expected only the private discard sink'
+assert {m['name'] for m in modules}=={'module-native-protocol-unix','module-null-sink'}, 'Unexpected PulseAudio module'
+PY
 # Do not relax X authentication or expose X11 on TCP.
 touch "$XAUTHORITY"
 xauth -f "$XAUTHORITY" add "$DISPLAY" . "$(python3 -c 'import secrets; print(secrets.token_hex(16))')"
@@ -199,7 +235,7 @@ done
 xdpyinfo > "$OUT/xdpyinfo.txt"
 glxinfo -B | tee "$OUT/glxinfo.txt"
 grep -qi 'llvmpipe\|softpipe' "$OUT/glxinfo.txt" || { echo 'Software GL renderer was not established' >&2; exit 3; }
-"$KODI_BIN" --windowing=x11 --gl-interface=glx --audio-backend=alsa --debug -fs > "$KODI_TEMP/kodi-stdout.log" 2>&1 &
+"$KODI_BIN" --windowing=x11 --gl-interface=glx --audio-backend=pulseaudio --debug -fs > "$KODI_TEMP/kodi-stdout.log" 2>&1 &
 KODI_PID=$!
 export APERTURE_KODI_PID="$KODI_PID" APERTURE_KODI_BIN="$KODI_BIN" APERTURE_SKIN_HOME="$ROOT/build/skin.aperture/xml/Home.xml"
 
@@ -272,12 +308,28 @@ def next_observation(key):
     before=press(key)
     return wait_for(f'fresh state after {key}',lambda s:True,after=before)
 
+def focus_signature(s):
+    return tuple(s.get(key) for key in ('window','dialog','focus','dialog_focus','list_item','control_label'))
+
+def settle_focus(timeout=8):
+    deadline=time.monotonic()+timeout; previous=None; same_since=0; frames=0; sequence=-1
+    while time.monotonic()<deadline:
+        current=state(); signature=focus_signature(current)
+        if current.get('sequence')!=sequence:
+            sequence=current.get('sequence')
+            if signature==previous: frames+=1
+            else: previous=signature; frames=1; same_since=time.monotonic()
+            if frames>=3 and time.monotonic()-same_since>=.3: return current
+        time.sleep(.1)
+    raise AssertionError('Focus failed to settle: '+str(state()))
+
 def find_label(text, direction, max_steps):
-    # The bound comes from the small menu under test; never choose an unobserved item.
-    for _ in range(max_steps+1):
-        if labelled(state(),text): return
-        next_observation(direction)
-        time.sleep(0.2)
+    for step in range(max_steps+1):
+        current=settle_focus()
+        if labelled(current,text): return
+        if step==max_steps: break
+        signature=focus_signature(current); before=press(direction)
+        wait_for('focus moves toward '+text,lambda s:focus_signature(s)!=signature,after=before)
     raise AssertionError(f'Could not focus visible item {text!r}; actual state={state()}')
 
 # Use source navigation edges to support vertical and horizontal experiment branches,
@@ -313,9 +365,13 @@ try:
     screenshot('01-estuary-baseline')
 
     def choose_skin(name, expected_skin, accept=True):
-        before=press('F6')
+        before=press('i')
         wait_for('Interface settings',lambda s:s.get('window')==10032 and s.get('dialog')==9999,after=before)
-        next_observation('Right')
+        current=settle_focus()
+        if current.get('focus')==3:
+            before=press('Right')
+            wait_for('Settings content focused',lambda s:s.get('focus')!=3,after=before)
+        find_label('Skin','Down',8)
         before=press('Return')
         wait_for('Skin chooser',lambda s:s.get('dialog')==12000,after=before)
         # Small installed-skin list, no downloads or repository configuration.
@@ -324,9 +380,11 @@ try:
         wait_for('Keep/revert dialog',lambda s:s.get('skin')==expected_skin and s.get('dialog')==10100,timeout=40,after=before)
         screenshot('skin-confirm-'+expected_skin)
         if accept:
-            for _ in range(3):
-                if state().get('dialog_focus')==11: break
-                next_observation('Left')
+            settle_focus()
+            if state().get('dialog_focus')!=11:
+                before=press('Left')
+                wait_for('Yes focused',lambda s:s.get('dialog')==10100 and s.get('dialog_focus')==11,after=before)
+            settle_focus()
             if state().get('dialog_focus')!=11: raise AssertionError('Yes button not visibly focused')
             before=press('Return')
             wait_for('Accepted '+name,lambda s:s.get('skin')==expected_skin and s.get('dialog')==9999,after=before)
@@ -372,11 +430,17 @@ try:
     next_observation('Escape')
     wait_for('Final Home',lambda s:s.get('window')==HOME)
     screenshot('06-final-home')
+    import importlib.util
+    spec=importlib.util.spec_from_file_location('ci_format_driver', os.environ['APERTURE_FORMAT_DRIVER'])
+    format_driver=importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(format_driver)
+    format_result=format_driver.run(globals())
+    checks.extend(format_result['checks'])
     log=(out/'logs/kodi.log').read_text(errors='replace')
     fatal_markers=('Error loading skin', 'failed to load skin', 'EXCEPTION Thrown (PythonToCppException)', 'unable to load font')
     errors=[line for line in log.splitlines() if any(marker.lower() in line.lower() for marker in fatal_markers)]
     if errors: raise AssertionError('Skin errors in Kodi log: '+'\n'.join(errors))
-    result={'status':'passed','scope':'Kodi 21.3 actual GUI activation, repeated navigation, accepted skin switch and automatic recovery',
+    result={'status':'passed','scope':'Kodi 21.3 actual GUI activation, repeated navigation, accepted skin switch, automatic recovery and synthetic Format HTTP playback',
             'checks':checks,'limitations':['No physical Pi/controller/audio/core acceptance','No ZIP-installer interaction yet','No claim of reproducing the original Pi freeze']}
     (out/'result.json').write_text(json.dumps(result,indent=2)+'\n')
     print('PASS: real Kodi 21.3 skin activation, repeated native navigation and recovery.',flush=True)
@@ -386,4 +450,25 @@ except Exception as exc:
     result={'status':'failed','reason':str(exc),'checks':checks,'last_state':last,'traceback':traceback.format_exc()}
     (out/'result.json').write_text(json.dumps(result,indent=2)+'\n')
     raise
+PY
+
+# End the first process cleanly before the independent fresh ZIP acceptance run.
+kill -TERM "$KODI_PID"
+for _ in {1..100}; do kill -0 "$KODI_PID" 2>/dev/null || break; sleep 0.1; done
+if kill -0 "$KODI_PID" 2>/dev/null; then
+  echo 'Kodi did not shut down cleanly before ZIP acceptance' >&2
+  exit 1
+fi
+wait "$KODI_PID" || true
+KODI_PID=""
+python3 "$ROOT/tools/zip_smoke_driver.py" --root "$ROOT" --runtime "$RUNTIME" --out "$OUT/zip-install" --binary "$KODI_BIN"
+python3 - "$OUT" <<'PY'
+import json, pathlib, sys
+out=pathlib.Path(sys.argv[1]); p=out/'result.json'
+result=json.loads(p.read_text()); zip_result=json.loads((out/'zip-install/result.json').read_text())
+if zip_result.get('status')!='passed': raise RuntimeError('Fresh ZIP acceptance did not pass')
+result['zip_acceptance']=zip_result
+result['limitations']=[s for s in result['limitations'] if s!='No ZIP-installer interaction yet']
+result['scope'] += '; fresh ZIP installation, process restart persistence and accepted Estuary recovery'
+p.write_text(json.dumps(result,indent=2)+'\n')
 PY

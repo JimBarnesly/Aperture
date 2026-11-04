@@ -14,3 +14,18 @@ The original prototype used relative distribution font links, an undefined
 font30 name, and kept duplicate-ID previous copies inside Kodi's add-on scan
 folder. These are concrete defects; they do not prove the cause of the reported
 Pi freeze without its complete log. A desktop test is not Pi hardware acceptance.
+
+## MediaStream reference photograph
+
+`skin/media/aperture/bridge.png` is the unmodified `MediaStream/Media/HomeBGPictures.png`
+from Team-Resurgent/XBMC-Skinning-Project, commit
+484fa2309eab69291d546398d7444e3d761f8cac. The upstream MediaStream distribution
+includes a Creative Commons Attribution-ShareAlike3.0Unported licence; its notice
+is retained in `skin/licenses/MediaStream-CC-BY-SA-3.0.txt`.
+Source: https://github.com/Team-Resurgent/XBMC-Skinning-Project/blob/484fa2309eab69291d546398d7444e3d761f8cac/MediaStream/Media/HomeBGPictures.png
+Licence: https://creativecommons.org/licenses/by-sa/3.0/
+
+The upstream tree does not identify the photographer separately. This records
+package provenance rather than claiming independent photo-rights clearance.
+No original MediaStream font is included. The Home layout, rounded channel-card
+textures and icons are newly authored for Aperture; Kodi's existing fonts remain.
