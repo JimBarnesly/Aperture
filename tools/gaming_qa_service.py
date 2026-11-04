@@ -27,6 +27,7 @@ def until(description,predicate,timeout=35):
 def active(): return [{'type':'game'}] if xbmc.Player().isPlayingGame() else []
 def capture(name):
     xbmc.executebuiltin('TakeScreenshot('+str(out/(name+'.png'))+',sync)')
+    until('screenshot '+name, lambda:(out/(name+'.png')).exists(), timeout=8)
 try:
     until('Home',lambda:xbmcgui.getCurrentWindowId()==10000)
     for addon in ('game.libretro','peripheral.joystick','game.libretro.aperture.nestopia','game.libretro.aperture.pcsxrearmed'):
@@ -40,11 +41,11 @@ try:
         listing=rpc('Files.GetDirectory',{'directory':folder,'media':'files'})['files']
         game=next((x for x in listing if x['label']==title),None)
         if not game: raise RuntimeError('Synthetic game absent from actual plugin list: '+title)
-        # Exercise the plugin resolver and native core selection, not a direct ROM bypass.
+        # Exercise the directory launch action and native core selection, not a direct ROM bypass.
         xbmc.executebuiltin('ActivateWindow(Games,'+folder+',return)')
         until('Games directory',lambda:xbmcgui.getCurrentWindowId()==10821)
         for cycle in range(1):
-            xbmc.Player().play(game['file'])
+            xbmc.executebuiltin('ActivateWindow(Games,'+game['file']+',return)')
             until('RetroPlayer active '+system,lambda:any(p['type']=='game' for p in active()))
             monitor.waitForAbort(8)
             players=active()

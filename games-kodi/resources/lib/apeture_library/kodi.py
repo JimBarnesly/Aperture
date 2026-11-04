@@ -128,6 +128,15 @@ class Plugin:
         ])
         return item
 
+    def launch_item(self, game):
+        item = self.game_item(game)
+        item.setProperty("IsPlayable", "false")
+        return item
+
+    def finish_action(self):
+        if self.handle >= 0:
+            xbmcplugin.endOfDirectory(self.handle, succeeded=False, cacheToDisc=False)
+
     def directory(self, system_id=None, update=False):
         xbmcplugin.setContent(self.handle, "games")
         xbmcplugin.setPluginCategory(self.handle, self.text(32000))
@@ -142,7 +151,7 @@ class Plugin:
                 for library in result.libraries:
                     for game in library.games:
                         items.append((url(action="play", system=system_id, game=game_key(game)),
-                                      self.game_item(game), False))
+                                      self.launch_item(game), True))
             else:
                 for library in result.libraries:
                     item = xbmcgui.ListItem(label=library.system.name,
@@ -185,7 +194,7 @@ class Plugin:
                          if game_key(game) == key), None)
             if game is None:
                 xbmcgui.Dialog().ok(self.text(32000), self.text(32013))
-                xbmcplugin.setResolvedUrl(self.handle, False, xbmcgui.ListItem())
+                self.finish_action()
                 return
             path = game.path
             if game.discs:
@@ -194,12 +203,15 @@ class Plugin:
                 if selected < 0:
                     raise ScanCancelled()
                 path = game.discs[selected]
-            xbmcplugin.setResolvedUrl(self.handle, True, self.game_item(game, path))
+            # Kodi 21's resolver keeps the plugin URL as Path; RetroPlayer
+            # requires the actual local ROM as Path, not merely DynPath.
+            self.finish_action()
+            xbmc.Player().play(path, self.game_item(game, path))
         except ScanCancelled:
-            xbmcplugin.setResolvedUrl(self.handle, False, xbmcgui.ListItem())
+            self.finish_action()
         except (ScanError, OSError, IOError, ValueError) as exc:
             self.error(exc)
-            xbmcplugin.setResolvedUrl(self.handle, False, xbmcgui.ListItem())
+            self.finish_action()
 
 
 def run(argv):
@@ -234,7 +246,4 @@ def run(argv):
     except Exception as exc:  # Kodi must always receive a terminal callback.
         plugin.error(exc)
         if handle >= 0:
-            if action == "play":
-                xbmcplugin.setResolvedUrl(handle, False, xbmcgui.ListItem())
-            else:
-                xbmcplugin.endOfDirectory(handle, succeeded=False, cacheToDisc=False)
+            xbmcplugin.endOfDirectory(handle, succeeded=False, cacheToDisc=False)

@@ -63,7 +63,8 @@ class AdapterTests(unittest.TestCase):
         self.plugin_api = Mock()
         self.vfs = Mock()
         self.vfs.translatePath.return_value = str(self.root)
-        self.xbmc = types.SimpleNamespace(Monitor=lambda: self.monitor, log=Mock(),
+        self.player = Mock()
+        self.xbmc = types.SimpleNamespace(Player=lambda: self.player, Monitor=lambda: self.monitor, log=Mock(),
                                          LOGWARNING=2, LOGERROR=3)
         modules = {
             "xbmc": self.xbmc,
@@ -111,8 +112,8 @@ class AdapterTests(unittest.TestCase):
         self.put('nes/A & B "demo" café.nes')
         self.run_plugin("action=system&system=nes")
         uri, item, folder = self.directory_items()[0]
-        self.assertFalse(folder)
-        self.assertEqual(item.properties["IsPlayable"], "true")
+        self.assertTrue(folder)
+        self.assertEqual(item.properties["IsPlayable"], "false")
         self.assertFalse(item.content_lookup)
         self.assertEqual(item.tag.title, 'A & B "demo" café')
         self.assertEqual(item.tag.platform, "Nintendo Entertainment System")
@@ -125,14 +126,14 @@ class AdapterTests(unittest.TestCase):
         path = self.put("nes/Demo.nes")
         key = self.module.game_key(self.one_game())
         self.run_plugin("action=play&system=nes&game=" + key)
-        handle, succeeded, item = self.plugin_api.setResolvedUrl.call_args.args
-        self.assertEqual(handle, 42)
-        self.assertTrue(succeeded)
+        actual_path, item = self.player.play.call_args.args
+        self.assertEqual(actual_path, str(path))
+        self.plugin_api.setResolvedUrl.assert_not_called()
         self.assertEqual(item.path, str(path))
         self.assertEqual(item.properties["IsPlayable"], "true")
         self.assertEqual(item.tag.title, "Demo")
         self.assertFalse(hasattr(item.tag, "gameclient"))
-        self.plugin_api.endOfDirectory.assert_not_called()
+        self.plugin_api.endOfDirectory.assert_called_once_with(42, succeeded=False, cacheToDisc=False)
 
     def test_playlist_disc_picker_resolves_disc_not_m3u(self):
         self.put("psx/Disc 1.chd")
@@ -141,7 +142,7 @@ class AdapterTests(unittest.TestCase):
         self.dialog.select.return_value = 1
         key = self.module.game_key(self.one_game())
         self.run_plugin("action=play&system=psx&game=" + key)
-        self.assertEqual(self.plugin_api.setResolvedUrl.call_args.args[2].path, str(chosen))
+        self.assertEqual(self.player.play.call_args.args[1].path, str(chosen))
         self.dialog.select.assert_called_once_with("text-32014", ["Disc 1.chd", "Disc 2.chd"])
 
     def test_disc_picker_cancel_is_failed_resolution_not_first_disc(self):
@@ -150,7 +151,8 @@ class AdapterTests(unittest.TestCase):
         self.dialog.select.return_value = -1
         key = self.module.game_key(self.one_game())
         self.run_plugin("action=play&system=psx&game=" + key)
-        self.assertFalse(self.plugin_api.setResolvedUrl.call_args.args[1])
+        self.player.play.assert_not_called()
+        self.plugin_api.endOfDirectory.assert_called_once_with(42, succeeded=False, cacheToDisc=False)
         self.dialog.ok.assert_not_called()
 
     def test_removed_game_cannot_be_resolved_from_stale_link(self):
@@ -158,7 +160,8 @@ class AdapterTests(unittest.TestCase):
         key = self.module.game_key(self.one_game())
         path.unlink()
         self.run_plugin("action=play&system=nes&game=" + key)
-        self.assertFalse(self.plugin_api.setResolvedUrl.call_args.args[1])
+        self.player.play.assert_not_called()
+        self.plugin_api.endOfDirectory.assert_called_once_with(42, succeeded=False, cacheToDisc=False)
         self.dialog.ok.assert_called_once_with("text-32000", "text-32013")
 
     def test_unconfigured_root_offers_settings_not_fake_systems(self):
@@ -204,7 +207,8 @@ class AdapterTests(unittest.TestCase):
 
     def test_untrusted_play_path_cannot_bypass_discovery(self):
         self.run_plugin("action=play&system=nes&game=../../private&path=/outside.nes")
-        self.assertFalse(self.plugin_api.setResolvedUrl.call_args.args[1])
+        self.player.play.assert_not_called()
+        self.plugin_api.endOfDirectory.assert_called_once_with(42, succeeded=False, cacheToDisc=False)
 
     def test_excessive_query_has_terminal_callback(self):
         self.run_plugin("&".join("x{}=a".format(index) for index in range(13)))
