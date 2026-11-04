@@ -126,3 +126,13 @@ Read the latest branch before writing. Preserve unrelated work and use non-destr
 6. Apply optional PS1 picture improvements and polish after the baseline is stable.
 
 Back up before changes. Ask before destructive/security/network/access changes, credential handling or service restarts that interrupt use. Do not replace the OS or broadly upgrade packages as a first diagnostic step.
+
+## Menu styling update — 2026-11-04 13:19 UTC
+
+Primary developer update; tested code commit `191a8b800dd38db6425e8242657cb8c0452eaac9` on the draft branch.
+
+- Removed the Aperture heading from Home while retaining its remaining layout. Replaced the stock cyan Power Options with a charcoal/mist-mint overlay; shared selection and confirmation dialogs now use the same palette and restrained headers. Existing power actions, conditions and Back navigation are preserved.
+- Changes: `skin/xml/Home.xml`, new `DialogButtonMenu.xml`, `tools/design_home.py`, new `tools/style_dialogs.py`, and integration in `tools/build_skin.py`/`install.sh`; accompanying unit and disposable Kodi tests. The shared styling transforms only the staged Aperture copy, never system Estuary.
+- Validation: 257 unit tests pass; complete skin assembles from official Estuary with all referenced Home/power fonts available. [Real Kodi 21.3 acceptance](https://github.com/JimBarnesly/Aperture/actions/runs/41836423061) passed power open/navigation/Back twice, selection cancellation and confirmation cancellation. Its artifact contains actual Home, power, selection and confirmation screenshots, visually inspected. No shutdown/reboot operation was executed.
+- Limits: software-rendered test environment, not physical Pi/controller validation. This does not resolve or waive the game-exit crash or earlier gaming/ZIP acceptance issues. No installation on the user's Pi is confirmed.
+- Hermes next step: when safe to reload the skin, back up the installed Aperture add-on, apply the pinned source through `install.sh`, and check the TV's Home, power and ordinary dialogs with keyboard/controller. Python 3 enables shared-dialog recoloring. Keep profile/media/saves unchanged; rollback by restoring the prior skin add-on backup. Return a sanitised result and exact tested commit, keeping private diagnostics local.
