@@ -1,6 +1,7 @@
 """Aperture local movies: browse existing Kodi sources, never alter media."""
 import json
 import sys
+import traceback
 from urllib.parse import parse_qs, urlencode
 import xbmc
 import xbmcaddon
@@ -17,7 +18,7 @@ BASE = sys.argv[0]
 def rpc(method, params=None):
     result = json.loads(xbmc.executeJSONRPC(json.dumps({'jsonrpc': '2.0', 'id': 1, 'method': method, 'params': params or {}})))
     if 'error' in result:
-        raise RuntimeError('Kodi could not read this source')
+        raise RuntimeError('Kodi source RPC error code '+str(result['error'].get('code', 'unknown')))
     return result.get('result', {})
 
 
@@ -60,8 +61,20 @@ def main():
         xbmcgui.Dialog().ok('Movies', 'That folder is outside the selected video source.')
         end(False); return
     properties = ['title', 'year', 'plot', 'runtime', 'genre', 'rating', 'art', 'thumbnail', 'playcount', 'resume']
-    result = rpc('Files.GetDirectory', {'directory': path, 'media': 'video', 'properties': properties, 'sort': {'method': 'label', 'order': 'ascending', 'ignorearticle': True}})
-    items = result.get('files', [])
+    try:
+        result = rpc('Files.GetDirectory', {'directory': path, 'media': 'video', 'properties': properties, 'sort': {'method': 'label', 'order': 'ascending', 'ignorearticle': True}})
+        items = result.get('files', [])
+    except RuntimeError:
+        # JSON-RPC can refuse a saved source with allowsharing=false. Local VFS
+        # browsing does not enable sharing or expose that source over the network.
+        if not xbmcvfs.exists(path):
+            raise RuntimeError('Source unavailable')
+        folders, files = xbmcvfs.listdir(path)
+        extensions = tuple(xbmc.getSupportedMedia('video').lower().split('|'))
+        prefix = path.rstrip('/')+'/'
+        items = [{'file': prefix+n+'/', 'label': n, 'filetype': 'directory'} for n in folders]
+        items += [{'file': prefix+n, 'label': n, 'filetype': 'file'} for n in files if n.lower().endswith(extensions)]
+        items.sort(key=lambda item: item['label'].casefold())
     xbmcplugin.setPluginCategory(HANDLE, chosen.get('label') or 'Movies')
     for item in items:
         directory = item.get('filetype') == 'directory'
@@ -100,8 +113,10 @@ def main():
 if __name__ == '__main__':
     try:
         main()
-    except Exception:
+    except Exception as error:
         # Paths may contain credentials. Never put remote URLs or exception values in logs.
-        xbmc.log('Aperture Movies: source listing failed', xbmc.LOGERROR)
+        frames = traceback.extract_tb(error.__traceback__)
+        location = frames[-1].lineno if frames else 0
+        xbmc.log('Aperture Movies: source listing failed ('+type(error).__name__+', line '+str(location)+')', xbmc.LOGERROR)
         xbmcgui.Dialog().ok('Movies', 'Could not read the movie source. Check that the drive is connected and available in Kodi.')
         end(False)

@@ -84,6 +84,16 @@ try:
     if len(actual_sources)!=expected_count:
         raise RuntimeError('Disposable source fixture was not loaded: '+str(actual_sources))
     checks.append({'check':'source-fixture','scenario':SCENARIO,'count':len(actual_sources)})
+    # Diagnostic data is safe only because every source belongs to this disposable fixture.
+    diagnostics=[]
+    for source in actual_sources:
+        directory=source['file']
+        if not directory.startswith(str(RUNTIME)+'/'):
+            raise RuntimeError('Unexpected non-fixture source; refusing to record it')
+        params={'directory':directory,'media':'video','properties':['title','year','plot','runtime','genre','rating','art','thumbnail','playcount','resume'],'sort':{'method':'label','order':'ascending','ignorearticle':True}}
+        response=json.loads(xbmc.executeJSONRPC(json.dumps({'jsonrpc':'2.0','id':1,'method':'Files.GetDirectory','params':params})))
+        diagnostics.append({'source':source,'request':params,'response':response})
+    (OUT/'directory-rpc.json').write_text(json.dumps(diagnostics,indent=2)+'\n')
     xbmc.executebuiltin('ActivateWindow(Videos,'+ROOT+',return)')
     if SCENARIO=='empty':
         until('no-source guidance',lambda:xbmcgui.getCurrentWindowDialogId()==12002)
