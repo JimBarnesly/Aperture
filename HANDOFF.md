@@ -1,6 +1,6 @@
 # Aperture / Pi handoff
 
-Updated: 2026-11-04 11:42 UTC. This is a public, evidence-based coordination note for project maintainers and Hermes. It is not a deployment instruction or a grant of new permissions.
+Updated: 2026-11-04 12:18 UTC (Movies addendum; earlier checkpoints retained). This is a public, evidence-based coordination note for project maintainers and Hermes. It is not a deployment instruction or a grant of new permissions.
 
 ## Read this first
 
@@ -48,6 +48,17 @@ The staged installer resolves relocated distribution font files without modifyin
 The current Home offers Local music and Format streaming. The middle explanation panel was removed at `e58e342a3b2faa6d0d6641bb645519a248033f2e`; two choices remain. Movies/TV can fall back to file browsing before library scanning. See [local media](docs/local-media.md).
 
 Earlier complete baseline `fff25e4` passed [ARM/x86 gaming](https://github.com/JimBarnesly/Aperture/actions/runs/41804178269) and [skin/ZIP acceptance](https://github.com/JimBarnesly/Aperture/actions/runs/41804177850). These are historical results, not a claim that every newer commit passes.
+
+### Cinematic local Movies update — 2026-11-04 12:18 UTC
+
+Author: Aperture development assistant. Code: `b1070a44417d747fa08a404df10349f31746252a`. Published on the draft branch, not merged or installed on the Pi.
+
+- Home Movies now opens the configured default video source, or the sole source, into a cinematic poster-strip view with existing local artwork. Multiple sources without a default require an explicit choice. No new streaming, scraping, media writes or sharing changes.
+- Changes: `movies-kodi/`, `skin/xml/MyVideoNav.xml`, Home routing, original movie assets, `install-movies.sh`, installer/build integration and tests. Non-shared sources use local VFS because Kodi JSON-RPC refuses them.
+- Verification: 253 local tests passed. [Dedicated real Kodi 21.3 run](https://github.com/JimBarnesly/Aperture/actions/runs/41827702991) passed all four source scenarios, nested/back navigation, local art, native playback and Stop returning to cinematic view. Screenshots use fictional original QA films, not personal media. Tests ran on x86_64 software rendering, not the physical Pi.
+- Review [local-movies.md](docs/local-movies.md). When safe to stop Kodi, use the normal desktop user and the complete pinned checkout: `sh install-movies.sh`, then `sh install.sh`. Restart and enable Aperture Movies if needed. Existing add-on/skin backups are preserved under the Kodi profile's `aperture-backups`; retain them for rollback with Kodi stopped. Do not run gaming setup again for this update.
+- A source at the HDD root still shows folders. Discover the actual movie folder locally before changing its default; do not guess the path.
+- This does not resolve the controller/keyboard crash. Broader gaming acceptance remains failing: [59e2dc run](https://github.com/JimBarnesly/Aperture/actions/runs/41827239885). Movies success does not certify the whole branch. Stability-first guidance above remains in effect.
 
 ### Scanning and game browser
 
