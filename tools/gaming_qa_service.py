@@ -67,7 +67,10 @@ try:
     result={'status':'passed','checks':checks,'limitations':['Synthetic original NES/PSX programs only','No physical Pi, 8BitDo, Bluetooth, BIOS or commercial-game testing','No audible hardware-output test']}
     (out/'result.json').write_text(json.dumps(result,indent=2))
 except Exception as exc:
-    capture('failure')
+    try:
+        capture('failure')
+    except Exception:
+        pass  # Preserve the original failure even if the framebuffer is unavailable.
     (out/'result.json').write_text(json.dumps({'status':'failed','reason':str(exc),'checks':checks,'traceback':traceback.format_exc()},indent=2))
 finally:
     xbmc.executebuiltin('Quit')

@@ -114,9 +114,10 @@ class Plugin:
         item = xbmcgui.ListItem(label=game.title, path=path, offscreen=True)
         item.setProperty("IsPlayable", "true")
         item.setContentLookup(False)
-        tag = item.getGameInfoTag()
-        tag.setTitle(game.title)
-        tag.setPlatform(SYSTEM_BY_ID[game.system_id].name)
+        if path:
+            tag = item.getGameInfoTag()
+            tag.setTitle(game.title)
+            tag.setPlatform(SYSTEM_BY_ID[game.system_id].name)
         item.setArt({"icon": "DefaultAddonGame.png"})
         item.setProperty("Aperture.System", game.system_id)
         item.setProperty("Aperture.DiscCount", str(len(game.discs) or 1))

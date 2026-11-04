@@ -115,8 +115,9 @@ class AdapterTests(unittest.TestCase):
         self.assertTrue(folder)
         self.assertEqual(item.properties["IsPlayable"], "false")
         self.assertFalse(item.content_lookup)
-        self.assertEqual(item.tag.title, 'A & B "demo" café')
-        self.assertEqual(item.tag.platform, "Nintendo Entertainment System")
+        self.assertEqual(item.label, 'A & B "demo" café')
+        # A tagged folder is misclassified as a playable archive by Kodi's Play action.
+        self.assertIsNone(item.tag)
         self.assertEqual(item.art["icon"], "DefaultAddonGame.png")
         self.assertNotIn(str(self.root), uri)
         self.assertNotIn("café", uri)

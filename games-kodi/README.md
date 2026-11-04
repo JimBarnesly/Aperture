@@ -142,8 +142,9 @@ The scanner/catalog have no Kodi imports and no third-party Python dependencies.
 
 - `xbmc.python.pluginsource` declares `<provides>game</provides>`.
 - Listings use `xbmcplugin.setContent(handle, "games")`.
-- Game launch actions are folder items with `IsPlayable=false`, disabled content
-  lookup, and `ListItem.getGameInfoTag().setTitle()/setPlatform()` metadata.
+- Game launch actions are folder items with `IsPlayable=false` and disabled
+  content lookup. They deliberately have no GameInfoTag, so Kodi's context-menu
+  Play action cannot mistake an action folder for a playable game archive.
 - Selecting one re-scans the system, handles any disc choice, closes the directory
   action, and calls `xbmc.Player().play(real_path, listitem)` with a playable game tag.
   This is intentional: Kodi 21's plugin resolver retains the plugin URL as Path

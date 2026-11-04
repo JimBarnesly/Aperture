@@ -36,7 +36,7 @@ class SetupTests(unittest.TestCase):
    self.assertEqual(addon.get('id'),g.PREFIX+core.key)
    ext=addon.find("extension[@point='kodi.gameclient']")
    self.assertEqual(ext.get('library_linux'),core.library)
-   self.assertEqual(ext.findtext('supports_vfs'),'false')
+   self.assertEqual(ext.findtext('supports_vfs'),'false' if core.key=='pcsxrearmed' else 'true')
    self.assertEqual((target/core.library).read_bytes(),b'fake-test-core')
    mapping=ET.parse(target/'resources/buttonmap.xml').find('controller')
    self.assertEqual(mapping.get('id'),'game.controller.default')
