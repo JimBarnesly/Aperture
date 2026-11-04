@@ -47,12 +47,19 @@ try:
     monitor.waitForAbort(.5)
     capture('psx-video-settings')
     checks.append({'check':'psx-settings-ui-opens','dialog':xbmcgui.getCurrentWindowDialogId(),'native_default':True})
-    rpc('Input.Back')
+    # Exercise the actual spinner, then OK, rather than setting an add-on copy.
+    rpc('Input.Select')
+    monitor.waitForAbort(.4)
+    capture('psx-video-settings-enhanced')
+    xbmc.executebuiltin('SetFocus(28)')
+    monitor.waitForAbort(.2)
+    rpc('Input.Select')
     until('settings closed',lambda:not xbmc.getCondVisibility('System.HasModalDialog'))
-    # Test-only preference in this disposable Kodi profile. User installations stay native.
-    psx_addon.setSetting('pcsx_rearmed_neon_enhancement_enable','enabled')
+    monitor.waitForAbort(.5)
+    psx_addon=xbmcaddon.Addon('game.libretro.aperture.pcsxrearmed')
     if psx_addon.getSetting('pcsx_rearmed_neon_enhancement_enable') != 'enabled':
-        raise RuntimeError('Cannot set string-valued enhancement option')
+        raise RuntimeError('GUI did not save enhanced-resolution choice')
+    checks.append({'check':'psx-settings-ui-saves-enabled'})
     systems=rpc('Files.GetDirectory',{'directory':'plugin://plugin.games.aperture/','media':'files'})['files']
     if not any('Nintendo' in item['label'] for item in systems): raise RuntimeError('NES system missing from actual plugin root')
     checks.append({'check':'actual-plugin-system-list','labels':[i['label'] for i in systems]})
@@ -64,17 +71,24 @@ try:
         # Exercise the directory launch action and native core selection, not a direct ROM bypass.
         until('no modal before browsing',lambda:not xbmc.getCondVisibility('System.HasModalDialog'))
         monitor.waitForAbort(.3)
-        xbmc.executebuiltin('ActivateWindow(Games,plugin://plugin.games.aperture/,return)')
-        until('console cards',lambda:xbmcgui.getCurrentWindowId()==10821 and xbmc.getCondVisibility('Control.IsVisible(59)') and not xbmc.getCondVisibility('System.HasModalDialog'))
-        monitor.waitForAbort(.4)
-        for _ in range(12):
-            if xbmc.getInfoLabel('ListItem.Property(Aperture.System)')==system: break
-            rpc('Input.Right'); monitor.waitForAbort(.2)
-        if xbmc.getInfoLabel('ListItem.Property(Aperture.System)')!=system: raise RuntimeError('Cannot focus console '+system)
-        capture(system+'-console-cards')
-        rpc('Input.Select')
-        until('Games directory',lambda:xbmcgui.getCurrentWindowId()==10821 and xbmc.getInfoLabel('Container.FolderPath')==folder and xbmc.getCondVisibility('Control.IsVisible(60)') and not xbmc.getCondVisibility('System.HasModalDialog'))
-        monitor.waitForAbort(.6)
+        if system=='psx':
+            rpc('Settings.SetSettingValue',{'setting':'gamesgeneral.enableautosave','value':True})
+        if os.environ.get('APERTURE_GAMING_SKIN')=='classic':
+            xbmc.executebuiltin('ActivateWindow(Games,'+folder+',return)')
+            until('classic Games directory',lambda:xbmcgui.getCurrentWindowId()==10821 and xbmc.getInfoLabel('Container.FolderPath')==folder and not xbmc.getCondVisibility('System.HasModalDialog'))
+            monitor.waitForAbort(.6)
+        else:
+            xbmc.executebuiltin('ActivateWindow(Games,plugin://plugin.games.aperture/,return)')
+            until('console cards',lambda:xbmcgui.getCurrentWindowId()==10821 and xbmc.getCondVisibility('Control.IsVisible(59)') and not xbmc.getCondVisibility('System.HasModalDialog'))
+            monitor.waitForAbort(.4)
+            for _ in range(12):
+                if xbmc.getInfoLabel('ListItem.Property(Aperture.System)')==system: break
+                rpc('Input.Right'); monitor.waitForAbort(.2)
+            if xbmc.getInfoLabel('ListItem.Property(Aperture.System)')!=system: raise RuntimeError('Cannot focus console '+system)
+            capture(system+'-console-cards')
+            rpc('Input.Select')
+            until('Games directory',lambda:xbmcgui.getCurrentWindowId()==10821 and xbmc.getInfoLabel('Container.FolderPath')==folder and xbmc.getCondVisibility('Control.IsVisible(60)') and not xbmc.getCondVisibility('System.HasModalDialog'))
+            monitor.waitForAbort(.6)
         for cycle in range(1):
             # Navigate and select the actual listed action as a controller would.
             for _ in range(12):
@@ -106,6 +120,10 @@ try:
             until('return to Games',lambda:xbmcgui.getCurrentWindowId()==10821 and not xbmc.getCondVisibility('System.HasModalDialog'))
             monitor.waitForAbort(.6)
             checks.append({'check':'exit-back-to-games-'+system+'-'+str(cycle),'window':xbmcgui.getCurrentWindowId()})
+            if system=='psx':
+                until('PSX autosave written',lambda:any((runtime/'data/userdata').rglob('*.sav')),timeout=20)
+                if monitor.waitForAbort(4): raise RuntimeError('Kodi exited after PSX autosave')
+                checks.append({'check':'psx-autosave-stop-survives','save_files':len(list((runtime/'data/userdata').rglob('*.sav')))})
     result={'status':'passed','checks':checks,'limitations':['Synthetic original NES/PSX programs only','No physical Pi, 8BitDo, Bluetooth, BIOS or commercial-game testing','No audible hardware-output test']}
     (out/'result.json').write_text(json.dumps(result,indent=2))
 except Exception as exc:

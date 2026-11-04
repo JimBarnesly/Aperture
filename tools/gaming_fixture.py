@@ -69,7 +69,7 @@ def prepare(root,runtime,out,pcsx):
 <setting id="gamesgeneral.showosdhelp">false</setting>
 <setting id="gamesgeneral.enableautosave">false</setting>
 <resolutions/><viewstates/><skinsettings/>
-</settings>''')
+</settings>'''.replace('skin.aperture','skin.estuary' if os.environ.get('APERTURE_GAMING_SKIN')=='classic' else 'skin.aperture'))
     (userdata/'advancedsettings.xml').write_text('<advancedsettings><loglevel hide="false">1</loglevel></advancedsettings>')
     (out/'fixture.json').write_text(__import__('json').dumps({'runtime':str(runtime),'roms':str(roms),'commercial_data':False}))
 
