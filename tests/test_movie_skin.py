@@ -14,6 +14,7 @@ class MovieSkinTests(unittest.TestCase):
 
     def test_plugin_only_native_container(self):
         self.assertIsNotNone(self.view)
+        self.assertIs(self.tree.find('./controls/control[@id="61"]'), self.view)
         self.assertEqual(self.view.findtext('visible'), 'String.IsEqual(Container.PluginName,plugin.video.aperture.movies)')
         self.assertIsNone(self.view.find('content'))
         self.assertEqual(list(self.view.iter('onclick')), [])

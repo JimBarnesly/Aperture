@@ -250,7 +250,7 @@
         <width>1100</width>
         <height>40</height>
         <font>font27</font>
-        <label>$INFO[ListItem.Year]$INFO[ListItem.Genre,   •   ]$INFO[ListItem.Duration,   •   , min]</label>
+        <label>$INFO[ListItem.Year]$INFO[ListItem.Genre,   •   ]$INFO[ListItem.Duration,   •   ]</label>
         <textcolor>FF9BD5D0</textcolor>
       </control>
       <control type="textbox">
@@ -282,108 +282,6 @@
         <textcolor>FFB4C8CD</textcolor>
         <align>right</align>
       </control>
-      <control type="panel" id="61">
-        <left>72</left>
-        <top>621</top>
-        <width>1780</width>
-        <height>350</height>
-        <orientation>horizontal</orientation>
-        <viewtype label="Cinema">icon</viewtype>
-        <visible>String.IsEqual(Container.PluginName,plugin.video.aperture.movies)</visible>
-        <scrolltime>240</scrolltime>
-        <onleft>61</onleft>
-        <onright>61</onright>
-        <onup>61</onup>
-        <ondown>61</ondown>
-        <itemlayout width="254" height="350">
-          <control type="image">
-            <left>9</left>
-            <top>5</top>
-            <width>230</width>
-            <height>334</height>
-            <texture>aperture/movies/plate.png</texture>
-          </control>
-          <control type="image">
-            <left>13</left>
-            <top>7</top>
-            <width>222</width>
-            <height>286</height>
-            <texture fallback="aperture/movies/poster.jpg">$INFO[ListItem.Art(poster)]</texture>
-            <aspectratio>scale</aspectratio>
-          </control>
-          <control type="image">
-            <left>13</left>
-            <top>236</top>
-            <width>222</width>
-            <height>57</height>
-            <texture>aperture/movies/plate.png</texture>
-          </control>
-          <control type="label">
-            <left>25</left>
-            <top>246</top>
-            <width>196</width>
-            <height>36</height>
-            <font>font20_title</font>
-            <label>FOLDER</label>
-            <textcolor>FFC6E8E3</textcolor>
-            <visible>ListItem.IsFolder</visible>
-          </control>
-          <control type="label">
-            <left>20</left>
-            <top>299</top>
-            <width>209</width>
-            <height>36</height>
-            <font>font20_title</font>
-            <label>$INFO[ListItem.Label]</label>
-            <textcolor>FFD6E4E7</textcolor>
-            <scroll>false</scroll>
-          </control>
-        </itemlayout>
-        <focusedlayout width="254" height="350">
-          <control type="image">
-            <left>6</left>
-            <top>0</top>
-            <width>236</width>
-            <height>344</height>
-            <texture>aperture/movies/accent.png</texture>
-          </control>
-          <control type="image">
-            <left>13</left>
-            <top>7</top>
-            <width>222</width>
-            <height>286</height>
-            <texture fallback="aperture/movies/poster.jpg">$INFO[ListItem.Art(poster)]</texture>
-            <aspectratio>scale</aspectratio>
-          </control>
-          <control type="image">
-            <left>13</left>
-            <top>236</top>
-            <width>222</width>
-            <height>57</height>
-            <texture>aperture/movies/plate.png</texture>
-          </control>
-          <control type="label">
-            <left>25</left>
-            <top>246</top>
-            <width>196</width>
-            <height>36</height>
-            <font>font20_title</font>
-            <label>FOLDER</label>
-            <textcolor>FFC6E8E3</textcolor>
-            <visible>ListItem.IsFolder</visible>
-          </control>
-          <control type="label">
-            <left>20</left>
-            <top>299</top>
-            <width>209</width>
-            <height>36</height>
-            <font>font20_title</font>
-            <label>$INFO[ListItem.Label]</label>
-            <textcolor>FF102C35</textcolor>
-            <scroll>true</scroll>
-          </control>
-        </focusedlayout>
-      </control>
       <control type="image">
         <left>84</left>
         <top>1000</top>
@@ -409,6 +307,108 @@
         <label>LOCAL COLLECTION</label>
         <textcolor>FF9BD5D0</textcolor>
       </control>
+    </control>
+    <control type="panel" id="61">
+      <left>72</left>
+      <top>621</top>
+      <width>1780</width>
+      <height>350</height>
+      <orientation>horizontal</orientation>
+      <viewtype label="Cinema">icon</viewtype>
+      <visible>String.IsEqual(Container.PluginName,plugin.video.aperture.movies)</visible>
+      <scrolltime>240</scrolltime>
+      <onleft>61</onleft>
+      <onright>61</onright>
+      <onup>61</onup>
+      <ondown>61</ondown>
+      <itemlayout width="254" height="350">
+        <control type="image">
+          <left>9</left>
+          <top>5</top>
+          <width>230</width>
+          <height>334</height>
+          <texture>aperture/movies/plate.png</texture>
+        </control>
+        <control type="image">
+          <left>13</left>
+          <top>7</top>
+          <width>222</width>
+          <height>286</height>
+          <texture fallback="aperture/movies/poster.jpg">$INFO[ListItem.Art(poster)]</texture>
+          <aspectratio>scale</aspectratio>
+        </control>
+        <control type="image">
+          <left>13</left>
+          <top>236</top>
+          <width>222</width>
+          <height>57</height>
+          <texture>aperture/movies/plate.png</texture>
+        </control>
+        <control type="label">
+          <left>25</left>
+          <top>246</top>
+          <width>196</width>
+          <height>36</height>
+          <font>font20_title</font>
+          <label>FOLDER</label>
+          <textcolor>FFC6E8E3</textcolor>
+          <visible>ListItem.IsFolder</visible>
+        </control>
+        <control type="label">
+          <left>20</left>
+          <top>299</top>
+          <width>209</width>
+          <height>36</height>
+          <font>font20_title</font>
+          <label>$INFO[ListItem.Label]</label>
+          <textcolor>FFD6E4E7</textcolor>
+          <scroll>false</scroll>
+        </control>
+      </itemlayout>
+      <focusedlayout width="254" height="350">
+        <control type="image">
+          <left>6</left>
+          <top>0</top>
+          <width>236</width>
+          <height>344</height>
+          <texture>aperture/movies/accent.png</texture>
+        </control>
+        <control type="image">
+          <left>13</left>
+          <top>7</top>
+          <width>222</width>
+          <height>286</height>
+          <texture fallback="aperture/movies/poster.jpg">$INFO[ListItem.Art(poster)]</texture>
+          <aspectratio>scale</aspectratio>
+        </control>
+        <control type="image">
+          <left>13</left>
+          <top>236</top>
+          <width>222</width>
+          <height>57</height>
+          <texture>aperture/movies/plate.png</texture>
+        </control>
+        <control type="label">
+          <left>25</left>
+          <top>246</top>
+          <width>196</width>
+          <height>36</height>
+          <font>font20_title</font>
+          <label>FOLDER</label>
+          <textcolor>FFC6E8E3</textcolor>
+          <visible>ListItem.IsFolder</visible>
+        </control>
+        <control type="label">
+          <left>20</left>
+          <top>299</top>
+          <width>209</width>
+          <height>36</height>
+          <font>font20_title</font>
+          <label>$INFO[ListItem.Label]</label>
+          <textcolor>FF102C35</textcolor>
+          <scroll>true</scroll>
+        </control>
+      </focusedlayout>
     </control>
   </controls>
 </window>

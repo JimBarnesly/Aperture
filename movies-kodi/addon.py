@@ -2,7 +2,7 @@
 import json
 import sys
 import traceback
-from urllib.parse import parse_qs, urlencode
+from urllib.parse import parse_qs, urlencode, urlsplit
 import xbmc
 import xbmcaddon
 import xbmcgui
@@ -36,6 +36,30 @@ def end(ok=True):
     xbmcplugin.endOfDirectory(HANDLE, succeeded=ok, cacheToDisc=False)
 
 
+
+def apply_cinema_view():
+    """Wait briefly for this directory, never change a different window's view."""
+    expected = urlsplit(BASE + sys.argv[2])
+    def same_directory(current):
+        actual = urlsplit(current)
+        return (actual.scheme == expected.scheme and actual.netloc == expected.netloc
+                and actual.path.rstrip('/') == expected.path.rstrip('/')
+                and parse_qs(actual.query, keep_blank_values=True)
+                == parse_qs(expected.query, keep_blank_values=True))
+    monitor = xbmc.Monitor()
+    for _ in range(60):
+        if monitor.abortRequested():
+            return
+        if (same_directory(xbmc.getInfoLabel('Container.FolderPath'))
+                and not xbmc.getCondVisibility('System.HasModalDialog')
+                and not xbmc.getCondVisibility('Window.IsActive(busydialog)')
+                and not xbmc.getCondVisibility('Window.IsActive(busydialognocancel)')):
+            xbmc.executebuiltin('Container.SetViewMode(61)')
+            return
+        if monitor.waitForAbort(0.05):
+            return
+
+
 def main():
     xbmcplugin.setContent(HANDLE, 'movies')
     xbmcplugin.setPluginCategory(HANDLE, 'Movies')
@@ -54,7 +78,7 @@ def main():
             li.setArt({'icon': 'DefaultFolder.png', 'thumb': 'DefaultFolder.png'})
             li.setProperty('Aperture.MovieFolder', 'true')
             xbmcplugin.addDirectoryItem(HANDLE, BASE+'?'+urlencode({'source': s['file'], 'path': s['file']}), li, True)
-        end(); xbmc.executebuiltin('Container.SetViewMode(61)'); return
+        end(); apply_cinema_view(); return
     root = chosen['file']
     path = query.get('path', [root])[0]
     if not within_source(path, root):
@@ -107,7 +131,7 @@ def main():
         xbmcgui.Dialog().notification('Movies', 'No videos in this folder, or the drive is unavailable.', time=4000)
     end()
     # New plugin view only; native Kodi windows retain their saved view choices.
-    xbmc.executebuiltin('Container.SetViewMode(61)')
+    apply_cinema_view()
 
 
 if __name__ == '__main__':

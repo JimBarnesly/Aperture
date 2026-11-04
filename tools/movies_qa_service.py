@@ -33,7 +33,8 @@ def until(description,predicate,timeout=35):
             return
         if monitor.waitForAbort(.15):
             raise RuntimeError('Kodi exited during '+description)
-    raise RuntimeError('Timed out '+description)
+    state={'window':xbmcgui.getCurrentWindowId(),'dialog':xbmcgui.getCurrentWindowDialogId(),'folder':xbmc.getInfoLabel('Container.FolderPath'),'plugin':xbmc.getInfoLabel('Container.PluginName'),'label':xbmc.getInfoLabel('ListItem.Label'),'view61':xbmc.getCondVisibility('Control.IsVisible(61)'),'view50':xbmc.getCondVisibility('Control.IsVisible(50)')}
+    raise RuntimeError('Timed out '+description+'; state='+json.dumps(state))
 
 
 def capture(name):

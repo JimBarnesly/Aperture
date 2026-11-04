@@ -12,7 +12,7 @@ class Item:
     def setDuration(self,x):pass
 
 class PluginTests(unittest.TestCase):
-    def run_plugin(self,sources,query='',default='',files=None,fail=False,vfs_listing=None,vfs_exists=(),vfs_trace=None):
+    def run_plugin(self,sources,query='',default='',files=None,fail=False,vfs_listing=None,vfs_exists=(),vfs_trace=None,folder_paths=None,busy_checks=0,view_trace=None,abort=False):
         calls=[]; entries=[]; dialogs=[]; ended=[]; builtins=[]
         vfs_trace = vfs_trace if vfs_trace is not None else []
         def exists(path):
@@ -21,6 +21,24 @@ class PluginTests(unittest.TestCase):
         def listdir(path):
             vfs_trace.append(('listdir', path))
             return vfs_listing if vfs_listing is not None else ([], [])
+        view_trace = view_trace if view_trace is not None else []
+        paths = iter(folder_paths or ['plugin://plugin.video.aperture.movies/'+query])
+        current_path = ['']
+        busy = [busy_checks]
+        def folder_path(label):
+            current_path[0] = next(paths,current_path[0])
+            view_trace.append(('path',current_path[0]))
+            return current_path[0]
+        def condition(expression):
+            if expression == 'System.HasModalDialog' and busy[0]:
+                busy[0] -= 1
+                return True
+            return False
+        class Monitor:
+            def abortRequested(self): return abort
+            def waitForAbort(self,seconds):
+                view_trace.append(('wait',seconds))
+                return abort
         def rpc(raw):
             r=json.loads(raw);calls.append(r)
             if r['method']=='Files.GetSources':return json.dumps({'result':{'sources':sources}})
@@ -32,7 +50,7 @@ class PluginTests(unittest.TestCase):
             def close(self):pass
         dialog=types.SimpleNamespace(ok=lambda *a:dialogs.append(a),notification=lambda *a,**kw:dialogs.append(a))
         mods={
-            'xbmc':types.SimpleNamespace(executeJSONRPC=rpc,executebuiltin=builtins.append,log=lambda *a:None,LOGERROR=4,getSupportedMedia=lambda kind:'.avi|.mkv|.mp4'),
+            'xbmc':types.SimpleNamespace(executeJSONRPC=rpc,executebuiltin=builtins.append,log=lambda *a:None,LOGERROR=4,getSupportedMedia=lambda kind:'.avi|.mkv|.mp4',Monitor=Monitor,getInfoLabel=folder_path,getCondVisibility=condition),
             'xbmcaddon':types.SimpleNamespace(Addon=lambda:None),
             'xbmcgui':types.SimpleNamespace(ListItem=Item,Dialog=lambda:dialog),
             'xbmcplugin':types.SimpleNamespace(setContent=lambda *a:None,setPluginCategory=lambda *a:None,endOfDirectory=lambda *a,**kw:ended.append(kw),addDirectoryItem=lambda *a:entries.append(a)),
@@ -43,7 +61,7 @@ class PluginTests(unittest.TestCase):
         for k in list(saved):sys.modules.pop(k)
         try:
             with patch.dict(sys.modules,mods),patch.object(sys,'argv',['plugin://plugin.video.aperture.movies/','3',query]):
-                runpy.run_path(str(ROOT/'movies-kodi/addon.py'),run_name='__main__')
+                exec(compile((ROOT/'movies-kodi/addon.py').read_text(), str(ROOT/'movies-kodi/addon.py'), 'exec'), {'__name__':'__main__'})
         finally:
             sys.path.pop(0)
             for k in list(sys.modules):
@@ -120,5 +138,31 @@ class PluginTests(unittest.TestCase):
         self.assertNotIn('secret',repr(d))
         self.assertNotIn('listdir',[event[0] for event in trace])
         self.assertEqual(b,[])
+
+    def test_view_waits_for_nested_directory_and_modal_to_clear(self):
+        trace=[]
+        query='?source=%2Fmovies%2F&path=%2Fmovies%2FA+%26+B%2F'
+        # Same URL with reordered query keys and percent-encoded spaces is equivalent.
+        ready='plugin://plugin.video.aperture.movies/?path=%2Fmovies%2FA%20%26%20B%2F&source=%2Fmovies%2F'
+        c,e,d,x,b=self.run_plugin([{'label':'Drive','file':'/movies/'}],query=query,
+            folder_paths=['plugin://plugin.video.aperture.movies/',ready],busy_checks=1,view_trace=trace)
+        self.assertEqual(b,['Container.SetViewMode(61)'])
+        self.assertEqual([event for event in trace if event[0]=='wait'],[('wait',0.05),('wait',0.05)])
+
+    def test_view_wait_is_bounded_and_never_changes_another_directory(self):
+        trace=[]
+        c,e,d,x,b=self.run_plugin([{'label':'Drive','file':'/movies/'}],
+            folder_paths=['plugin://other/'],view_trace=trace)
+        self.assertEqual(b,[])
+        waits=[event[1] for event in trace if event[0]=='wait']
+        self.assertEqual(len(waits),60)
+        self.assertAlmostEqual(sum(waits),3.0)
+        self.assertTrue(x[-1]['succeeded'])
+
+    def test_view_wait_obeys_abort(self):
+        trace=[]
+        c,e,d,x,b=self.run_plugin([{'label':'Drive','file':'/movies/'}],abort=True,view_trace=trace)
+        self.assertEqual(b,[])
+        self.assertEqual(trace,[])
 
 if __name__=='__main__':unittest.main()
