@@ -3,7 +3,8 @@
 
 prepare creates original WAV/PNG fixtures and an observation-only Kodi service.
 serve binds 127.0.0.1 on an OS-selected port, writes settings, then ready.json.
-Only GET/HEAD endpoints exist; an offline marker simulates an unavailable server.
+Mock acquisition endpoints only alter this disposable fixture's JSON. They never
+contact a provider or acquire files. An offline marker simulates an outage.
 """
 import argparse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -13,6 +14,7 @@ import os
 from pathlib import Path
 import shutil
 import struct
+import threading
 import time
 from urllib.parse import parse_qs, urlsplit
 import uuid
@@ -24,6 +26,9 @@ ROOT = Path(__file__).resolve().parents[1]
 ADDON = "plugin.audio.aperture.format"
 OBSERVER = "service.aperture.formatsmoke"
 LABEL = "SYNTHETIC QA"
+ARTIST = "A SYNTHETIC QA"
+CATALOG_ID = "synthetic-catalog%00album, A & B"
+CATALOG_TITLE = "SYNTHETIC QA Mock Download"
 ALBUM_ID = "synthetic%00double,album"
 TRACK_IDS = ["SYNTHETIC QA/Disc 1/01, A & B.wav", "SYNTHETIC QA/Disc 1/02.wav",
              "SYNTHETIC QA/Disc 2/01.wav", "SYNTHETIC QA/Disc 2/02.wav"]
@@ -80,7 +85,12 @@ try:
             state = {"sequence":sequence, "time":time.time(), "pid":os.getpid(), "queue":queue, "player":player,
                      "folder":xbmc.getInfoLabel("Container.FolderPath"),
                      "focused_title":xbmc.getInfoLabel("ListItem.Title"),
-                     "labels":[xbmc.getInfoLabel("Container.ListItemAbsolute({}).Label".format(i)) for i in range(6)],
+                     "focused_label":xbmc.getInfoLabel("ListItem.Label"),
+                     "labels":[xbmc.getInfoLabel("Container.ListItemAbsolute({}).Label".format(i)) for i in range(12)],
+                     "format_view":xbmc.getInfoLabel("Container.Property(Aperture.FormatView)"),
+                     "shelf_visible":bool(xbmc.getCondVisibility("Control.IsVisible(64)")),
+                     "list_visible":bool(xbmc.getCondVisibility("Control.IsVisible(63)")),
+                     "focus":xbmc.getInfoLabel("System.CurrentControlId"),
                      "art":xbmc.getInfoLabel("ListItem.Art(thumb)"),
                      "enabled":bool(xbmc.getCondVisibility("System.AddonIsEnabled(plugin.audio.aperture.format)"))}
             payload = json.dumps(state)
@@ -110,6 +120,20 @@ def fixture_library():
     return {"albums":[{"id":ALBUM_ID, "artist":"A SYNTHETIC QA", "title":"SYNTHETIC QA Double", "year":"2026",
                        "trackIds":[TRACK_IDS[2], TRACK_IDS[1], TRACK_IDS[3], TRACK_IDS[0]]}],
             "tracks":list(reversed(tracks))}
+
+
+def fixture_catalogue():
+    # Covers and tracks are synthetic too. No provider URLs exist in this source.
+    return {"artist":{"id":"synthetic-artist", "name":ARTIST, "country":"", "disambiguation":""},
+            "albums":[{"id":CATALOG_ID, "title":CATALOG_TITLE, "year":"2026", "secondaryTypes":[],
+                       "owned":False, "localAlbumId":None, "downloadable":True, "cover":""}]}
+
+
+def fixture_preview():
+    return {"id":CATALOG_ID, "artist":ARTIST, "title":CATALOG_TITLE, "year":"2026",
+            "releaseId":"synthetic-release", "releaseTitle":CATALOG_TITLE, "country":"", "cover":"",
+            "tracks":[{"disc":1, "position":i + 1, "title":"SYNTHETIC QA Catalogue Track {}".format(i + 1),
+                       "artist":ARTIST, "duration":30} for i in range(2)]}
 
 
 def write_wav(path, frequency):
@@ -162,6 +186,8 @@ def prepare(runtime, out, root=ROOT):
     fixture.mkdir()
     library = fixture_library()
     atomic(fixture / "library.json", library)
+    atomic(fixture / "health.json", {"readOnly":False})
+    atomic(fixture / "acquisitions.json", [])
     files = {}
     for index, identifier in enumerate(TRACK_IDS):
         name = "track-{}.wav".format(index + 1)
@@ -169,6 +195,8 @@ def prepare(runtime, out, root=ROOT):
         files[identifier] = name
     (fixture / "cover.png").write_bytes(cover_png())
     config = {"label":LABEL, "token":uuid.uuid4().hex, "runtime":str(runtime), "out":str(out), "files":files,
+              "artist":ARTIST, "catalog_id":CATALOG_ID, "catalog_title":CATALOG_TITLE,
+              "catalog_tracks":[track["title"] for track in fixture_preview()["tracks"]],
               "expected_ids":TRACK_IDS, "album_id":ALBUM_ID, "album_title":library["albums"][0]["title"], "expected_titles":["SYNTHETIC QA Disc {} Track {}".format(i // 2 + 1, i % 2 + 1) for i in range(4)]}
     atomic(marker, config)
     shutil.copytree(root / "format-kodi", addon, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
@@ -229,13 +257,9 @@ def byte_range(value, length):
     return start, end, True
 
 
-def serve(runtime):
-    runtime = validated_runtime(runtime)
-    config = json.loads((runtime / ".aperture-format-fixture.json").read_text())
-    out, fixture = Path(config["out"]), runtime / "format-fixture"
-    if config.get("label") != LABEL or config.get("runtime") != str(runtime):
-        raise ValueError("Invalid fixture marker")
-
+def fixture_handler(config, fixture, out):
+    """Purely local mock contract. Only serve() may bind it to loopback."""
+    lock = threading.Lock()
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, *args):
             pass
@@ -246,23 +270,23 @@ def serve(runtime):
         def do_GET(self):
             self.respond()
 
+        def do_POST(self):
+            self.respond()
+
+        def do_PUT(self):
+            self.respond()
+
+        def do_DELETE(self):
+            self.respond()
+
         def respond(self, head=False):
             url = urlsplit(self.path)
-            status = 200
-            if (fixture / "offline").exists():
-                payload, mime, status = b'{"error":"SYNTHETIC QA offline"}', "application/json", 503
-            elif url.path == "/api/library":
-                payload, mime = (fixture / "library.json").read_bytes(), "application/json"
-            elif url.path in ("/api/audio", "/api/cover"):
-                identifier = parse_qs(url.query).get("id", [""])[0]
-                if identifier not in config["files"]:
-                    payload, mime, status = b"Not a fixture track", "text/plain", 404
-                elif url.path == "/api/cover":
-                    payload, mime = (fixture / "cover.png").read_bytes(), "image/png"
-                else:
-                    payload, mime = (fixture / config["files"][identifier]).read_bytes(), "audio/wav"
-            else:
-                payload, mime, status = b"Not found", "text/plain", 404
+            query = parse_qs(url.query, keep_blank_values=True)
+            identifier = query.get("id", [""])[0]
+            # All requests, including prohibited methods and rejected writes,
+            # enter the same log. An unexpected mutation must never be invisible.
+            with lock:
+                payload, mime, status = self.payload(url.path, query, identifier)
             total = len(payload)
             start, end, ranged = 0, total - 1, False
             if status == 200 and url.path == "/api/audio":
@@ -272,6 +296,10 @@ def serve(runtime):
                     status, payload = 416, b""
                 if ranged:
                     status, payload = 206, payload[start:end + 1]
+            with lock, (out / "format-requests.jsonl").open("a") as log:
+                log.write(json.dumps({"time":time.time(), "path":url.path, "query":query,
+                                      "id":query.get("id"), "status":status,
+                                      "method":self.command}) + "\n")
             self.send_response(status)
             self.send_header("Content-Type", mime)
             self.send_header("Content-Length", str(len(payload)))
@@ -282,15 +310,81 @@ def serve(runtime):
             elif status == 416:
                 self.send_header("Content-Range", "bytes */{}".format(total))
             self.end_headers()
-            with (out / "format-requests.jsonl").open("a") as log:
-                log.write(json.dumps({"time":time.time(), "path":url.path, "id":parse_qs(url.query).get("id"), "status":status, "method":self.command}) + "\n")
             if not head:
                 try:
                     self.wfile.write(payload)
                 except (BrokenPipeError, ConnectionResetError):
                     pass
 
-    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        def payload(self, path, query, identifier):
+            def data(value, status=200):
+                return json.dumps(value).encode(), "application/json", status
+            if (fixture / "offline").exists():
+                return data({"error":"SYNTHETIC QA offline"}, 503)
+            health = json.loads((fixture / "health.json").read_text())
+            writes = ("/api/acquire-album", "/api/acquisitions/cancel", "/api/acquisitions/prioritize")
+            if self.command not in ("GET", "HEAD"):
+                if health.get("readOnly") is not False:
+                    return data({"error":"This Format server is in read-only mode."}, 403)
+                if self.command != "POST" or path not in writes:
+                    return data({"error":"Not a supported mock acquisition action"}, 405)
+                if identifier != CATALOG_ID or set(query) != {"id"} or len(query["id"]) != 1:
+                    return data({"error":"Not a synthetic catalogue album"}, 404)
+                items = json.loads((fixture / "acquisitions.json").read_text())
+                item = next((row for row in items if row["id"] == identifier), None)
+                if path == "/api/acquire-album":
+                    if item is None or item["status"] == "cancelled":
+                        item = {"id":CATALOG_ID, "artist":ARTIST, "title":CATALOG_TITLE,
+                                "origin":"manual", "status":"queued", "message":"SYNTHETIC QA mock queue; no provider or file transfer.",
+                                "progress":0, "queuePosition":1, "trackNumber":0, "totalTracks":2}
+                        items = [item]
+                elif item is None or item["status"] != "queued":
+                    return data({"error":"Queued download not found"}, 404)
+                elif path.endswith("/cancel"):
+                    item.update(status="cancelled", queuePosition=0, message="SYNTHETIC QA mock cancelled.")
+                else:
+                    item.update(queuePosition=1, priority=100, message="SYNTHETIC QA moved to front.")
+                atomic(fixture / "acquisitions.json", items)
+                return data(item, 202)
+            if path in writes:
+                return data({"error":"POST required"}, 405)
+            if path == "/api/health":
+                if (fixture / "health-offline").exists():
+                    return data({"error":"SYNTHETIC QA health unavailable"}, 503)
+                return data(dict(health, initialLibraryScanComplete=True, albums=1, tracks=4))
+            if path == "/api/catalog/search":
+                if query.get("q", [""])[0].strip().casefold() != ARTIST.casefold():
+                    return data({"artist":None, "albums":[]})
+                return data(fixture_catalogue())
+            if path == "/api/catalog/album":
+                return data(fixture_preview()) if identifier == CATALOG_ID else data({"error":"Not a synthetic album"}, 404)
+            if path == "/api/acquisitions":
+                return data(json.loads((fixture / "acquisitions.json").read_text()))
+            if path == "/api/shadow-albums":
+                return data([])
+            if path == "/api/library":
+                payload, mime = (fixture / "library.json").read_bytes(), "application/json"
+            elif path in ("/api/audio", "/api/cover"):
+                if identifier not in config["files"]:
+                    return b"Not a fixture track", "text/plain", 404
+                elif path == "/api/cover":
+                    payload, mime = (fixture / "cover.png").read_bytes(), "image/png"
+                else:
+                    payload, mime = (fixture / config["files"][identifier]).read_bytes(), "audio/wav"
+            else:
+                return b"Not found", "text/plain", 404
+            return payload, mime, 200
+    return Handler
+
+
+def serve(runtime):
+    runtime = validated_runtime(runtime)
+    config = json.loads((runtime / ".aperture-format-fixture.json").read_text())
+    out, fixture = Path(config["out"]), runtime / "format-fixture"
+    if config.get("label") != LABEL or config.get("runtime") != str(runtime):
+        raise ValueError("Invalid fixture marker")
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), fixture_handler(config, fixture, out))
     server.daemon_threads = True
     url = "http://127.0.0.1:{}".format(server.server_port)
     settings = runtime / "data/userdata/addon_data" / ADDON / "settings.xml"

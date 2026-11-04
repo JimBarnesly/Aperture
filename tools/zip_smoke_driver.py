@@ -301,6 +301,22 @@ class Driver:
                     todo.append((nxt, route + [(key, nxt)]))
         raise AssertionError('No native arrow route to installed Home control')
 
+    def check_music(self):
+        # Exercise the installed Home action, not a shortcut into the add-on.
+        # Reentering must reset to the single Format root and Back restores Music.
+        for attempt in range(2):
+            self.focus_home(103)
+            before = self.key('Return')
+            self.wait('ZIP-installed unified Music root', lambda s: s.get('window') == 10502
+                and s.get('dialog') == 9999 and s.get('folder') == 'plugin://plugin.audio.aperture.format/', after=before)
+            if attempt == 0:
+                self.capture('zip-10-installed-format')
+            self.settle_focus()
+            before = self.key('BackSpace')
+            self.wait('Format Back returns to Home Music', lambda s: s.get('window') == 10000
+                and s.get('dialog') == 9999 and s.get('focus') == 103, after=before)
+            self.record('unified-music-open-back', attempt=attempt)
+
     def run(self):
         self.start('skin.estuary')
         if self.state()['installed'] or self.state()['unknown_sources']:
@@ -319,33 +335,7 @@ class Driver:
         self.wait('accepted skin/sources-off persisted after restart', lambda s: setting_matches(s, False) and
             installed_matches(s, self.packages, self.target / 'data'))
         self.capture('zip-09-restarted-aperture')
-        # Local music remains reachable alongside the independently installed
-        # Format add-on. Exercise Cancel and reopen through the actual Home UI.
-        self.focus_home(103)
-        before = self.key('Return')
-        self.wait('ZIP-installed Music choice', lambda s:s.get('window') == 10000 and s.get('focus') == 203, after=before)
-        # Exercise the same Back action as controller B; Escape is PreviousMenu.
-        before = self.key('BackSpace')
-        self.wait('Music choice cancels to Home Music', lambda s:s.get('window') == 10000 and s.get('focus') == 103, after=before)
-        before = self.key('Right')
-        self.wait('Music choice reopens', lambda s:s.get('window') == 10000 and s.get('focus') == 203, after=before)
-        before = self.key('Return')
-        self.wait('ZIP-installed local music', lambda s:s.get('window') == 10502
-            and s.get('folder') == 'library://music/', after=before)
-        self.record('local-music-alongside-format')
-        self.key('Escape')
-        self.wait('Home after local music', lambda s:s.get('window') == 10000 and s.get('dialog') == 9999)
-        self.focus_home(103)
-        before = self.key('Right')
-        self.wait('Music choice before Format', lambda s:s.get('window') == 10000 and s.get('focus') == 203, after=before)
-        before = self.key('Down')
-        self.wait('Format choice focused', lambda s:s.get('window') == 10000 and s.get('focus') == 204, after=before)
-        self.key('Return')
-        self.wait('ZIP-installed Format root', lambda s: s.get('window') == 10502
-            and s.get('folder', '').startswith('plugin://plugin.audio.aperture.format/'))
-        self.capture('zip-10-installed-format')
-        self.key('Escape')
-        self.wait('Home after installed Format', lambda s: s.get('window') == 10000 and s.get('dialog') == 9999)
+        self.check_music()
         # This profile has no video sources. Prove the independently ZIP-installed
         # Movies route runs, explains setup, and survives dismissal/Back/reopening.
         self.check_movies()

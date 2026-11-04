@@ -81,7 +81,7 @@ class FormatTest(unittest.TestCase):
 
     def test_root_works_offline_without_touching_playback(self):
         self.run_action()
-        self.assertEqual([entry[2].label for entry in self.items()], ["Albums", "Configure Format server"])
+        self.assertEqual([entry[2].label for entry in self.items()], ["Albums", "Artists", "Search library", "Find music", "Downloads", "Configure Format server"])
         self.urlopen.assert_not_called()
         self.xbmc.PlayList.assert_not_called()
         self.assert_directory_result(True)
@@ -89,7 +89,7 @@ class FormatTest(unittest.TestCase):
     def test_settings_returns_root_and_is_not_cached(self):
         self.run_action("configure")
         self.xbmcaddon.Addon.return_value.openSettings.assert_called_once()
-        self.assertEqual(len(self.items()), 2)
+        self.assertEqual(len(self.items()), 6)
         self.assert_directory_result(True)
 
     def test_album_urls_preserve_stable_encoded_id_and_art(self):

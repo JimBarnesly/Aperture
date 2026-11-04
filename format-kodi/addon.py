@@ -1,11 +1,11 @@
-"""Read-only Format client for Kodi 20/21. No acquisition or library writes."""
+"""Native Format library, catalogue and explicitly confirmed downloads for Kodi 20/21."""
 import json
 import math
 import sys
 import time
 from urllib.error import HTTPError, URLError
 from urllib.parse import parse_qs, urlencode, urlsplit
-from urllib.request import urlopen
+from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 import xbmc
 import xbmcaddon
@@ -18,10 +18,33 @@ MAX_LIBRARY_BYTES = 64 * 1024 * 1024
 LIBRARY_CHUNK_BYTES = 64 * 1024
 LIBRARY_BODY_SECONDS = 20
 SOCKET_TIMEOUT_SECONDS = 12
+MAX_API_BYTES = 16 * 1024 * 1024
+MAX_QUERY_LENGTH = 200
+ACQUISITION_STATES = frozenset(("queued", "resolving", "running", "complete", "failed", "cancelled", "cancelling"))
+CANCELLABLE_STATES = frozenset(("queued", "resolving", "running"))
+SHADOW_STATES = frozenset(("detected", "queued", "resolving", "running", "incomplete", "validating", "published", "failed", "cancelled", "cancelling", "retry_wait", "identifying", "acquiring", "needs_attention", "missing_local_files", "legacy_published_needs_attention"))
+WRITE_ENDPOINTS = frozenset(("/api/acquire-album", "/api/acquisitions/cancel", "/api/acquisitions/prioritize"))
+READ_ENDPOINTS = frozenset(("/api/library", "/api/health", "/api/catalog/search", "/api/catalog/album", "/api/acquisitions", "/api/shadow-albums"))
+
+
+class NoRedirect(HTTPRedirectHandler):
+    """Never replay a mutation or send IDs to a redirect destination."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+def urlopen(request, timeout):
+    # Refuse even same-origin redirects: a POST may already have taken effect.
+    return build_opener(NoRedirect()).open(request, timeout=timeout)
 
 
 class FormatError(Exception):
     """An error safe to show without exposing the server response or URL."""
+
+
+class MutationUncertainError(FormatError):
+    """The POST was attempted; inspect status rather than repeating it."""
 
 
 def plugin_url(action, **kwargs):
@@ -49,38 +72,93 @@ def media(server, endpoint, track_id):
     return server + endpoint + "?" + urlencode({"id": track_id})
 
 
-def library(server):
+def request_json(server, endpoint, params=None, post=False, maximum=None):
+    if endpoint not in (WRITE_ENDPOINTS if post else READ_ENDPOINTS):
+        raise FormatError("This Format operation is not supported.")
+    maximum = MAX_API_BYTES if maximum is None else maximum
+    url = server + endpoint + ("?" + urlencode(params) if params else "")
+    request = Request(url, data=b"", method="POST") if post else url
     try:
-        with urlopen(server + "/api/library", timeout=SOCKET_TIMEOUT_SECONDS) as response:
+        with urlopen(request, timeout=SOCKET_TIMEOUT_SECONDS) as response:
             deadline = time.monotonic() + LIBRARY_BODY_SECONDS
             payload = bytearray()
             while True:
                 if time.monotonic() >= deadline:
-                    raise FormatError("Format took too long to return its library. Try again when the server responds.")
-                # read() may wait to fill its entire size while a server drips
-                # bytes forever. read1() performs at most one underlying read,
-                # letting the monotonic body budget be checked between chunks.
-                chunk = response.read1(min(LIBRARY_CHUNK_BYTES, MAX_LIBRARY_BYTES + 1 - len(payload)))
+                    raise FormatError("Format took too long to return a response. Try again when the server responds.")
+                # A read1 call does at most one socket read, allowing the overall
+                # budget to stop servers that trickle bytes without timing out.
+                chunk = response.read1(min(LIBRARY_CHUNK_BYTES, maximum + 1 - len(payload)))
                 if time.monotonic() >= deadline:
-                    raise FormatError("Format took too long to return its library. Try again when the server responds.")
+                    raise FormatError("Format took too long to return a response. Try again when the server responds.")
                 if not chunk:
                     break
                 payload.extend(chunk)
-                if len(payload) > MAX_LIBRARY_BYTES:
-                    raise FormatError("The Format library response is too large.")
-        data = json.loads(payload)
+                if len(payload) > maximum:
+                    raise FormatError("The Format response is too large.")
+        return json.loads(payload)
     except HTTPError as error:
-        raise FormatError("Format returned HTTP {}. Check the server address and access.".format(error.code)) from error
+        code = error.code
+        error.close()
+        raise FormatError("Format returned HTTP {}. Check the server address and access.".format(code)) from error
     except (URLError, TimeoutError, OSError) as error:
-        raise FormatError("Cannot reach Format. Check the server is running and the Pi can reach it.") from error
-    except (ValueError, UnicodeError) as error:
-        raise FormatError("The server did not return a Format library. Check the server URL.") from error
+        raise FormatError("Cannot reach Format. Check the server is running and this device can reach it.") from error
+    except (ValueError, UnicodeError, RecursionError) as error:
+        raise FormatError("The server did not return a valid Format response. Check the server URL.") from error
+
+
+def library(server):
+    data = request_json(server, "/api/library", maximum=MAX_LIBRARY_BYTES)
     if (not isinstance(data, dict)
-            or not isinstance(data.get("albums"), list)
-            or not isinstance(data.get("tracks"), list)
-            or not all(isinstance(item, dict) for item in data["albums"] + data["tracks"])):
+            or not object_list(data.get("albums"))
+            or not object_list(data.get("tracks"))):
         raise FormatError("The server returned an unsupported Format library.")
     return data
+
+
+def object_list(value):
+    return isinstance(value, list) and all(isinstance(item, dict) for item in value)
+
+
+def identifier(value):
+    # Mutation IDs must be actual server strings, never derived from display labels.
+    return isinstance(value, str) and 0 < len(value) <= 2048 and not any(ord(c) < 32 for c in value)
+
+
+def write_access(server):
+    try:
+        health = request_json(server, "/api/health", maximum=64 * 1024)
+    except FormatError:
+        return False, "Downloading unavailable: cannot verify Format server permissions. Browsing and status are still available."
+    if isinstance(health, dict) and health.get("readOnly") is False:
+        return True, "Downloads are saved to your Format server."
+    if isinstance(health, dict) and health.get("readOnly") is True:
+        return False, "Downloading disabled: this Format server is read-only. Browsing and status are still available."
+    return False, "Downloading unavailable: the Format server did not confirm write access."
+
+
+def require_write_access(server):
+    allowed, notice = write_access(server)
+    if not allowed:
+        raise FormatError(notice)
+
+
+def mutate(server, endpoint, item_id):
+    if endpoint not in WRITE_ENDPOINTS or not identifier(item_id):
+        raise FormatError("This Format download action is invalid.")
+    # Recheck after the confirmation dialog: permission can change while it is open.
+    require_write_access(server)
+    try:
+        result = request_json(server, endpoint, {"id": item_id}, post=True, maximum=256 * 1024)
+        if (not isinstance(result, dict) or not identifier(result.get("id"))
+                or not isinstance(result.get("status"), str) or result["status"] not in ACQUISITION_STATES):
+            raise FormatError("Invalid download response.")
+        if endpoint != "/api/acquire-album" and result["id"] != item_id:
+            raise FormatError("Unexpected download identity.")
+    except Exception as error:
+        # A timeout, bad JSON or a redirect does not establish whether the POST
+        # executed. Never retry it, and never expose raw server diagnostics.
+        raise MutationUncertainError("Format could not confirm the download action. Check Downloads before trying again; the action may already have happened.") from error
+    return result
 
 
 def number(value, default=0):
@@ -128,13 +206,13 @@ def set_metadata(item, source, album, is_album=False):
     # Container content does not set the individual item's native media type.
     # Kodi 20+ exposes this separately from local music database identifiers.
     tag.setMediaType("album" if is_album else "song")
-    tag.setTitle(text(source.get("title"), "Untitled"))
-    tag.setAlbum(text(album.get("title"), "Untitled"))
-    tag.setArtist(text(source.get("artist"), text(album.get("artist"), "Unknown artist")))
-    tag.setAlbumArtist(text(source.get("albumArtist"), text(album.get("artist"), "Unknown artist")))
+    tag.setTitle(display(source.get("title"), "Untitled"))
+    tag.setAlbum(display(album.get("title"), "Untitled"))
+    tag.setArtist(display(source.get("artist"), display(album.get("artist"), "Unknown artist")))
+    tag.setAlbumArtist(display(source.get("albumArtist"), display(album.get("artist"), "Unknown artist")))
     tag.setYear(number(album.get("year")))
     tag.setDuration(number(source.get("duration")))
-    tag.setGenres([text(source.get("genre"))] if source.get("genre") else [])
+    tag.setGenres([display(source.get("genre"))] if source.get("genre") else [])
     if not is_album:
         tag.setDisc(number(source.get("disc"), 1) or 1)
         tag.setTrack(number(source.get("track")))
@@ -142,11 +220,12 @@ def set_metadata(item, source, album, is_album=False):
 
 def track_item(server, track, album):
     track_id = str(track["id"])
-    item = xbmcgui.ListItem(label=text(track.get("title"), "Untitled"),
+    item = xbmcgui.ListItem(label=display(track.get("title"), "Untitled"),
                             path=media(server, "/api/audio", track_id), offscreen=True)
     item.setContentLookup(False)
     item.setProperty("IsPlayable", "true")
     set_metadata(item, track, album)
+    display_properties(item, track)
     item.setArt({"thumb": media(server, "/api/cover", track_id), "icon": "DefaultAlbumCover.png"})
     return item
 
@@ -156,39 +235,70 @@ def album_context(album):
             ("Configure Format server", "Addon.OpenSettings({})".format(ADDON_ID))]
 
 
-def root(handle):
-    for title, action in (("Albums", "albums"), ("Configure Format server", "configure")):
-        item = xbmcgui.ListItem(label=title, offscreen=True)
-        item.setArt({"icon": "DefaultAlbumCover.png"})
-        xbmcplugin.addDirectoryItem(handle, plugin_url(action), item, True)
-
-
-def albums(handle, server, data):
-    xbmcplugin.setContent(handle, "albums")
-    xbmcplugin.setPluginCategory(handle, "Format albums")
+def set_view(handle, mode, content="files", category="Format", notice=""):
+    xbmcplugin.setContent(handle, content)
+    xbmcplugin.setPluginCategory(handle, category)
+    xbmcplugin.setProperty(handle, "Aperture.FormatView", mode)
+    xbmcplugin.setProperty(handle, "Aperture.FormatNotice", notice)
     xbmcplugin.addSortMethod(handle, xbmcplugin.SORT_METHOD_NONE)
+
+
+def display(value, fallback=""):
+    # Kodi labels support formatting tags. Server metadata is plain text, not markup.
+    value = text(value, fallback) if isinstance(value, (str, int, float)) or value is None else fallback
+    value = "".join(character if character.isprintable() else " " for character in value[:2048])
+    return " ".join(value.replace("[", "(").replace("]", ")").split())[:240]
+
+
+def display_properties(item, source, status="", detail="", progress=""):
+    item.setProperty("Aperture.FormatTitle", display(source.get("title"), "Untitled"))
+    item.setProperty("Aperture.FormatArtist", display(source.get("artist"), "Unknown artist"))
+    item.setProperty("Aperture.FormatStatus", status)
+    item.setProperty("Aperture.FormatDetail", detail)
+    item.setProperty("Aperture.FormatProgress", str(progress))
+
+
+def menu_item(handle, label, action="noop", folder=False, detail="", source=None,
+              status="", progress="", art=None, context=None, **params):
+    item = xbmcgui.ListItem(label=label, offscreen=True)
+    item.setArt({"icon": "DefaultAlbumCover.png"})
+    item.setProperty("IsPlayable", "false")
+    item.setProperty("Aperture.FormatDetail", detail)
+    if source is not None:
+        display_properties(item, source, status, detail, progress)
+    if art:
+        item.setArt(art)
+    if context:
+        item.addContextMenuItems(context)
+    # Kodi copies the ListItem here: all annotations must precede this call.
+    xbmcplugin.addDirectoryItem(handle, plugin_url(action, **params), item, folder)
+    return item
+
+
+def root(handle):
+    set_view(handle, "menu")
+    for title, action in (("Albums", "albums"), ("Artists", "artists"),
+                          ("Search library", "search"), ("Find music", "find_music"),
+                          ("Downloads", "downloads"), ("Configure Format server", "configure")):
+        menu_item(handle, title, action, action not in ("search", "find_music", "configure"))
+
+
+def albums(handle, server, data, artist=None):
+    set_view(handle, "albums", "albums", display(artist, "Format albums"))
     count = 0
     for album in sorted(data["albums"], key=lambda item: (text(item.get("artist")).casefold(),
                                                          text(item.get("title")).casefold())):
-        ids = track_ids(album)
-        if album.get("id") is None or not ids:
+        if artist is not None and text(album.get("artist"), "Unknown artist").casefold() != artist.casefold():
             continue
-        label = "{} - {}".format(text(album.get("artist"), "Unknown artist"), text(album.get("title"), "Untitled"))
-        item = xbmcgui.ListItem(label=label, offscreen=True)
-        set_metadata(item, album, album, is_album=True)
-        item.setArt({"thumb": media(server, "/api/cover", ids[0]), "icon": "DefaultAlbumCover.png"})
-        item.addContextMenuItems(album_context(album))
-        xbmcplugin.addDirectoryItem(handle, plugin_url("album", album_id=album["id"]), item, True)
-        count += 1
+        if add_album(handle, server, album):
+            count += 1
     if not count:
         xbmcgui.Dialog().notification("Format", "No published albums yet. Check your Format server.",
                                       xbmcgui.NOTIFICATION_INFO, 6000)
 
 
 def tracks(handle, server, data, album):
-    xbmcplugin.setContent(handle, "songs")
-    xbmcplugin.setPluginCategory(handle, text(album.get("title"), "Format tracks"))
-    xbmcplugin.addSortMethod(handle, xbmcplugin.SORT_METHOD_NONE)
+    set_view(handle, "tracks", "songs", display(album.get("title"), "Format tracks"))
     for track in album_tracks(data, album):
         item = track_item(server, track, album)
         item.addContextMenuItems(album_context(album))
@@ -207,33 +317,316 @@ def play_album(server, data, album):
     xbmc.Player().play(playlist, startpos=0)
 
 
+def add_album(handle, server, album, prefix=""):
+    ids = track_ids(album)
+    if album.get("id") is None or not ids:
+        return False
+    label = "{}{} - {}".format(prefix, display(album.get("artist"), "Unknown artist"), display(album.get("title"), "Untitled"))
+    item = xbmcgui.ListItem(label=label, offscreen=True)
+    set_metadata(item, album, album, is_album=True)
+    display_properties(item, album)
+    item.setArt({"thumb": media(server, "/api/cover", ids[0]), "icon": "DefaultAlbumCover.png"})
+    item.addContextMenuItems(album_context(album))
+    xbmcplugin.addDirectoryItem(handle, plugin_url("album", album_id=album["id"]), item, True)
+    return True
+
+
+def artists(handle, server, data):
+    set_view(handle, "menu", "artists", "Format artists")
+    grouped = {}
+    for album in data["albums"]:
+        if album.get("id") is None or not track_ids(album):
+            continue
+        artist = text(album.get("artist"), "Unknown artist")
+        group = grouped.setdefault(artist.casefold(), {"name": artist, "albums": []})
+        group["albums"].append(album)
+    for key in sorted(grouped):
+        group = grouped[key]
+        count = len(group["albums"])
+        menu_item(handle, display(group["name"]), "artist", True,
+                  detail="{} album{}".format(count, "" if count == 1 else "s"), artist=group["name"],
+                  art={"thumb": media(server, "/api/cover", track_ids(group["albums"][0])[0])})
+    if not grouped:
+        menu_item(handle, "No published artists yet")
+
+
+def search_query(args, heading, minimum=1):
+    value = args.get("q", [None])[0]
+    if value is None:
+        value = xbmcgui.Dialog().input(heading)
+    if not isinstance(value, str) or not value.strip():
+        return None
+    value = value.strip()
+    if len(value) < minimum or len(value) > MAX_QUERY_LENGTH:
+        raise FormatError("Enter between {} and {} characters.".format(minimum, MAX_QUERY_LENGTH))
+    return value
+
+
+def search_library(handle, server, data, query):
+    set_view(handle, "menu", "files", "Library: " + display(query))
+    needle = query.casefold()
+    count = 0
+    for album in data["albums"]:
+        if any(needle in text(album.get(field)).casefold() for field in ("title", "artist")):
+            count += bool(add_album(handle, server, album, "Album: "))
+    # Only published album members are searchable/playable. Orphan/staging tracks
+    # cannot leak into the library search even if a malformed server includes them.
+    membership = {}
+    for album in data["albums"]:
+        for track_id in track_ids(album):
+            membership.setdefault(track_id, album)
+    for track in data["tracks"]:
+        album = membership.get(str(track.get("id")))
+        if album is None or not any(needle in text(track.get(field)).casefold() for field in ("title", "artist")):
+            continue
+        item = track_item(server, track, album)
+        item.addContextMenuItems(album_context(album))
+        xbmcplugin.addDirectoryItem(handle, media(server, "/api/audio", track["id"]), item, False)
+        count += 1
+    if not count:
+        menu_item(handle, "No matching albums or tracks in your library")
+
+
+def find_music(handle, server, query):
+    data = request_json(server, "/api/catalog/search", {"q": query})
+    if (not isinstance(data, dict) or not object_list(data.get("albums"))
+            or (data.get("artist") is not None and not isinstance(data.get("artist"), dict))):
+        raise FormatError("Format returned an unsupported artist catalogue.")
+    artist = data.get("artist") or {}
+    _, notice = write_access(server)
+    set_view(handle, "catalog", "files", "Find music: " + display(artist.get("name"), query),
+             "Artist catalogue: up to 100 studio album releases. " + notice)
+    menu_item(handle, "Artist catalogue: up to 100 studio album releases", detail=notice)
+    for album in data["albums"][:100]:
+        if not identifier(album.get("id")):
+            continue
+        label = display(album.get("title"), "Untitled")
+        if album.get("year"):
+            label += " ({})".format(display(album["year"]))
+        if album.get("owned") is True:
+            label += " - In your library"
+        menu_item(handle, label, "catalog_album", True, album_id=album["id"],
+                  source=dict(album, artist=artist.get("name")),
+                  status="In your library" if album.get("owned") is True else "Catalogue")
+        # The catalogue cover field points to external providers, not our server.
+        # Do not let Kodi request it outside the configured Format destination.
+    if not data["albums"]:
+        menu_item(handle, "No matching studio albums. Try another artist name.")
+
+
+def catalogue_preview(server, album_id):
+    if not identifier(album_id):
+        raise FormatError("Select an album from Find music first.")
+    album = request_json(server, "/api/catalog/album", {"id": album_id})
+    if (not isinstance(album, dict) or album.get("id") != album_id
+            or not isinstance(album.get("artist"), str) or not album["artist"].strip()
+            or not isinstance(album.get("title"), str) or not album["title"].strip()
+            or not object_list(album.get("tracks")) or not album["tracks"]):
+        raise FormatError("Format returned an unsupported catalogue album. Search for it again.")
+    return album
+
+
+def catalogue_album(handle, server, album_id):
+    album = catalogue_preview(server, album_id)
+    allowed, notice = write_access(server)
+    set_view(handle, "catalog", "files", display(album["title"]), notice)
+    if allowed:
+        menu_item(handle, "Download album", "acquire", False,
+                  detail="Download to your Format server", album_id=album["id"],
+                  source=album, status="Available to download")
+    else:
+        menu_item(handle, notice)
+    for track in album["tracks"]:
+        label = "{}.{}  {}".format(number(track.get("disc"), 1) or 1,
+                                    number(track.get("position")), display(track.get("title"), "Untitled"))
+        menu_item(handle, label, detail="Catalogue preview; not in the playback queue",
+                  source=dict(track, artist=track.get("artist", album["artist"])), status="Preview")
+
+
+def acquire(server, album_id):
+    require_write_access(server)
+    album = catalogue_preview(server, album_id)
+    message = "Download {} - {} to your Format server? Only download music you have the right to obtain.".format(
+        display(album["artist"]), display(album["title"]))
+    if xbmcgui.Dialog().yesno("Download album", message) is not True:
+        return False
+    mutate(server, "/api/acquire-album", album["id"])
+    return True
+
+
+def status_list(server, endpoint):
+    items = request_json(server, endpoint)
+    if not object_list(items):
+        raise FormatError("Format returned an unsupported download status list.")
+    return items
+
+
+def acquisition_detail(source):
+    state = source.get("status")
+    if not isinstance(state, str) or state not in ACQUISITION_STATES:
+        return "Unknown", "Refresh to check this download", ""
+    progress = min(100, number(source.get("progress")))
+    if source.get("cancelRequested") is True and state in CANCELLABLE_STATES:
+        return "Cancellation requested", "Waiting for the server to stop this download", ""
+    detail = ""
+    if state == "queued":
+        position = number(source.get("queuePosition"))
+        detail = "Queue position {}".format(position) if position else "Waiting to start"
+    elif state == "running":
+        detail = "Finalising album" if progress == 100 else "{}% downloaded".format(progress)
+    elif state == "failed":
+        detail = "Download failed. Check the Format server for details."
+    return state.capitalize(), detail, str(progress) if state in ("running", "complete") else ""
+
+
+def downloads(handle, server):
+    allowed, notice = write_access(server)
+    set_view(handle, "downloads", "files", "Format downloads", notice)
+    menu_item(handle, "Refresh downloads", "downloads", True, detail="Refresh status only")
+    if not allowed:
+        menu_item(handle, notice)
+    # Each source can still be useful when the other is temporarily unavailable.
+    for endpoint, shadow in (("/api/acquisitions", False), ("/api/shadow-albums", True)):
+        try:
+            items = status_list(server, endpoint)
+        except FormatError:
+            menu_item(handle, "Shadow album status unavailable" if shadow else "Download status unavailable")
+            continue
+        if not items:
+            menu_item(handle, "No shadow albums" if shadow else "No downloads yet")
+        for source in items:
+            if shadow:
+                status = source.get("status")
+                status = status.replace("_", " ").capitalize() if isinstance(status, str) and status in SHADOW_STATES else "Unknown"
+                manifest = source.get("manifest") if object_list(source.get("manifest")) else []
+                validated = sum(track.get("status") in ("validated", "published") for track in manifest)
+                expected = number(source.get("expectedTrackCount")) or len(manifest)
+                detail = "{} local / {} validated / {} expected".format(
+                    number(source.get("localTrackCount")), validated, expected or "?")
+                state = "Shadow: " + status
+                progress = ""
+            else:
+                state, detail, progress = acquisition_detail(source)
+            label = "{} - {} | {}".format(display(source.get("artist"), "Unknown artist"),
+                                          display(source.get("title"), "Untitled"), state)
+            item_id = source.get("id")
+            interactive = (not shadow and allowed and identifier(item_id)
+                           and isinstance(source.get("status"), str) and source["status"] in CANCELLABLE_STATES
+                           and source.get("cancelRequested") is not True)
+            actions = []
+            if interactive:
+                actions = [("Cancel download", "RunPlugin({})".format(plugin_url("cancel_download", acquisition_id=item_id)))]
+                if source.get("status") == "queued":
+                    actions.append(("Move to front", "RunPlugin({})".format(plugin_url("prioritize_download", acquisition_id=item_id))))
+            menu_item(handle, label, "download" if interactive else "noop", False,
+                      detail=detail, source=source, status=state, progress=progress, context=actions,
+                      **({"acquisition_id": item_id} if interactive else {}))
+
+
+def download_action(server, item_id, action=None):
+    require_write_access(server)
+    if not identifier(item_id):
+        raise FormatError("Select a download from the current Downloads list.")
+    matches = [item for item in status_list(server, "/api/acquisitions") if item.get("id") == item_id]
+    if (len(matches) != 1 or not isinstance(matches[0].get("status"), str)
+            or matches[0]["status"] not in CANCELLABLE_STATES or matches[0].get("cancelRequested") is True):
+        raise FormatError("This download is no longer active or queued. Refresh Downloads.")
+    item = matches[0]
+    if action is None:
+        choices = [("Cancel download", "cancel_download")]
+        if item["status"] == "queued":
+            choices.append(("Move to front", "prioritize_download"))
+        selected = xbmcgui.Dialog().select("Download actions", [choice[0] for choice in choices])
+        if type(selected) is not int or not 0 <= selected < len(choices):
+            return False
+        action = choices[selected][1]
+    if action not in ("cancel_download", "prioritize_download"):
+        raise FormatError("This download action is not supported.")
+    if action == "prioritize_download" and item["status"] != "queued":
+        raise FormatError("Only queued downloads can move to the front. Refresh Downloads.")
+    title = "Cancel download" if action == "cancel_download" else "Move to front"
+    message = "{}: {} - {}?".format(title, display(item.get("artist"), "Unknown artist"), display(item.get("title"), "Untitled"))
+    if xbmcgui.Dialog().yesno(title, message) is not True:
+        return False
+    endpoint = "/api/acquisitions/cancel" if action == "cancel_download" else "/api/acquisitions/prioritize"
+    mutate(server, endpoint, item_id)
+    return True
+
+
 def main(argv=None):
     argv = sys.argv if argv is None else argv
     handle = int(argv[1]) if len(argv) > 1 else -1
     args = parse_qs(argv[2].lstrip("?")) if len(argv) > 2 else {}
     action = args.get("action", ["root"])[0]
     succeeded = False
+    changed = False
+    redirect = None
+    view = "menu"
     try:
+        if action in ("acquire", "download", "cancel_download", "prioritize_download") and handle >= 0:
+            raise FormatError("Select this action from Find music or Downloads, not as a saved folder.")
         if action in ("root", "configure"):
             if action == "configure":
                 xbmcaddon.Addon(ADDON_ID).openSettings()
+                xbmc.executebuiltin("Container.Refresh")
             if handle >= 0:
                 root(handle)
-        elif action in ("albums", "album", "play_album"):
+        elif action in ("search", "find_music"):
+            query = search_query(args, "Search your Format library" if action == "search" else "Find music by artist (at least 2 characters)",
+                                 minimum=1 if action == "search" else 2)
+            if query is None:
+                if handle >= 0:
+                    root(handle)
+            elif "q" not in args or handle < 0:
+                # Store the query in the directory URL, not a transient prompt,
+                # so Back and refresh never repeat the keyboard dialog.
+                redirect = plugin_url(action, q=query)
+            else:
+                server = server_url()
+                if action == "search":
+                    search_library(handle, server, library(server), query)
+                else:
+                    view = "catalog"
+                    find_music(handle, server, query)
+        elif action in ("albums", "artists", "artist", "album", "play_album"):
             server = server_url()
             data = library(server)
-            if action == "albums":
-                albums(handle, server, data)
+            if action in ("albums", "artist"):
+                view = "albums"
+                albums(handle, server, data, args.get("artist", [None])[0] if action == "artist" else None)
+            elif action == "artists":
+                artists(handle, server, data)
             else:
                 album = find_album(data, args.get("album_id", [""])[0])
                 if action == "album":
+                    view = "tracks"
                     tracks(handle, server, data, album)
                 else:
                     play_album(server, data, album)
-        else:
+        elif action in ("catalog_album", "acquire"):
+            server = server_url()
+            album_id = args.get("album_id", [""])[0]
+            if action == "acquire":
+                changed = acquire(server, album_id)
+                if changed:
+                    redirect = plugin_url("downloads")
+            elif handle >= 0:
+                view = "catalog"
+                catalogue_album(handle, server, album_id)
+        elif action in ("downloads", "download", "cancel_download", "prioritize_download"):
+            server = server_url()
+            if action != "downloads":
+                changed = download_action(server, args.get("acquisition_id", [""])[0], None if action == "download" else action)
+            if handle >= 0:
+                view = "downloads"
+                downloads(handle, server)
+        elif action != "noop":
             raise FormatError("Unknown Format action. Open the add-on again from Music add-ons.")
         succeeded = True
     except FormatError as error:
+        changed = changed or isinstance(error, MutationUncertainError)
+        if isinstance(error, MutationUncertainError) and action == "acquire":
+            redirect = plugin_url("downloads")
         xbmc.log("Aperture Format: {}".format(error), xbmc.LOGERROR)
         xbmcgui.Dialog().ok("Format", str(error))
     except Exception as error:
@@ -244,6 +637,14 @@ def main(argv=None):
         # RunPlugin context-menu actions use handle -1, not a directory handle.
         if handle >= 0:
             xbmcplugin.endOfDirectory(handle, succeeded=succeeded, cacheToDisc=False)
+            if succeeded and not redirect and xbmc.getSkinDir() == "skin.aperture":
+                xbmc.executebuiltin("Container.SetViewMode({})".format(64 if view == "albums" else 63))
+        if redirect:
+            # Non-folder actions never enter history. Do not use 'replace', which
+            # clears Kodi's complete Back stack for query-only plugin routes.
+            xbmc.executebuiltin("Container.Update({})".format(redirect))
+        elif changed:
+            xbmc.executebuiltin("Container.Refresh")
 
 
 if __name__ == "__main__":

@@ -13,5 +13,5 @@ msgid "Format server URL"
 msgstr ""
 
 msgctxt "#32003"
-msgid "Enter the address reachable from this Kodi device, for example http://format-server.local:4534. Format must already be running."
+msgid "Enter the address reachable from this Kodi device, for example http://format-server.local:4534. Format must already be running. Read-only servers support browsing and status; downloading requires a writable server. No access settings are changed."
 msgstr ""

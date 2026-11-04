@@ -115,6 +115,9 @@ def assemble(source: Path, output: Path, home: Path, font_roots=()):
         movies = ROOT / 'skin/xml/MyVideoNav.xml'
         if movies.is_file():
             shutil.copy2(movies, staged / 'xml/MyVideoNav.xml')
+        music = ROOT / 'skin/xml/MyMusicNav.xml'
+        if music.is_file():
+            shutil.copy2(music, staged / 'xml/MyMusicNav.xml')
         for folder in ('media', 'licenses'):
             extra=ROOT/'skin'/folder
             if extra.is_dir(): shutil.copytree(extra, staged/folder, dirs_exist_ok=True)
@@ -145,7 +148,7 @@ def package(skin: Path, output: Path):
 
 
 def package_format(source: Path, output: Path):
-    """Package the independently installable read-only Format client."""
+    """Package the independently installable native Format client."""
     import ast
     manifest = ET.parse(source / 'addon.xml').getroot()
     addon_id = manifest.get('id')

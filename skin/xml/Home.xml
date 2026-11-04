@@ -155,10 +155,12 @@
         <texturefocus />
         <texturenofocus />
         <onleft>106</onleft>
-        <onright>203</onright>
+        <onright>103</onright>
         <onup>101</onup>
         <ondown>102</ondown>
-        <onclick>SetFocus(203)</onclick>
+        <onclick condition="System.AddonIsEnabled(plugin.audio.aperture.format)">ActivateWindow(Music,plugin://plugin.audio.aperture.format/,return)</onclick>
+        <onclick condition="!System.AddonIsEnabled(plugin.audio.aperture.format)">ActivateWindow(AddonBrowser)</onclick>
+        <onclick condition="!System.AddonIsEnabled(plugin.audio.aperture.format)">Notification(Music needs Format,Install or enable Aperture Format in Add-ons.,8000)</onclick>
       </control>
       <control type="label">
         <left>50</left>
@@ -171,10 +173,10 @@
         <textcolor>FF9DB2B9</textcolor>
         <shadowcolor>40000000</shadowcolor>
         <label>Music</label>
-        <visible>![Control.HasFocus(103) | Control.HasFocus(203) | Control.HasFocus(204)]</visible>
+        <visible>![Control.HasFocus(103)]</visible>
       </control>
       <control type="group">
-        <visible>Control.HasFocus(103) | Control.HasFocus(203) | Control.HasFocus(204)</visible>
+        <visible>Control.HasFocus(103)</visible>
         <animation effect="fade" time="130">VisibleChange</animation>
         <control type="label">
           <left>25</left>
@@ -374,66 +376,6 @@
         <onup>105</onup>
         <ondown>100</ondown>
         <onclick>ActivateWindow(ShutdownMenu)</onclick>
-      </control>
-      <control type="group">
-        <visible>Control.HasFocus(103) | Control.HasFocus(203) | Control.HasFocus(204)</visible>
-        <control type="button" id="203">
-          <left>785</left>
-          <top>444</top>
-          <width>910</width>
-          <height>70</height>
-          <label>Local music</label>
-          <font>font32</font>
-          <textcolor>FFB9CBCF</textcolor>
-          <focusedcolor>FFF4FCFD</focusedcolor>
-          <disabledcolor>FF6C8189</disabledcolor>
-          <shadowcolor>E6000000</shadowcolor>
-          <texturefocus />
-          <texturenofocus />
-          <onleft>103</onleft>
-          <onright>203</onright>
-          <onup>103</onup>
-          <ondown>204</ondown>
-          <onback>103</onback>
-          <onclick>ActivateWindow(Music,library://music/,return)</onclick>
-        </control>
-        <control type="image">
-          <left>760</left>
-          <top>454</top>
-          <width>5</width>
-          <height>50</height>
-          <texture>aperture/focus-marker.png</texture>
-          <visible>Control.HasFocus(203)</visible>
-        </control>
-        <control type="button" id="204">
-          <left>785</left>
-          <top>566</top>
-          <width>910</width>
-          <height>70</height>
-          <label>Format streaming</label>
-          <font>font32</font>
-          <textcolor>FFB9CBCF</textcolor>
-          <focusedcolor>FFF4FCFD</focusedcolor>
-          <disabledcolor>FF6C8189</disabledcolor>
-          <shadowcolor>E6000000</shadowcolor>
-          <texturefocus />
-          <texturenofocus />
-          <onleft>103</onleft>
-          <onright>204</onright>
-          <onup>203</onup>
-          <ondown>103</ondown>
-          <onback>103</onback>
-          <enable>System.AddonIsEnabled(plugin.audio.aperture.format)</enable>
-          <onclick condition="System.AddonIsEnabled(plugin.audio.aperture.format)">ActivateWindow(Music,plugin://plugin.audio.aperture.format/,return)</onclick>
-        </control>
-        <control type="image">
-          <left>760</left>
-          <top>576</top>
-          <width>5</width>
-          <height>50</height>
-          <texture>aperture/focus-marker.png</texture>
-          <visible>Control.HasFocus(204)</visible>
-        </control>
       </control>
     </control>
   </controls>

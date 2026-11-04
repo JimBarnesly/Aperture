@@ -1,25 +1,19 @@
 # Music-first integration
 
-The current repair candidate keeps Kodi's complete official Estuary foundation,
-a minimal Aperture Home, native media/settings dialogs and an independently
-installable Format client. An unchanged Estuary Home is available through the
-skin installer's `--baseline` diagnostic mode. Switching foundations does not by
-itself establish the cause of a freeze; official Confluence can be compared
-independently if useful.
+Music opens Format directly. The native Kodi client shares the existing Format
+server with the standalone web application; it does not create a competing
+music library, duplicate the server or embed a browser UI.
 
-Format's existing library/acquisition service stays on the server. The TV add-on
-is a read-only HTTP client with cover art, album/track metadata, stable album IDs
-and full ordered-release playback. It does not clone the server or provision a
-new one. The old private example address is intentionally not a default.
+The skin provides an album shelf and native lists for artists, tracks, library
+search, artist catalogue search and downloads. Published releases play in their
+intended disc/track order. Catalogue search and acquisition remain server-side,
+including provider handling, release validation and publication safeguards.
 
-Acceptance covers browsing, covers, streaming, disc/track queue order, back/return,
-settings changes and server failure/recovery. A loopback synthetic CI fixture is
-separate from the user's server and library. Physical Pi audio and network
-acceptance remain required.
+Writes require the server's explicit writable capability and a confirmed user
+action in Kodi. Read-only Pi servers can browse and play; download management
+stays unavailable rather than bypassing media protection. The client never
+changes service settings, grants operator privileges or exposes a LAN endpoint.
 
-Phone control, receiver services and third-party streaming require separate
-configuration and permission. The installers do not enable Kodi HTTP control,
-open ports, configure authentication or alter service/security settings.
-
-Games/system indexing, native cover-flow refinement and receiver services follow
-a stable skin/music baseline. Do not silently substitute a browser UI for Kodi.
+[Installation and acceptance](format-integration.md) distinguish mocked CI from
+physical Pi/HDD, provider and audible-output tests. Keep games/controller crash
+investigation separate from Format music acceptance.

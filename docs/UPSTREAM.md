@@ -3,7 +3,9 @@
 The complete skin is assembled from the official Estuary distributed with the
 Kodi 21 runtime under test. Its XML, textures, fonts and license notices are
 retained. The distribution source and version are recorded in APERTURE_BUILD.json.
-Aperture's Home override uses the existing Kodi GUI 5.17.0 contract.
+Aperture's Home and media browser overrides use the existing Kodi GUI 5.17.0
+contract. MyMusicNav.xml retains the official Omega Estuary native fallback and
+adds Format-specific native containers; its upstream license remains applicable.
 
 Estuary code is GPL-2.0-compatible and artwork is CC-BY-SA 4.0 as described in its
 retained addon.xml and license notices. Fonts retain their individual licenses.

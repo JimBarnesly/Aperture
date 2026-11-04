@@ -1,15 +1,9 @@
 # HDD music and movies
 
-Aperture keeps one **Music** home item. Select it, or press Right, to choose:
-
-- **Local music**: Kodi's music root, with Albums and Artists when scanned and
-  **Files** for browsing your existing drives and adding a music source.
-- **Format streaming**: the independent Format add-on and its configured server.
-  This choice is disabled when the add-on is unavailable.
-
-Left or Back returns from either choice to the Music home item. Local music
-always opens the native root even if Format was the last music page visited.
-Neither route copies music or creates another music database.
+Aperture's **Music** home item opens the integrated Format library directly.
+Format indexes the actual music folder; Kodi does not maintain a second music
+source or offer a separate “local” versus “streaming” choice. Both the skin and
+standalone Format use the same backend and library. See [Format integration](format-integration.md).
 
 **Movies** and **TV shows** open their scanned libraries when present. With an
 empty library, they open Kodi's video sources so unscanned files remain usable.
@@ -17,9 +11,9 @@ empty library, they open Kodi's video sources so unscanned files remain usable.
 
 ## Add the actual HDD folders
 
-Use **Music > Local music > Files > Add music** for music, and **Sources > Add
-videos** for movies. Browse to the drive Kodi actually shows; no label, username,
-mount path or filesystem is assumed. Select the media folder rather than a whole
+Configure Format with the verified existing music folder. For movies, use
+**Sources > Add videos** and browse to the drive Kodi actually shows. No label,
+username, mount path or filesystem is assumed. Select the media folder rather than a whole
 mixed games/music/movie drive. For movies, set its content to Movies if you want
 Kodi's scanned library. You can browse and play without a scan.
 
@@ -34,13 +28,14 @@ it before updating; do not clean the library merely because the drive is absent.
 Syncing is a separate operation. Establish the exact source and destination
 folders, free space, copy direction and handling of existing files first. Preview
 an additive copy before running it. Do not use deletion or mirror options by
-default. After the copy, update the existing Kodi music source; no second import
-destination or automatic Format upload is needed.
+default. After the copy, scan and reconcile the existing Format library; no second import
+destination or automatic upload is needed. Reconciliation identifies metadata;
+it must not rewrite tags or acquire missing tracks in the protected Pi profile.
 
 ## Verification boundaries
 
 Static tests cover routing, controller navigation, unavailable Format, generator
 parity and the absence of drive assumptions or mutation commands. GUI runners
-cover the Music choice, Back/reopen, native local root, empty video libraries and
-the separate Format route after ZIP installation. These are separate from Pi
+cover direct Format entry, Back/reopen, empty video libraries and the same
+Format route after ZIP installation. These are separate from Pi
 hardware, actual HDD access, controller and audio-output verification.

@@ -410,21 +410,20 @@ try:
             checks.append({'check':f'home-focus-{cycle}-{control}','state':state()})
         for control,expected,name in [(100,10025,'movies'),(101,10025,'television'),(102,10821,'games'),(103,10502,'music'),(104,10025,'videos'),(105,10004,'settings')]:
             focus(control); before=press('Return')
-            if control == 103:
-                wait_for('Music choice opens on Local music', lambda s:s.get('window')==HOME and s.get('focus')==203, after=before)
-                # Kodi maps BackSpace/controller B to Back, which invokes the
-                # focused control's onback. Escape is PreviousMenu instead.
-                before=press('BackSpace')
-                wait_for('Music choice Back returns to Music', lambda s:s.get('window')==HOME and s.get('focus')==103, after=before)
-                before=press('Right')
-                wait_for('Music choice reopens after Back', lambda s:s.get('window')==HOME and s.get('focus')==203, after=before)
-                before=press('Return')
             wait_for(name+' opened',lambda s:s.get('window')==expected and s.get('skin')=='skin.aperture',after=before)
             if control == 103:
-                wait_for('Local library remains separate from Format', lambda s:s.get('folder')=='library://music/', after=before)
+                wait_for('Music opens the unified Format root', lambda s:s.get('window')==10502
+                    and s.get('dialog')==9999 and s.get('folder')=='plugin://plugin.audio.aperture.format/', after=before)
             if control in (100,101,104):
                 wait_for('Unscanned video sources are reachable', lambda s:s.get('folder')=='sources://video/', after=before)
             if cycle==0: screenshot('03-'+name)
+            if control == 103:
+                # Check the controller-equivalent Back route, including restored
+                # Home focus, on every direct entry/reentry into Format.
+                settle_focus()
+                before=press('BackSpace')
+                wait_for('Format Back returns to Home Music', lambda s:s.get('window')==HOME
+                    and s.get('dialog')==9999 and s.get('focus')==103, after=before)
             for _ in range(5):
                 if state().get('window')==HOME: break
                 next_observation('Escape'); time.sleep(.2)

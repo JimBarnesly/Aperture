@@ -1,4 +1,4 @@
-"""Local media must remain available without guessing or changing drive paths."""
+"""Music is integrated Format; other media retain their intended native routes."""
 from collections import deque
 from pathlib import Path
 import shutil
@@ -21,43 +21,42 @@ class LocalMediaNavigationTests(unittest.TestCase):
         return {node.get('condition'): node.text
                 for node in self.buttons[str(ident)].findall('onclick')}
 
-    def test_music_opens_one_choice_instead_of_hijacking_local_music(self):
-        self.assertEqual(self.actions(103), {None: 'SetFocus(203)'})
-        self.assertEqual(self.buttons['103'].findtext('onright'), '203')
-        self.assertEqual(sum(b.findtext('label') == 'Music' for b in self.buttons.values()), 1)
-
-    def test_local_music_explicitly_resets_to_native_root(self):
-        # Bare ActivateWindow(Music) can reopen the last-used Format directory.
-        self.assertEqual(self.actions(203), {None: 'ActivateWindow(Music,library://music/,return)'})
-        self.assertIsNone(self.buttons['203'].find('enable'))
-
-    def test_format_is_separate_and_disabled_when_unavailable(self):
+    def test_music_opens_format_directly_without_a_second_product_choice(self):
         enabled = 'System.AddonIsEnabled(plugin.audio.aperture.format)'
-        self.assertEqual(self.buttons['204'].findtext('enable'), enabled)
-        self.assertEqual(self.actions(204), {enabled: 'ActivateWindow(Music,plugin://plugin.audio.aperture.format/,return)'})
-        self.assertEqual(self.buttons['204'].findtext('label'), 'Format streaming')
+        actions = self.buttons['103'].findall('onclick')
+        self.assertEqual([node.text for node in actions if node.get('condition') == enabled],
+                         ['ActivateWindow(Music,plugin://plugin.audio.aperture.format/,return)'])
+        self.assertEqual(self.buttons['103'].findtext('onright'), '103')
+        self.assertEqual(sum(b.findtext('label') == 'Music' for b in self.buttons.values()), 1)
+        self.assertIsNone(self.buttons['103'].find('enable'))
+        self.assertEqual({node.get('condition') for node in actions}, {enabled, '!' + enabled})
 
-    def test_music_choices_have_no_box_or_explanatory_copy(self):
+    def test_missing_or_disabled_format_opens_explicit_addon_setup_guidance(self):
+        unavailable = '!System.AddonIsEnabled(plugin.audio.aperture.format)'
+        actions = self.buttons['103'].findall('onclick')
+        self.assertEqual([node.text for node in actions if node.get('condition') == unavailable], [
+            'ActivateWindow(AddonBrowser)',
+            'Notification(Music needs Format,Install or enable Aperture Format in Add-ons.,8000)',
+        ])
+        self.assertEqual(len(actions), 3)
+
+    def test_no_local_streaming_submenu_or_hidden_native_music_fallback(self):
+        source = ET.tostring(self.home, encoding='unicode')
+        for obsolete in ('Local music', 'Format streaming', 'Control.HasFocus(203)',
+                         'Control.HasFocus(204)', 'SetFocus(203)', 'library://music/',
+                         'ActivateWindow(Music)'):
+            self.assertNotIn(obsolete, source)
+        self.assertNotIn('203', self.buttons)
+        self.assertNotIn('204', self.buttons)
+
+    def test_music_keeps_main_menu_arrows_and_visible_focus(self):
+        button = self.buttons['103']
+        self.assertEqual({key: button.findtext(key) for key in ('onup', 'ondown', 'onleft', 'onright')},
+                         {'onup': '101', 'ondown': '102', 'onleft': '106', 'onright': '103'})
         group = next(node for node in self.home.iter('control')
-                     if node.find("control[@id='203']") is not None)
-        self.assertEqual([node.findtext('label') for node in group.findall("control[@type='button']")],
-                         ['Local music', 'Format streaming'])
-        self.assertEqual(group.findall("control[@type='label']"), [])
-        # Only narrow focus markers remain, never a filled background panel.
-        for node in group.findall("control[@type='image']"):
-            self.assertEqual(node.findtext('texture'), 'aperture/focus-marker.png')
-            self.assertEqual(node.findtext('width'), '5')
-
-    def test_choice_back_and_left_both_return_to_music(self):
-        for ident in ('203', '204'):
-            for event in ('onleft', 'onback'):
-                self.assertEqual(self.buttons[ident].findtext(event), '103')
-
-    def test_choice_is_visible_before_setfocus_and_while_navigating(self):
-        group = next(node for node in self.home.iter('control')
-                     if node.find("control[@id='203']") is not None)
-        self.assertEqual(group.findtext('visible'),
-                         'Control.HasFocus(103) | Control.HasFocus(203) | Control.HasFocus(204)')
+                     if node.findtext('visible') == 'Control.HasFocus(103)')
+        self.assertEqual(group.findtext("control[@type='label']/label"), 'Music')
+        self.assertEqual(group.findtext("control[@type='image']/texture"), 'aperture/focus-marker.png')
 
     def test_movies_prefer_cinematic_plugin_with_native_fallback(self):
         enabled = 'System.AddonIsEnabled(plugin.video.aperture.movies)'
@@ -88,11 +87,11 @@ class LocalMediaNavigationTests(unittest.TestCase):
                 self.assertIn(target, self.buttons)
                 pending.append(target)
         self.assertEqual(seen, set(self.buttons))
-        self.assertEqual(len(self.buttons), 9)
+        self.assertEqual(len(self.buttons), 7)
 
     def test_home_does_not_run_media_mutations_or_assume_hdd_paths(self):
         for action in self.home.iter('onclick'):
-            self.assertTrue(action.text.startswith(('ActivateWindow(', 'SetFocus(')), action.text)
+            self.assertTrue(action.text.startswith(('ActivateWindow(', 'Notification(')), action.text)
             for forbidden in ('/media/', '/mnt/', '/dev/', 'RunScript', 'RunPlugin', 'UpdateLibrary', 'CleanLibrary'):
                 self.assertNotIn(forbidden, action.text)
 
@@ -105,19 +104,23 @@ class LocalMediaNavigationTests(unittest.TestCase):
             subprocess.run([sys.executable, str(root / 'tools/design_home.py')], check=True)
             self.assertEqual((root / 'skin/xml/Home.xml').read_bytes(), (ROOT / 'skin/xml/Home.xml').read_bytes())
 
-    def test_real_gui_runners_cover_cancel_local_and_format_routes(self):
+    def test_real_gui_runners_cover_direct_format_back_and_reopen(self):
         smoke = (ROOT / 'tools/ci_kodi_smoke.sh').read_text()
-        self.assertIn('Music choice Back returns to Music', smoke)
+        self.assertIn('Music opens the unified Format root', smoke)
+        self.assertIn('Format Back returns to Home Music', smoke)
         self.assertIn('Unscanned video sources are reachable', smoke)
         zipper = (ROOT / 'tools/zip_smoke_driver.py').read_text()
-        self.assertIn('ZIP-installed local music', zipper)
-        self.assertIn('Format choice focused', zipper)
+        self.assertIn('ZIP-installed unified Music root', zipper)
+        self.assertIn('self.check_music()', zipper)
+        for source in (smoke, zipper):
+            self.assertNotIn('Music choice', source)
+            self.assertNotIn('library://music/', source)
 
-    def test_choice_cancel_uses_controller_equivalent_back_not_previousmenu(self):
+    def test_format_back_uses_controller_equivalent_back_not_previousmenu(self):
         smoke = (ROOT / 'tools/ci_kodi_smoke.sh').read_text()
-        self.assertIn("before=press('BackSpace')\n                wait_for('Music choice Back returns to Music'", smoke)
+        self.assertIn("before=press('BackSpace')\n                wait_for('Format Back returns to Home Music'", smoke)
         zipper = (ROOT / 'tools/zip_smoke_driver.py').read_text()
-        self.assertIn("before = self.key('BackSpace')\n        self.wait('Music choice cancels to Home Music'", zipper)
+        self.assertIn("before = self.key('BackSpace')\n            self.wait('Format Back returns to Home Music'", zipper)
 
 
 if __name__ == '__main__':

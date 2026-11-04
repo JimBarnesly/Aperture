@@ -19,11 +19,14 @@
   SHA256-verified archive. Missing, duplicate, unexpected and unlisted stale ZIPs
   are rejected. All three add-ons must remain enabled at the same paths/versions
   after restart and accepted Estuary recovery. Unknown sources is restored off.
-  The installed Home exercises local music, Format, and Movies' no-source setup
+  The installed Home exercises direct Format Music entry and Movies' no-source setup
   guidance with dismissal, Back and reopening. No real video source is added.
   The optional Games add-on is not produced by this build and remains covered by
   its separate gaming acceptance, not the fresh ZIP phase.
-- Format GUI fixture: synthetic original tones and artwork on loopback only.
+- Format GUI fixture: synthetic original tones, artwork and mock acquisition
+  state on loopback only. Covers native album/list views, artists/search,
+  catalogue preview, declined/confirmed actions, read-only permission changes,
+  queue state, ordered playback and offline recovery.
   This fixture is not a replacement for anyone's library or proof of access to
   their Format server. Clocked discard audio is not an audible-output test.
 

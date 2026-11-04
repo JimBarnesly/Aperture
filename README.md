@@ -1,7 +1,9 @@
 # Aperture
 
-A Kodi-native, controller-oriented home for Raspberry Pi 5, with a separate
-read-only client for the [Format music server](https://github.com/JimBarnesly/Format).
+A Kodi-native, controller-oriented home for Raspberry Pi 5. Music is fully
+backed by the [Format music server](https://github.com/JimBarnesly/Format): one
+library, album playback, catalogue discovery and download management in the skin.
+Format also retains its standalone web application.
 
 ## Repair candidate
 
@@ -23,15 +25,17 @@ Until the final test report is recorded, treat this branch as work in progress.
 Use the complete, tested ZIPs from the candidate kit or matching CI artifact:
 
 1. Keep Estuary installed and back up your Kodi profile.
-2. Install `plugin.audio.aperture.format-0.2.0.zip` through Kodi's ZIP installer.
+2. Install `plugin.audio.aperture.format-0.3.0.zip` through Kodi's ZIP installer.
 3. Install `skin.aperture-4.0.1~rc1.zip` through Kodi's ZIP installer.
 4. If Kodi presents an unknown-sources warning, review it yourself. The software
    does not silently enable that setting. Disable it again after installation.
 5. Choose Aperture in Settings > Interface > Skin. Select Keep only when the
    screen and controls respond. Otherwise let the automatic rollback happen.
-6. Open Music > Format streaming. Configure the reachable Format server address in the add-on
-   settings, then open Albums. Long-press an album (or press C) and choose **Play
-   album** to play the complete release in disc/track order.
+6. Open Music. Configure the reachable Format server address, then open Albums.
+   Long-press an album (or press C) and choose **Play album** to play the complete
+   release in disc/track order. Music is one Format library, without a separate
+   local/streaming choice. See [Format integration](docs/format-integration.md)
+   for server setup, download restrictions and Pi acceptance.
 
 Do not ZIP the `skin/` override directory. It is not a complete skin. Do not install
 both this prototype and an older `skin.apeture` kit expecting them to be the same
@@ -64,16 +68,22 @@ the OS, stop services, flash storage, enable SSH or provision Format.
 
 ## Format service and limits
 
-Format must already be running on a server reachable by the Pi. There is no
-hard-coded private server address. The add-on reads `/api/library`, retrieves
-cover images and streams audio. It does not acquire, delete, rename or upload
-music. It supports release/track IDs containing commas and sorts multi-disc
-releases by disc and track metadata before replacing the playback queue.
+Format must run on a server reachable by Kodi. For the protected same-Pi setup,
+use `http://127.0.0.1:4534`; the client does not guess a server or install one.
+Native album shelves, artists, library search, ordered playback, catalogue search
+and download status share Format's existing backend with its standalone UI.
 
-Native Kodi music views are used in this candidate. Format's original web
-cover-flow is not embedded. Game systems, artwork, emulator installation and
-receiver services remain separate work. Generic Kodi is not a certified Google
-Cast receiver.
+Download actions require an explicitly writable server, an explicit action in
+Kodi and a confirmation. Read-only or unsupported servers remain read-only;
+unknown capability is never treated as permission. Acquisition, cancellation and
+prioritisation are not enabled by changing the skin. No automatic acquisition,
+metadata rewriting, deletion, upload, operator privileges or LAN exposure is added.
+The current protected Pi deployment disables download writes. A writable Pi
+profile needs a separately verified destination/staging setup and provider access.
+
+The native Kodi client does not embed a web browser or clone Format's database.
+Game systems and receiver services remain separate; generic Kodi is not a
+certified Google Cast receiver. See [integration and installation](docs/format-integration.md).
 
 ## Build and test
 
@@ -101,5 +111,5 @@ browser and native RetroPlayer cores. The home Games item opens that browser
 when enabled and keeps native Games as the fallback. Physical controller, HDMI
 and game compatibility still need testing on your Pi.
 
-[Local music and movies](docs/local-media.md) explains the Music source choice
+[HDD music and movies](docs/local-media.md) explains shared Format music and video sources
 and HDD browsing without moving media or changing mounts.

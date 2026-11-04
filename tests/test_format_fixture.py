@@ -1,10 +1,15 @@
 import importlib.util
+from http.server import ThreadingHTTPServer
 import json
 import os
 from pathlib import Path
 import tempfile
+import threading
 import unittest
 from unittest.mock import patch
+from urllib.error import HTTPError
+from urllib.parse import urlencode
+from urllib.request import Request, urlopen
 import wave
 import xml.etree.ElementTree as ET
 
@@ -56,7 +61,13 @@ class FixtureTest(unittest.TestCase):
                 config = fixture.prepare(runtime, runtime / "out")
                 self.assertEqual(config["expected_ids"], fixture.TRACK_IDS)
                 self.assertEqual(config["album_title"], fixture.fixture_library()["albums"][0]["title"])
+                self.assertEqual(config["catalog_id"], fixture.CATALOG_ID)
+                self.assertEqual(json.loads((runtime / "format-fixture/health.json").read_text()), {"readOnly":False})
+                self.assertEqual(json.loads((runtime / "format-fixture/acquisitions.json").read_text()), [])
                 self.assertIn('"focused_title":xbmc.getInfoLabel("ListItem.Title")', fixture.OBSERVER_SOURCE)
+                self.assertIn('Container.Property(Aperture.FormatView)', fixture.OBSERVER_SOURCE)
+                self.assertIn('Control.IsVisible(64)', fixture.OBSERVER_SOURCE)
+                self.assertIn('Control.IsVisible(63)', fixture.OBSERVER_SOURCE)
                 self.assertTrue((runtime / "system/addons" / fixture.ADDON / "addon.py").is_file())
                 self.assertFalse((runtime / "out/format-ready.json").exists())
                 self.assertEqual(json.loads((runtime / "out/format-result.json").read_text())["status"], "not_run")
@@ -69,6 +80,106 @@ class FixtureTest(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix="ordinary-profile.") as directory:
             with self.assertRaises(ValueError):
                 fixture.validated_runtime(Path(directory))
+
+
+class FixtureHTTPTest(unittest.TestCase):
+    """Real HTTP, isolated loopback synthetic files; never a provider connection."""
+    def setUp(self):
+        self.directory = tempfile.TemporaryDirectory(prefix="aperture-kodi-smoke.")
+        self.addCleanup(self.directory.cleanup)
+        runtime = Path(self.directory.name)
+        self.files, self.out = runtime / "format-fixture", runtime / "out"
+        self.files.mkdir()
+        self.out.mkdir()
+        fixture.atomic(self.files / "library.json", fixture.fixture_library())
+        fixture.atomic(self.files / "health.json", {"readOnly":False})
+        fixture.atomic(self.files / "acquisitions.json", [])
+        fixture.write_wav(self.files / "tone.wav", 220)
+        (self.files / "cover.png").write_bytes(fixture.cover_png())
+        config = {"files":{identifier:"tone.wav" for identifier in fixture.TRACK_IDS}}
+        self.server = ThreadingHTTPServer(("127.0.0.1", 0), fixture.fixture_handler(config, self.files, self.out))
+        self.server.daemon_threads = True
+        self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
+        self.thread.start()
+        self.addCleanup(self.stop)
+        self.url = "http://127.0.0.1:{}".format(self.server.server_port)
+
+    def stop(self):
+        self.server.shutdown()
+        self.server.server_close()
+        self.thread.join(timeout=5)
+
+    def request(self, path, method="GET", headers=None, **query):
+        url = self.url + path + ("?" + urlencode(query) if query else "")
+        try:
+            response = urlopen(Request(url, method=method, headers=headers or {}), timeout=3)
+        except HTTPError as error:
+            response = error
+        with response:
+            payload = response.read()
+            if response.headers.get("Content-Type") == "application/json" and payload:
+                payload = json.loads(payload)
+            return response.status, payload
+
+    def requests(self):
+        return [json.loads(line) for line in (self.out / "format-requests.jsonl").read_text().splitlines()]
+
+    def test_read_only_browsing_cannot_queue_or_contact_a_provider(self):
+        self.assertFalse(self.request("/api/health")[1]["readOnly"])
+        self.assertEqual(self.request("/api/library")[1], fixture.fixture_library())
+        catalogue = self.request("/api/catalog/search", q=fixture.ARTIST)[1]
+        self.assertEqual(catalogue, fixture.fixture_catalogue())
+        self.assertEqual(self.request("/api/catalog/album", id=fixture.CATALOG_ID)[1], fixture.fixture_preview())
+        self.assertNotIn("http", json.dumps(catalogue) + json.dumps(fixture.fixture_preview()))
+        self.assertEqual(self.request("/api/acquisitions"), (200, []))
+        self.assertEqual({row["method"] for row in self.requests()}, {"GET"})
+        self.assertEqual(json.loads((self.files / "acquisitions.json").read_text()), [])
+
+    def test_explicit_mock_acquisition_priority_and_cancel(self):
+        status, item = self.request("/api/acquire-album", "POST", id=fixture.CATALOG_ID)
+        self.assertEqual((status, item["status"], item["id"]), (202, "queued", fixture.CATALOG_ID))
+        self.assertEqual(self.request("/api/acquisitions")[1], [item])
+        status, item = self.request("/api/acquisitions/prioritize", "POST", id=fixture.CATALOG_ID)
+        self.assertEqual((status, item["priority"]), (202, 100))
+        status, item = self.request("/api/acquisitions/cancel", "POST", id=fixture.CATALOG_ID)
+        self.assertEqual((status, item["status"]), (202, "cancelled"))
+        self.assertEqual(self.request("/api/acquisitions")[1], [item])
+        self.assertEqual(self.request("/api/acquisitions/cancel", "POST", id=fixture.CATALOG_ID)[0], 404)
+        self.assertEqual({path.name for path in self.files.iterdir()},
+                         {"library.json", "health.json", "acquisitions.json", "tone.wav", "cover.png"})
+        posts = [row for row in self.requests() if row["method"] == "POST"]
+        self.assertEqual([row["status"] for row in posts], [202, 202, 202, 404])
+        self.assertTrue(all(row["id"] == [fixture.CATALOG_ID] for row in posts))
+
+    def test_readonly_unknown_and_invalid_writes_fail_closed_and_are_logged(self):
+        for health in ({"readOnly":True}, {}, {"readOnly":"false"}):
+            fixture.atomic(self.files / "health.json", health)
+            self.assertEqual(self.request("/api/acquire-album", "POST", id=fixture.CATALOG_ID)[0], 403)
+        fixture.atomic(self.files / "health.json", {"readOnly":False})
+        for method, path, identifier, status in (
+                ("POST", "/api/acquire-album", "not-the-fixture", 404),
+                ("GET", "/api/acquire-album", fixture.CATALOG_ID, 405),
+                ("POST", "/api/library/trash-album", fixture.CATALOG_ID, 405),
+                ("PUT", "/api/library", fixture.CATALOG_ID, 405),
+                ("DELETE", "/api/acquisitions/history", fixture.CATALOG_ID, 405)):
+            self.assertEqual(self.request(path, method, id=identifier)[0], status)
+        self.assertEqual(len(self.requests()), 8)
+        self.assertEqual(json.loads((self.files / "acquisitions.json").read_text()), [])
+
+    def test_audio_ranges_offline_recovery_and_health_failure_log_real_status(self):
+        status, payload = self.request("/api/audio", headers={"Range":"bytes=0-15"}, id=fixture.TRACK_IDS[0])
+        self.assertEqual((status, len(payload)), (206, 16))
+        self.assertEqual(self.request("/api/audio", headers={"Range":"bytes=999999999-"}, id=fixture.TRACK_IDS[0])[0], 416)
+        self.assertEqual(self.request("/api/audio", "HEAD", id=fixture.TRACK_IDS[0]), (200, b""))
+        (self.files / "health-offline").touch()
+        self.assertEqual(self.request("/api/health")[0], 503)
+        self.assertEqual(self.request("/api/library")[0], 200)
+        (self.files / "offline").touch()
+        self.assertEqual(self.request("/api/library")[0], 503)
+        self.assertEqual(self.request("/api/acquire-album", "POST", id=fixture.CATALOG_ID)[0], 503)
+        (self.files / "offline").unlink()
+        self.assertEqual(self.request("/api/library")[0], 200)
+        self.assertEqual([row["status"] for row in self.requests()], [206, 416, 200, 503, 200, 503, 503, 200])
 
 
 if __name__ == "__main__":

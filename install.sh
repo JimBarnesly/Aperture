@@ -88,7 +88,7 @@ sed -i '/<addon /s/id="skin.estuary"/id="skin.aperture"/; /<addon /s/name="Estua
 if [ "$BASELINE" -eq 0 ]; then
   # Use one complete, matching source checkout, never moving remote fragments.
   [ -f "$SOURCE_DIR/skin/xml/Home.xml" ] || fail 'Use the complete source checkout or install the complete ZIP through Kodi.'
-  HOME_SHA=ae1eb00d33f862db6c88e1fa73864d96a62c74cfb149023c021de65f35a5eeee
+  HOME_SHA=1f597f1c60adef8554f3ddb28a3b23446d46f92c3e42feb8a45099879faac3e0
   cp "$SOURCE_DIR/skin/xml/Home.xml" "$STAGE/Home.xml"
   printf '%s  %s\n' "$HOME_SHA" "$STAGE/Home.xml" | sha256sum -c - >/dev/null || fail 'Home.xml integrity check failed'
   [ -d "$SOURCE_DIR/skin/media/aperture" ] || fail 'Matching Aperture artwork missing'
@@ -108,6 +108,10 @@ if [ "$BASELINE" -eq 0 ]; then
   MOVIES_SHA=65c9f400e002bdfe6f2abb2e954276b9a36bea6e1743a17379e462a82a9e5b5f
   printf '%s  %s\n' "$MOVIES_SHA" "$SOURCE_DIR/skin/xml/MyVideoNav.xml" | sha256sum -c - >/dev/null || fail 'MyVideoNav.xml integrity check failed'
   cp "$SOURCE_DIR/skin/xml/MyVideoNav.xml" "$TMP/xml/MyVideoNav.xml"
+  [ -f "$SOURCE_DIR/skin/xml/MyMusicNav.xml" ] || fail 'Matching music browser XML missing'
+  MUSIC_SHA=44ee4a0204b11bef5a3cadf37a7eb704d1c8b8c1731fadc58a34d3368d45c291
+  printf '%s  %s\n' "$MUSIC_SHA" "$SOURCE_DIR/skin/xml/MyMusicNav.xml" | sha256sum -c - >/dev/null || fail 'MyMusicNav.xml integrity check failed'
+  cp "$SOURCE_DIR/skin/xml/MyMusicNav.xml" "$TMP/xml/MyMusicNav.xml"
   cp -R "$SOURCE_DIR/skin/media/." "$TMP/media/"
   mkdir -p "$TMP/licenses"
   cp -R "$SOURCE_DIR/skin/licenses/." "$TMP/licenses/"

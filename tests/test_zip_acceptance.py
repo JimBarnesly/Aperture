@@ -241,7 +241,7 @@ class DriverSafetyTest(unittest.TestCase):
             shutil.copy2(ROOT / 'skin/xml/Home.xml', installed / 'Home.xml')
             now = [0]
             # A transition can briefly report the destination focus before
-            # restoring the submenu focus that actually receives the next key.
+            # restoring the previous menu focus that actually receives the next key.
             state = {'skin': 'skin.aperture', 'window': 10000, 'dialog': 9999,
                      'focus': 103, 'sequence': 10}
             events = []
@@ -251,12 +251,12 @@ class DriverSafetyTest(unittest.TestCase):
             def settle():
                 self.assertGreater(now[0] * 1000, reveal_ms)
                 events.append('settled')
-                state['focus'] = 203
+                state['focus'] = 102
                 return dict(state)
             def key(value):
                 events.append(value)
-                self.assertEqual(value, 'Left')
-                self.assertEqual(state['focus'], 203)
+                self.assertEqual(value, 'Up')
+                self.assertEqual(state['focus'], 102)
                 before = state['sequence']
                 if now[0] * 1000 > reveal_ms:
                     state.update(focus=103, sequence=before + 1)
@@ -271,7 +271,7 @@ class DriverSafetyTest(unittest.TestCase):
             subject.settle_focus = Mock(side_effect=settle)
             with patch.object(driver.time, 'sleep', side_effect=sleep):
                 subject.focus_home(103)
-            self.assertEqual(events, ['reveal', 'settled', 'Left'])
+            self.assertEqual(events, ['reveal', 'settled', 'Up'])
             self.assertEqual(state['focus'], 103)
             self.assertEqual(subject.wait.call_args.kwargs['after'], 10)
 
@@ -282,7 +282,7 @@ class DriverSafetyTest(unittest.TestCase):
             installed = subject.target / 'data/addons/skin.aperture/xml'
             installed.mkdir(parents=True)
             shutil.copy2(ROOT / 'skin/xml/Home.xml', installed / 'Home.xml')
-            state = {'skin': 'skin.aperture', 'window': 10000, 'dialog': 9999, 'focus': 203}
+            state = {'skin': 'skin.aperture', 'window': 10000, 'dialog': 9999, 'focus': 102}
             def wait(description, predicate, **_):
                 if not predicate(state):
                     raise AssertionError(description)
@@ -292,7 +292,7 @@ class DriverSafetyTest(unittest.TestCase):
             subject.settle_focus = Mock(return_value=state)
             with patch.object(driver.time, 'sleep'), self.assertRaisesRegex(AssertionError, 'installed Home focus 103'):
                 subject.focus_home(103)
-            subject.key.assert_called_once_with('Left')
+            subject.key.assert_called_once_with('Up')
 
     def test_home_navigation_rejects_a_modal_during_settle(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -304,7 +304,7 @@ class DriverSafetyTest(unittest.TestCase):
             subject.wait = Mock()
             subject.key = Mock()
             subject.settle_focus = Mock(return_value={
-                'skin': 'skin.aperture', 'window': 10000, 'dialog': 10100, 'focus': 203})
+                'skin': 'skin.aperture', 'window': 10000, 'dialog': 10100, 'focus': 102})
             with patch.object(driver.time, 'sleep'), self.assertRaisesRegex(AssertionError, 'Home changed'):
                 subject.focus_home(103)
             subject.key.assert_not_called()
@@ -335,6 +335,34 @@ class DriverSafetyTest(unittest.TestCase):
         self.assertFalse(driver.movies_guidance({**guidance, 'dialog': 10100}))
         self.assertFalse(driver.movies_guidance({**guidance, 'dialog_text': 'Movies Could not read the movie source.'}))
         self.assertFalse(driver.movies_guidance({}))
+
+    def test_music_runs_direct_open_controller_back_and_reopen(self):
+        subject = driver.Driver.__new__(driver.Driver)
+        subject.focus_home = Mock()
+        subject.key = Mock(return_value=42)
+        subject.wait = Mock()
+        subject.capture = Mock()
+        subject.settle_focus = Mock()
+        subject.record = Mock()
+        subject.check_music()
+        self.assertEqual([call.args[0] for call in subject.focus_home.call_args_list], [103, 103])
+        self.assertEqual([call.args[0] for call in subject.key.call_args_list],
+                         ['Return', 'BackSpace', 'Return', 'BackSpace'])
+        self.assertEqual(subject.settle_focus.call_count, 2)
+        predicates = [call.args[1] for call in subject.wait.call_args_list]
+        for root, home in (predicates[:2], predicates[2:]):
+            valid = {'window': 10502, 'dialog': 9999, 'folder': 'plugin://plugin.audio.aperture.format/'}
+            self.assertTrue(root(valid))
+            for folder in ('library://music/', 'plugin://plugin.audio.aperture.format/?action=albums',
+                           'plugin://plugin.audio.aperture.format.other/', ''):
+                self.assertFalse(root({**valid, 'folder': folder}))
+            self.assertFalse(root({**valid, 'dialog': 12002}))
+            self.assertFalse(root({**valid, 'window': 10000}))
+            self.assertTrue(home({'window': 10000, 'dialog': 9999, 'focus': 103}))
+            self.assertFalse(home({'window': 10000, 'dialog': 12002, 'focus': 103}))
+            self.assertFalse(home({'window': 10000, 'dialog': 9999, 'focus': 102}))
+        self.assertTrue(all(call.kwargs['after'] == 42 for call in subject.wait.call_args_list))
+        self.assertEqual([call.kwargs['attempt'] for call in subject.record.call_args_list], [0, 1])
 
     def test_movies_runs_native_open_dismiss_back_and_reopen(self):
         subject = driver.Driver.__new__(driver.Driver)

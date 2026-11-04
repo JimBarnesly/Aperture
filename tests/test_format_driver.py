@@ -78,7 +78,8 @@ class DriverTest(unittest.TestCase):
             title = "SYNTHETIC QA Double"
             (out / "format-expected.json").write_text(json.dumps({"runtime": str(runtime), "album_title": title}))
             actual = {"sequence": 1, "time": time.time(), "pid": os.getpid(), "enabled": True,
-                      "folder": "", "focused_title": "", "art": "/api/cover?id=fixture"}
+                      "folder": "", "focused_title": "", "art": "/api/cover?id=fixture",
+                      "format_view":"albums", "shelf_visible":True, "list_visible":False, "focus":"64"}
             gui = {"window": 10000, "dialog": 9999}
             keys = []
             def publish(*args):
@@ -127,7 +128,8 @@ class DriverTest(unittest.TestCase):
             albums = "plugin://plugin.audio.aperture.format/?action=albums"
             album = "plugin://plugin.audio.aperture.format/?action=album&album_id=fixture-album"
             actual = {"sequence": 1, "time": time.time(), "pid": os.getpid(), "enabled": True,
-                      "folder": "", "focused_title": "", "art": "/api/cover?id=fixture"}
+                      "folder": "", "focused_title": "", "art": "/api/cover?id=fixture",
+                      "format_view":"albums", "shelf_visible":True, "list_visible":False, "focus":"64"}
             gui = {"window": 10000, "dialog": 9999}
             keys = []
             def publish(*args):
@@ -141,10 +143,12 @@ class DriverTest(unittest.TestCase):
             def press(key):
                 keys.append(key)
                 if key in ("j", "BackSpace"):
-                    actual.update(folder=albums, focused_title=title)
+                    actual.update(folder=albums, focused_title=title, format_view="albums",
+                                  shelf_visible=True, list_visible=False, focus="64")
                     gui.update(window=10502, folder=albums)
                 elif key == "Return":
-                    actual.update(folder=album, focused_title=tracks[0])
+                    actual.update(folder=album, focused_title=tracks[0], format_view="tracks",
+                                  shelf_visible=False, list_visible=True, focus="63")
                     gui.update(window=10502, folder=album)
                 elif key == "Down":
                     actual["focused_title"] = tracks[1]
@@ -170,6 +174,50 @@ class DriverTest(unittest.TestCase):
                     driver.run(hooks)
             self.assertEqual(keys, ["j", "Return", "Down", "BackSpace", "c"])
             self.assertTrue(driver.route_is(gui["folder"], "albums"))
+
+    def test_real_find_title_uses_right_to_leave_album_parent_card(self):
+        with tempfile.TemporaryDirectory(prefix="aperture-kodi-smoke.") as directory:
+            runtime = Path(directory)
+            out = runtime / "out"
+            out.mkdir()
+            title = "SYNTHETIC QA Double"
+            (out / "format-expected.json").write_text(json.dumps({"runtime":str(runtime), "album_title":title}))
+            actual = {"sequence":1, "time":time.time(), "pid":os.getpid(), "enabled":True,
+                      "folder":"", "focused_title":"", "art":"/api/cover?id=fixture",
+                      "format_view":"albums", "shelf_visible":True, "list_visible":False, "focus":"64"}
+            gui, keys = {"window":10000, "dialog":9999}, []
+            def publish(*args):
+                actual.update(sequence=actual["sequence"] + 1, time=time.time())
+                (out / "format-state.json").write_text(json.dumps(actual))
+            publish()
+            def settle():
+                publish()
+                return gui
+            def press(key):
+                keys.append(key)
+                if key == "j":
+                    actual.update(folder="plugin://plugin.audio.aperture.format/?action=albums", focused_title="")
+                    gui.update(window=10502, folder=actual["folder"])
+                elif key == "Right":
+                    actual["focused_title"] = title
+                else:
+                    raise AssertionError("Horizontal shelf cannot be navigated with " + key)
+                publish()
+                return 1
+            def wait(description, predicate, after):
+                self.assertTrue(predicate(gui))
+                return gui
+            def capture(name):
+                if name == "format-01-albums":
+                    raise RuntimeError("Horizontal target reached")
+            hooks = {"state":lambda:gui, "wait_for":wait, "press":press, "screenshot":capture,
+                     "find_label":Mock(), "settle_focus":settle}
+            env = {"APERTURE_SMOKE_OUT":str(out), "KODI_DATA":str(runtime / "data"),
+                   "APERTURE_KODI_PID":str(os.getpid())}
+            with patch.dict(os.environ, env), patch.object(driver.time, "sleep", side_effect=publish):
+                with self.assertRaisesRegex(RuntimeError, "Horizontal target reached"):
+                    driver.run(hooks)
+            self.assertEqual(keys, ["j", "Right"])
 
     def test_recovery_reopens_root_then_selects_albums_from_empty_music_root(self):
         current = {"window": 10502, "dialog": 9999, "folder": ""}
@@ -217,6 +265,33 @@ class DriverTest(unittest.TestCase):
         for change in ({"folder": "tracks"}, {"window": 10000}, {"list_item": "Second album"}, {"focus": 56}):
             with self.subTest(change=change):
                 self.assertNotEqual(driver.gui_position(original), driver.gui_position(dict(original, **change)))
+
+    def test_view_requires_property_visibility_and_actual_focus(self):
+        shelf = {"format_view":"albums", "shelf_visible":True, "list_visible":False, "focus":"64"}
+        self.assertTrue(driver.view_is(shelf, "albums"))
+        for change in ({"focus":"63"}, {"list_visible":True}, {"shelf_visible":False}, {"format_view":"menu"}):
+            with self.subTest(change=change):
+                self.assertFalse(driver.view_is(dict(shelf, **change), "albums"))
+        for mode in ("menu", "tracks", "catalog", "downloads"):
+            actual = {"format_view":mode, "shelf_visible":False, "list_visible":True, "focus":63}
+            self.assertTrue(driver.view_is(actual, mode))
+            self.assertFalse(driver.view_is(dict(actual, shelf_visible=True), mode))
+            self.assertFalse(driver.view_is(dict(actual, focus=64), mode))
+
+    def test_album_shelf_navigation_is_horizontal_and_track_navigation_vertical(self):
+        self.assertEqual(driver.title_direction("albums"), "Right")
+        for mode in ("tracks", "menu", "catalog", "downloads"):
+            self.assertEqual(driver.title_direction(mode), "Down")
+
+    def test_mutation_proof_rejects_any_unexpected_repeated_or_failed_write(self):
+        read = {"method":"GET", "path":"/api/library", "status":200}
+        acquire = {"method":"POST", "path":"/api/acquire-album", "status":202, "id":["synthetic"]}
+        self.assertEqual(driver.assert_mock_mutations([read], [], "synthetic"), [])
+        self.assertEqual(driver.assert_mock_mutations([read, acquire], ["/api/acquire-album"], "synthetic"), [acquire])
+        for rows in ([acquire], [read, dict(acquire, method="DELETE")], [dict(acquire, status=403)],
+                     [dict(acquire, id=["another"])], [acquire, acquire]):
+            with self.subTest(rows=rows), self.assertRaisesRegex(AssertionError, "mutation"):
+                driver.assert_mock_mutations(rows, [] if rows == [acquire] else ["/api/acquire-album"], "synthetic")
 
 
 if __name__ == "__main__":
