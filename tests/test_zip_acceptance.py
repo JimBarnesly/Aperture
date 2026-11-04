@@ -15,7 +15,7 @@ import threading
 import time
 from types import SimpleNamespace
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 import xml.etree.ElementTree as ET
 import zipfile
 
@@ -27,13 +27,14 @@ sys.modules.setdefault('zip_smoke_fixture', fixture)
 spec = importlib.util.spec_from_file_location('zip_smoke_driver', ROOT / 'tools/zip_smoke_driver.py')
 driver = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(driver)
+EXPECTED_SUBJECTS = ('plugin.audio.aperture.format', 'plugin.video.aperture.movies', 'skin.aperture')
 
 
 def make_packages(root):
     dist = root / 'dist'
     dist.mkdir()
     checksums = {}
-    for addon in fixture.SUBJECTS:
+    for addon in EXPECTED_SUBJECTS:
         path = dist / f'{addon}-1.2.3.zip'
         with zipfile.ZipFile(path, 'w') as archive:
             archive.writestr(addon + '/addon.xml', f'<addon id="{addon}" version="1.2.3"/>')
@@ -57,8 +58,8 @@ class PackageTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             dist, _ = make_packages(Path(tmp))
             rows = fixture.packages(dist)
-            self.assertEqual([row['addon'] for row in rows], list(fixture.SUBJECTS))
-            self.assertEqual(rows[0]['addon'], 'plugin.audio.aperture.format')
+            self.assertEqual(fixture.SUBJECTS, EXPECTED_SUBJECTS)
+            self.assertEqual([row['addon'] for row in rows], list(EXPECTED_SUBJECTS))
             self.assertTrue(all(row['version'] == '1.2.3' for row in rows))
 
     def test_rejects_legacy_manifest_shape_and_extra_package(self):
@@ -68,6 +69,57 @@ class PackageTest(unittest.TestCase):
                 (dist / 'checksums.json').write_text(json.dumps(invalid))
                 with self.assertRaises(ValueError):
                     fixture.packages(dist)
+
+    def test_rejects_old_two_package_set(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            dist, checksums = make_packages(Path(tmp))
+            checksums.pop('plugin.video.aperture.movies-1.2.3.zip')
+            (dist / 'checksums.json').write_text(json.dumps(checksums))
+            with self.assertRaisesRegex(ValueError, 'exact built Format, Movies and skin'):
+                fixture.packages(dist)
+
+    def test_rejects_substituted_subject_and_duplicate_subject_version(self):
+        for replacement, version in (('plugin.games.aperture', '1.2.3'),
+                                     ('plugin.unexpected', '1.2.3'),
+                                     ('plugin.audio.aperture.format', '0.1.0')):
+            with self.subTest(replacement=replacement), tempfile.TemporaryDirectory() as tmp:
+                dist, checksums = make_packages(Path(tmp))
+                old = 'plugin.video.aperture.movies-1.2.3.zip'
+                checksums.pop(old)
+                (dist / old).unlink()
+                path = dist / f'{replacement}-{version}.zip'
+                with zipfile.ZipFile(path, 'w') as archive:
+                    archive.writestr(replacement + '/addon.xml',
+                                     f'<addon id="{replacement}" version="{version}"/>')
+                checksums[path.name] = hashlib.sha256(path.read_bytes()).hexdigest()
+                (dist / 'checksums.json').write_text(json.dumps(checksums))
+                with self.assertRaisesRegex(ValueError, 'Unexpected|Duplicated'):
+                    fixture.packages(dist)
+
+    def test_rejects_unlisted_stale_zip_and_duplicate_checksum_key(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            dist, checksums = make_packages(Path(tmp))
+            stale = dist / 'plugin.video.aperture.movies-0.0.1.zip'
+            stale.write_bytes(b'stale package')
+            with self.assertRaisesRegex(ValueError, 'Unexpected or stale ZIP'):
+                fixture.packages(dist)
+            stale.unlink()
+            filename, digest = next(iter(checksums.items()))
+            payload = json.dumps(checksums)[:-1] + ',' + json.dumps(filename) + ':' + json.dumps(digest) + '}'
+            (dist / 'checksums.json').write_text(payload)
+            with self.assertRaisesRegex(ValueError, 'Duplicated package checksum entry'):
+                fixture.packages(dist)
+
+    def test_rejects_filename_version_mismatch(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            dist, checksums = make_packages(Path(tmp))
+            old = 'plugin.video.aperture.movies-1.2.3.zip'
+            renamed = 'plugin.video.aperture.movies-0.0.1.zip'
+            (dist / old).rename(dist / renamed)
+            checksums[renamed] = checksums.pop(old)
+            (dist / 'checksums.json').write_text(json.dumps(checksums))
+            with self.assertRaisesRegex(ValueError, 'metadata differs'):
+                fixture.packages(dist)
 
     def test_rejects_checksum_mismatch_and_zip_symlink(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -120,8 +172,9 @@ class PackageTest(unittest.TestCase):
                 with zipfile.ZipFile(dist / row['file']) as archive:
                     archive.extractall(data / 'addons')
             verified = fixture.verify_installed(dist, data, rows)
-            self.assertEqual([row['files_verified'] for row in verified], [2, 2])
-            target = data / 'addons' / fixture.SUBJECTS[0] / 'resource.txt'
+            self.assertEqual([row['files_verified'] for row in verified], [2, 2, 2])
+            self.assertEqual([row['addon'] for row in verified], list(EXPECTED_SUBJECTS))
+            target = data / 'addons' / 'plugin.video.aperture.movies' / 'resource.txt'
             target.write_text('changed')
             with self.assertRaisesRegex(AssertionError, 'installed bytes differ'):
                 fixture.verify_installed(dist, data, rows)
@@ -146,11 +199,15 @@ class FreshFixtureTest(unittest.TestCase):
             (runtime / 'data/userdata/Database').mkdir(parents=True)
             (runtime / 'data/userdata/Database/Addons33.db').write_text('do not copy')
             target, rows = fixture.prepare(root, runtime, base, runtime / 'out')
-            self.assertEqual(len(rows), 2)
+            self.assertEqual([row['addon'] for row in rows], list(EXPECTED_SUBJECTS))
             self.assertFalse((target / 'data/addons').exists())
             self.assertFalse((target / 'data/userdata/Database').exists())
             for addon in subjects:
                 self.assertFalse((target / 'system/addons' / addon).exists())
+            self.assertEqual({path.name for path in (target / 'packages').iterdir()},
+                             {row['file'] for row in rows})
+            report = json.loads((runtime / 'out/fixture.json').read_text())
+            self.assertEqual(report['subjects'], list(EXPECTED_SUBJECTS))
             manifest = ET.parse(target / 'system/system/addon-manifest.xml')
             self.assertEqual({node.text for node in manifest.getroot()}, {'skin.estuary', fixture.OBSERVER})
             settings = {node.get('id'): node.text for node in ET.parse(target / 'data/userdata/guisettings.xml').getroot()}
@@ -172,6 +229,55 @@ class FreshFixtureTest(unittest.TestCase):
 
 
 class DriverSafetyTest(unittest.TestCase):
+    def test_observer_subjects_match_complete_build_set(self):
+        tree = ast.parse((ROOT / 'tools/zip_smoke_observer.py').read_text())
+        subjects = next(node.value for node in tree.body if isinstance(node, ast.Assign)
+                        and any(isinstance(target, ast.Name) and target.id == 'SUBJECTS' for target in node.targets))
+        self.assertEqual(ast.literal_eval(subjects), EXPECTED_SUBJECTS)
+        self.assertEqual(driver.SUBJECTS, EXPECTED_SUBJECTS)
+
+    def test_all_installed_subjects_need_matching_version_path_and_enabled(self):
+        data = Path('/tmp/aperture-test/data')
+        rows = [{'addon': addon, 'version': '1.2.3'} for addon in EXPECTED_SUBJECTS]
+        installed = {row['addon']: {'version': row['version'], 'enabled': True,
+                     'path': str(data / 'addons' / row['addon'])} for row in rows}
+        self.assertTrue(driver.installed_matches({'installed': installed}, rows, data))
+        for addon in EXPECTED_SUBJECTS:
+            for change in ({'version': '0.0.1'}, {'enabled': False}, {'path': '/system/addons/' + addon}, {'path': ''}):
+                with self.subTest(addon=addon, change=change):
+                    changed = {**installed, addon: {**installed[addon], **change}}
+                    self.assertFalse(driver.installed_matches({'installed': changed}, rows, data))
+            self.assertFalse(driver.installed_matches({'installed': {k: v for k, v in installed.items() if k != addon}}, rows, data))
+
+    def test_movies_guidance_rejects_error_or_unrelated_dialog(self):
+        guidance = {'dialog': 12002, 'dialog_text': 'Movies Add your existing movie folder in Kodi'}
+        self.assertTrue(driver.movies_guidance(guidance))
+        self.assertFalse(driver.movies_guidance({**guidance, 'dialog': 10100}))
+        self.assertFalse(driver.movies_guidance({**guidance, 'dialog_text': 'Movies Could not read the movie source.'}))
+        self.assertFalse(driver.movies_guidance({}))
+
+    def test_movies_runs_native_open_dismiss_back_and_reopen(self):
+        subject = driver.Driver.__new__(driver.Driver)
+        subject.focus_home = Mock()
+        subject.key = Mock(return_value=42)
+        subject.wait = Mock()
+        subject.capture = Mock()
+        subject.record = Mock()
+        subject.check_movies()
+        self.assertEqual([call.args[0] for call in subject.focus_home.call_args_list], [100, 100])
+        self.assertEqual([call.args[0] for call in subject.key.call_args_list],
+                         ['Return', 'Return', 'BackSpace', 'Return', 'BackSpace', 'BackSpace'])
+        predicates = [call.args[1] for call in subject.wait.call_args_list]
+        for guidance, empty, home in (predicates[:3], predicates[3:]):
+            self.assertIs(guidance, driver.movies_guidance)
+            valid = {'window': 10025, 'dialog': 9999, 'folder': 'plugin://plugin.video.aperture.movies/'}
+            self.assertTrue(empty(valid))
+            self.assertFalse(empty({**valid, 'folder': 'sources://video/'}))
+            self.assertFalse(empty({**valid, 'dialog': 12002}))
+            self.assertTrue(home({'window': 10000, 'dialog': 9999, 'focus': 100}))
+            self.assertFalse(home({'window': 10000, 'dialog': 12002, 'focus': 100}))
+        self.assertTrue(all(call.kwargs['after'] == 42 for call in subject.wait.call_args_list))
+
     def test_label_match_is_exact_except_radio_suffix(self):
         for actual in ('Unknown sources', 'Unknown sources ( )', 'Unknown sources (*)', ' Unknown sources (x) '):
             self.assertTrue(driver.label_matches(actual, 'Unknown sources'))

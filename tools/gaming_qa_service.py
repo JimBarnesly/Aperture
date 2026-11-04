@@ -26,8 +26,26 @@ def until(description,predicate,timeout=35):
     while time.monotonic()<deadline:
         if predicate(): return
         if monitor.waitForAbort(.15): raise RuntimeError('Kodi exited during '+description)
-    raise RuntimeError('Timed out '+description)
+    state={'window':xbmcgui.getCurrentWindowId(),
+           'dialog':xbmcgui.getCurrentWindowDialogId(),
+           'folder':xbmc.getInfoLabel('Container.FolderPath'),
+           'label':xbmc.getInfoLabel('ListItem.Label'),
+           'cards_visible':xbmc.getCondVisibility('Control.IsVisible(59)'),
+           'games_visible':xbmc.getCondVisibility('Control.IsVisible(60)')}
+    raise RuntimeError('Timed out '+description+'; state='+json.dumps(state,sort_keys=True))
 def active(): return [{'type':'game'}] if xbmc.Player().isPlayingGame() else []
+def open_console_cards():
+    root='plugin://plugin.games.aperture/'
+    if xbmcgui.getCurrentWindowId()!=10821:
+        xbmc.executebuiltin('ActivateWindow(Games,'+root+',return)')
+    elif xbmc.getInfoLabel('Container.FolderPath')!=root:
+        # Games is already open after Stop. ActivateWindow on that same window
+        # does not navigate its directory, so exercise the real Back action.
+        rpc('Input.Back')
+    until('console cards',lambda:xbmcgui.getCurrentWindowId()==10821
+          and xbmc.getInfoLabel('Container.FolderPath')==root
+          and xbmc.getCondVisibility('Control.IsVisible(59)')
+          and not xbmc.getCondVisibility('System.HasModalDialog'))
 def capture(name):
     if platform.machine() in ('x86_64','amd64'):
         xbmc.executebuiltin('TakeScreenshot('+str(out/(name+'.png'))+',sync)')
@@ -78,8 +96,7 @@ try:
             until('classic Games directory',lambda:xbmcgui.getCurrentWindowId()==10821 and xbmc.getInfoLabel('Container.FolderPath')==folder and not xbmc.getCondVisibility('System.HasModalDialog'))
             monitor.waitForAbort(.6)
         else:
-            xbmc.executebuiltin('ActivateWindow(Games,plugin://plugin.games.aperture/,return)')
-            until('console cards',lambda:xbmcgui.getCurrentWindowId()==10821 and xbmc.getCondVisibility('Control.IsVisible(59)') and not xbmc.getCondVisibility('System.HasModalDialog'))
+            open_console_cards()
             monitor.waitForAbort(.4)
             for _ in range(12):
                 if xbmc.getInfoLabel('ListItem.Property(Aperture.System)')==system: break
@@ -124,6 +141,14 @@ try:
                 until('PSX autosave written',lambda:any((runtime/'data/userdata').rglob('*.sav')),timeout=20)
                 if monitor.waitForAbort(4): raise RuntimeError('Kodi exited after PSX autosave')
                 checks.append({'check':'psx-autosave-stop-survives','save_files':len(list((runtime/'data/userdata').rglob('*.sav')))})
+            if os.environ.get('APERTURE_GAMING_SKIN')!='classic':
+                if xbmc.getInfoLabel('Container.FolderPath')!=folder:
+                    raise RuntimeError('Stop did not preserve the '+system+' game directory')
+                open_console_cards()
+                capture(system+'-back-to-console-cards')
+                checks.append({'check':'back-to-console-cards-'+system,
+                               'folder':xbmc.getInfoLabel('Container.FolderPath'),
+                               'view':59})
     result={'status':'passed','checks':checks,'limitations':['Synthetic original NES/PSX programs only','No physical Pi, 8BitDo, Bluetooth, BIOS or commercial-game testing','No audible hardware-output test']}
     (out/'result.json').write_text(json.dumps(result,indent=2))
 except Exception as exc:

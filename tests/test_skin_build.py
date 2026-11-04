@@ -8,6 +8,7 @@ from unittest.mock import patch
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / 'tools'))
 spec = importlib.util.spec_from_file_location('build_skin', ROOT/'tools/build_skin.py')
 build = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(build)
@@ -47,6 +48,22 @@ class SkinBuildTests(unittest.TestCase):
         a = build.package(self.out, self.root/'one.zip')
         b = build.package(self.out, self.root/'two.zip')
         self.assertEqual(a,b)
+
+    def test_default_build_matches_exact_fresh_zip_acceptance_set(self):
+        from zip_smoke_fixture import packages
+        repo = self.root / 'repo'
+        repo.mkdir()
+        for name in ('skin', 'format-kodi', 'movies-kodi', 'docs', 'LICENSE'):
+            (repo / name).symlink_to(ROOT / name)
+        with patch.object(build, 'ROOT', repo), patch.object(sys, 'argv',
+                ['build_skin.py', '--source', str(self.source), '--output', str(self.out)]), patch('builtins.print'):
+            build.main()
+        rows = packages(repo / 'dist')
+        self.assertEqual([row['addon'] for row in rows],
+                         ['plugin.audio.aperture.format', 'plugin.video.aperture.movies', 'skin.aperture'])
+        self.assertEqual([row['version'] for row in rows], [
+            ET.parse(ROOT / 'format-kodi/addon.xml').getroot().get('version'),
+            ET.parse(ROOT / 'movies-kodi/addon.xml').getroot().get('version'), build.VERSION])
 
     def test_unknown_font_rejected(self):
         self.assemble()

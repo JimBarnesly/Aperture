@@ -34,6 +34,23 @@ def setting_matches(state, expected, after=0):
             and time.time() - state.get('unknown_sources_read_completed', 0) < 3)
 
 
+def installed_matches(state, rows, data):
+    """Every subject must remain enabled at the exact installed user path/version."""
+    installed = state.get('installed', {})
+    for row in rows:
+        actual = installed.get(row['addon'], {})
+        expected_path = Path(data) / 'addons' / row['addon']
+        if (actual.get('enabled') is not True or actual.get('version') != row['version']
+                or not actual.get('path') or Path(actual['path']).resolve() != expected_path.resolve()):
+            return False
+    return True
+
+
+def movies_guidance(state):
+    return (state.get('dialog') == 12002
+            and 'Add your existing movie folder' in state.get('dialog_text', ''))
+
+
 
 
 class Driver:
@@ -227,9 +244,7 @@ class Driver:
             self.confirm('No')  # Exercise explicit chooser/Keep below, after restoring sources-off.
         self.wait('installed add-on enabled', lambda s: s.get('dialog') == 9999 and
             s.get('installed', {}).get(row['addon'], {}).get('enabled') is True)
-        actual = self.state()['installed'][row['addon']]
-        expected_path = self.target / 'data/addons' / row['addon']
-        if actual['version'] != row['version'] or Path(actual['path']).resolve() != expected_path:
+        if not installed_matches(self.state(), [row], self.target / 'data'):
             raise AssertionError('ZIP installation did not produce the expected user add-on/version')
         self.record('zip-installed-' + row['addon'])
 
@@ -291,7 +306,7 @@ class Driver:
         self.stop()
         self.start('skin.aperture')
         self.wait('accepted skin/sources-off persisted after restart', lambda s: setting_matches(s, False) and
-            all(s.get('installed', {}).get(addon, {}).get('enabled') for addon in SUBJECTS))
+            installed_matches(s, self.packages, self.target / 'data'))
         self.capture('zip-09-restarted-aperture')
         # Local music remains reachable alongside the independently installed
         # Format add-on. Exercise Cancel and reopen through the actual Home UI.
@@ -320,25 +335,46 @@ class Driver:
         self.capture('zip-10-installed-format')
         self.key('Escape')
         self.wait('Home after installed Format', lambda s: s.get('window') == 10000 and s.get('dialog') == 9999)
+        # This profile has no video sources. Prove the independently ZIP-installed
+        # Movies route runs, explains setup, and survives dismissal/Back/reopening.
+        self.check_movies()
         # Recovery is accepted, not just a test profile config-file replacement.
         self.choose_skin('Estuary', 'skin.estuary', 'zip-12-recovery-estuary')
         self.choose_skin(skin_name, 'skin.aperture', 'zip-13-return-aperture')
         self.stop()
         self.start('skin.aperture')
-        self.wait('recovered preference and sources-off persist', lambda s: setting_matches(s, False))
+        self.wait('recovered preference and all installed add-ons persist', lambda s: setting_matches(s, False)
+            and installed_matches(s, self.packages, self.target / 'data'))
         self.capture('zip-14-final-restart')
         verify_installed(self.target / 'packages', self.target / 'data', self.packages)
         self.stop()
         for path in (self.out / 'logs').glob('session-*.log'):
             log = path.read_text(encoding='utf-8', errors='replace')
-            for marker in ('Error loading skin', 'failed to load skin', 'EXCEPTION Thrown (PythonToCppException)', 'Aperture: operation failed'):
+            for marker in ('Error loading skin', 'failed to load skin', 'EXCEPTION Thrown (PythonToCppException)',
+                           'Aperture: operation failed', 'Aperture Movies: source listing failed'):
                 if marker.lower() in log.lower():
                     raise AssertionError('Fresh ZIP runtime error: ' + marker)
         shutil.copy2(self.target / 'data/userdata/guisettings.xml', self.out / 'final-guisettings.xml')
-        return {'status': 'passed', 'scope': 'Fresh local ZIP installer, accepted skin selection, persistent restart and accepted Estuary recovery',
+        return {'status': 'passed', 'scope': 'Fresh Format, Movies and skin ZIP installs, native media entry, accepted skin selection, persistent restart and accepted Estuary recovery',
             'checks': self.checks, 'packages': verification, 'unknown_sources_restored': True,
             'limitations': ['CI-only disposable profile and entry-window hotkeys', 'No Pi/hardware/controller/audio-output/core acceptance',
                 'No production network source or streaming acceptance']}
+
+    def check_movies(self):
+        for attempt, dismiss in ((1, 'Return'), (2, 'BackSpace')):
+            self.focus_home(100)
+            before = self.key('Return')
+            self.wait('ZIP-installed Movies no-source guidance', movies_guidance, after=before)
+            self.capture('zip-11-installed-movies-guidance-' + str(attempt))
+            before = self.key(dismiss)
+            self.wait('ZIP-installed Movies empty root', lambda s: s.get('window') == 10025
+                and s.get('dialog') == 9999
+                and s.get('folder', '').rstrip('/') == 'plugin://plugin.video.aperture.movies', after=before)
+            self.record('zip-installed-movies-empty-root-' + str(attempt))
+            before = self.key('BackSpace')
+            self.wait('Home after installed Movies', lambda s: s.get('window') == 10000
+                and s.get('dialog') == 9999 and s.get('focus') == 100, after=before)
+        self.capture('zip-11-installed-movies-home')
 
 
 def main():

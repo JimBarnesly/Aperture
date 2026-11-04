@@ -6,16 +6,29 @@ import shutil
 import xml.etree.ElementTree as ET
 import zipfile
 
-SUBJECTS = ('plugin.audio.aperture.format', 'skin.aperture')
+# Match build_skin.py's complete artifact set. Install the independent plugins
+# before the skin so its Home routes are available on the first accepted switch.
+# Games is distributed by the separate optional gaming installer, not this build.
+SUBJECTS = ('plugin.audio.aperture.format', 'plugin.video.aperture.movies', 'skin.aperture')
 OBSERVER = 'service.aperture.zipsmoke'
+
+
+def unique_checksums(pairs):
+    checksums = {}
+    for filename, digest in pairs:
+        if filename in checksums:
+            raise ValueError('Duplicated package checksum entry')
+        checksums[filename] = digest
+    return checksums
 
 
 def packages(dist):
     """Validate the exact build_skin.py filename-to-SHA256 manifest."""
     dist = Path(dist)
-    checksums = json.loads((dist / 'checksums.json').read_text(encoding='utf-8'))
+    checksums = json.loads((dist / 'checksums.json').read_text(encoding='utf-8'),
+                           object_pairs_hook=unique_checksums)
     if not isinstance(checksums, dict) or len(checksums) != len(SUBJECTS):
-        raise ValueError('Only the two exact built Aperture ZIPs are allowed')
+        raise ValueError('Only the exact built Format, Movies and skin ZIPs are allowed')
     result = {}
     for filename, digest in checksums.items():
         if (not isinstance(filename, str) or PurePosixPath(filename).name != filename
@@ -47,7 +60,9 @@ def packages(dist):
                 raise ValueError('ZIP metadata differs from checksum manifest filename')
         result[addon] = {'addon': addon, 'version': version, 'file': filename, 'sha256': digest}
     if set(result) != set(SUBJECTS):
-        raise ValueError('Both exact Aperture add-ons are required')
+        raise ValueError('All exact Format, Movies and skin add-ons are required')
+    if {path.name for path in dist.iterdir() if path.suffix.lower() == '.zip'} != set(checksums):
+        raise ValueError('Unexpected or stale ZIP outside the checksum manifest')
     return [result[addon] for addon in SUBJECTS]
 
 
@@ -140,6 +155,6 @@ def prepare(root, runtime, base_system, out):
     (out / 'package-checksums.json').write_text(json.dumps(rows, indent=2) + '\n', encoding='utf-8')
     (out / 'fixture.json').write_text(json.dumps({'fresh_subjects_absent': True, 'initial_skin': 'skin.estuary',
         'initial_unknown_sources': False, 'subjects': list(SUBJECTS), 'keymap_entry_shortcuts': True,
-        'runtime': str(target), 'scope': 'Only our two verified local ZIPs; no user profile or network RPC'}, indent=2) + '\n', encoding='utf-8')
+        'runtime': str(target), 'scope': 'Only verified local Format, Movies and skin ZIPs; no user profile or network RPC'}, indent=2) + '\n', encoding='utf-8')
     return target, rows
 

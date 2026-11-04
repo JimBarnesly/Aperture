@@ -12,6 +12,17 @@
   These filesystem fixtures are not tests on a physical Raspberry Pi.
 - Real GUI: official Kodi 21.3, isolated fresh profile, accepted Aperture switch,
   repeated native navigation, cancel/back, recovery to Estuary, timeout rollback.
+- Fresh ZIP GUI acceptance: a second empty profile installs exactly the three
+  packages produced by `tools/build_skin.py`: Format, Movies, then the complete
+  skin. Each is selected through Kodi's native ZIP installer, observed enabled
+  at its expected user add-on path/version, and checked byte-for-byte against its
+  SHA256-verified archive. Missing, duplicate, unexpected and unlisted stale ZIPs
+  are rejected. All three add-ons must remain enabled at the same paths/versions
+  after restart and accepted Estuary recovery. Unknown sources is restored off.
+  The installed Home exercises local music, Format, and Movies' no-source setup
+  guidance with dismissal, Back and reopening. No real video source is added.
+  The optional Games add-on is not produced by this build and remains covered by
+  its separate gaming acceptance, not the fresh ZIP phase.
 - Format GUI fixture: synthetic original tones and artwork on loopback only.
   This fixture is not a replacement for anyone's library or proof of access to
   their Format server. Clocked discard audio is not an audible-output test.

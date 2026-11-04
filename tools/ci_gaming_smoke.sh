@@ -42,6 +42,22 @@ for _ in {1..1800}; do
   kill -0 "$K_PID" 2>/dev/null || { echo 'Kodi exited without test result'; cat "$OUT/kodi.stdout"; exit 1; }
   sleep .1
 done
+# Bounded visual evidence for reviewers whose connector cannot download artifacts.
+# These are disposable synthetic-fixture captures, never the user's media.
+python3 - "$OUT" <<'PY'
+import base64
+from pathlib import Path
+import subprocess
+import sys
+out = Path(sys.argv[1])
+for screenshot in sorted(out.glob('*.png'))[:20]:
+    preview = screenshot.with_suffix('.preview.jpg')
+    subprocess.run(['convert', str(screenshot), '-resize', '640x360', '-quality', '65', str(preview)],
+                   check=True, timeout=10)
+    print('APERTURE_SCREENSHOT_BASE64_BEGIN ' + preview.name, flush=True)
+    print(base64.b64encode(preview.read_bytes()).decode(), flush=True)
+    print('APERTURE_SCREENSHOT_BASE64_END ' + preview.name, flush=True)
+PY
 python3 - "$OUT/result.json" <<'PY'
 import json,sys
 r=json.load(open(sys.argv[1])); print(json.dumps(r,indent=2)); assert r['status']=='passed'

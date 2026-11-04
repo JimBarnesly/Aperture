@@ -9,7 +9,7 @@ import xbmc
 import xbmcaddon
 import xbmcgui
 
-SUBJECTS = ('plugin.audio.aperture.format', 'skin.aperture')
+SUBJECTS = ('plugin.audio.aperture.format', 'plugin.video.aperture.movies', 'skin.aperture')
 
 
 
@@ -71,6 +71,8 @@ def observe(sequence, settings):
     return {'sequence': sequence, 'time': time.time(), 'pid': os.getpid(),
         'skin': xbmc.getSkinDir(), 'window': current, 'dialog': dialog, 'focus': focus,
         'control_label': xbmc.getInfoLabel('System.CurrentControl'), 'list_item': xbmc.getInfoLabel('ListItem.Label'),
+        'dialog_text': ' '.join(xbmc.getInfoLabel('Control.GetLabel(' + str(control) + ')')
+                                for control in (1, 9, 10)) if dialog == 12002 else '',
         **settings.snapshot(), 'installed': installed,
         'folder': xbmc.getInfoLabel('Container.FolderPath'),
         'item_path': xbmc.getInfoLabel('ListItem.FileNameAndPath'),
