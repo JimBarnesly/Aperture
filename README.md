@@ -29,7 +29,7 @@ Use the complete, tested ZIPs from the candidate kit or matching CI artifact:
    does not silently enable that setting. Disable it again after installation.
 5. Choose Aperture in Settings > Interface > Skin. Select Keep only when the
    screen and controls respond. Otherwise let the automatic rollback happen.
-6. Open Music. Configure the reachable Format server address in the add-on
+6. Open Music > Format streaming. Configure the reachable Format server address in the add-on
    settings, then open Albums. Long-press an album (or press C) and choose **Play
    album** to play the complete release in disc/track order.
 
@@ -93,3 +93,13 @@ Builds are assembled from the installed official Estuary; use the exact CI runti
 for byte-identical packages. ZIP timestamps/order are deterministic and hashes
 are in `dist/checksums.json`. Upstream notices are retained. See
 [upstream boundaries](docs/UPSTREAM.md) and [testing](docs/TESTING.md).
+
+## Optional Pi gaming and local media
+
+The independent [Pi gaming installer](docs/pi-gaming.md) adds a read-only ROM
+browser and native RetroPlayer cores. The home Games item opens that browser
+when enabled and keeps native Games as the fallback. Physical controller, HDMI
+and game compatibility still need testing on your Pi.
+
+[Local music and movies](docs/local-media.md) explains the Music source choice
+and HDD browsing without moving media or changing mounts.

@@ -34,21 +34,49 @@ menu=control(cs,'group'); animation(menu,'fade',0,100,380,320)
 control(menu,'label',left=80,top=75,width=535,height=65,font='font32',textcolor='FFB9CBCF',align='right',label='Aperture')
 control(menu,'label',left=1480,top=64,width=358,height=80,font='font_clock',textcolor='FFFFFFFF',shadowcolor='80000000',align='right',label='$INFO[System.Time]')
 items=[(100,'Movies'),(101,'TV shows'),(103,'Music'),(102,'Games'),(104,'Sources'),(105,'Settings')]
-actions={100:'ActivateWindow(Videos,videodb://movies/titles/,return)',101:'ActivateWindow(Videos,videodb://tvshows/titles/,return)',102:'ActivateWindow(Games)',104:'ActivateWindow(Videos)',105:'ActivateWindow(Settings)'}
+actions={104:'ActivateWindow(Videos,sources://video/,return)',105:'ActivateWindow(Settings)'}
 ids=[ident for ident,_ in items]
 for index,(ident,label) in enumerate(items):
     y=300+index*88
     # One visible label per destination. The button retains its accessible name;
     # separate conditional labels allow the original large active-title rhythm.
-    b=control(menu,'button',ident,left=80,top=y,width=550,height=86,label=label,font='font32',textcolor='00000000',focusedcolor='00000000',texturefocus='',texturenofocus='',onleft=106,onright=ident,onup=ids[index-1] if index else 106,ondown=ids[index+1] if index+1<len(ids) else 106)
+    b=control(menu,'button',ident,left=80,top=y,width=550,height=86,label=label,font='font32',textcolor='00000000',focusedcolor='00000000',texturefocus='',texturenofocus='',onleft=106,onright=203 if ident==103 else ident,onup=ids[index-1] if index else 106,ondown=ids[index+1] if index+1<len(ids) else 106)
     if ident==103:
-        E.SubElement(b,'onclick',{'condition':'System.AddonIsEnabled(plugin.audio.aperture.format)'}).text='ActivateWindow(Music,plugin://plugin.audio.aperture.format/,return)'
-        E.SubElement(b,'onclick',{'condition':'!System.AddonIsEnabled(plugin.audio.aperture.format)'}).text='ActivateWindow(Music)'
+        E.SubElement(b,'onclick').text='SetFocus(203)'
+    elif ident in (100,101):
+        content='Movies' if ident==100 else 'TVShows'
+        folder='movies' if ident==100 else 'tvshows'
+        E.SubElement(b,'onclick',{'condition':f'Library.HasContent({content})'}).text=f'ActivateWindow(Videos,videodb://{folder}/titles/,return)'
+        E.SubElement(b,'onclick',{'condition':f'!Library.HasContent({content})'}).text='ActivateWindow(Videos,sources://video/,return)'
+    elif ident==102:
+        E.SubElement(b,'onclick',{'condition':'System.AddonIsEnabled(plugin.games.aperture)'}).text='ActivateWindow(Games,plugin://plugin.games.aperture/,return)'
+        E.SubElement(b,'onclick',{'condition':'!System.AddonIsEnabled(plugin.games.aperture)'}).text='ActivateWindow(Games)'
     else: E.SubElement(b,'onclick').text=actions[ident]
-    control(menu,'label',left=50,top=y,width=565,height=86,font='font32',align='right',aligny='center',textcolor='FF9DB2B9',shadowcolor='40000000',label=label,visible=f'!Control.HasFocus({ident})')
-    active=control(menu,'group',visible=f'Control.HasFocus({ident})')
+    focused=f'Control.HasFocus({ident})'
+    if ident==103: focused+=' | Control.HasFocus(203) | Control.HasFocus(204)'
+    control(menu,'label',left=50,top=y,width=565,height=86,font='font32',align='right',aligny='center',textcolor='FF9DB2B9',shadowcolor='40000000',label=label,visible=f'![{focused}]')
+    active=control(menu,'group',visible=focused)
     E.SubElement(active,'animation',{'effect':'fade','time':'130'}).text='VisibleChange'
     control(active,'label',left=25,top=y,width=590,height=86,font='font60',align='right',aligny='center',textcolor='FFF4FCFD',shadowcolor='60000000',label=label)
     control(active,'image',left=638,top=y+14,width=5,height=58,texture='aperture/focus-marker.png')
 control(menu,'button',106,left=365,top=942,width=250,height=70,label='Power',font='font13',align='right',aligny='center',textcolor='FF8FA9B0',focusedcolor='FFDFFBFF',texturefocus='',texturenofocus='',onleft=105,onright=103,onup=105,ondown=100,onclick='ActivateWindow(ShutdownMenu)')
+# This is a contextual choice inside Music, not another home destination or a
+# second media database. Kodi owns the source paths and the local library.
+music=control(menu,'group',visible='Control.HasFocus(103) | Control.HasFocus(203) | Control.HasFocus(204)')
+panel=control(music,'image',left=740,top=416,width=1000,height=302)
+E.SubElement(panel,'texture',{'colordiffuse':'EB13262D'}).text='colors/white.png'
+for ident,label,y,action in (
+    (203,'Local music',444,'ActivateWindow(Music,library://music/,return)'),
+    (204,'Format streaming',566,'ActivateWindow(Music,plugin://plugin.audio.aperture.format/,return)'),
+):
+    b=control(music,'button',ident,left=785,top=y,width=910,height=70,label=label,font='font32',textcolor='FFB9CBCF',focusedcolor='FFF4FCFD',disabledcolor='FF6C8189',texturefocus='',texturenofocus='',onleft=103,onright=ident,onup=103 if ident==203 else 203,ondown=204 if ident==203 else 103,onback=103)
+    if ident==204:
+        E.SubElement(b,'enable').text='System.AddonIsEnabled(plugin.audio.aperture.format)'
+        E.SubElement(b,'onclick',{'condition':'System.AddonIsEnabled(plugin.audio.aperture.format)'}).text=action
+    else:
+        E.SubElement(b,'onclick').text=action
+    control(music,'image',left=760,top=y+10,width=5,height=50,texture='aperture/focus-marker.png',visible=f'Control.HasFocus({ident})')
+control(music,'label',left=785,top=514,width=910,height=36,font='font13',textcolor='FF9DB2B9',label='Albums, artists and Files from your Kodi sources')
+control(music,'label',left=785,top=636,width=910,height=36,font='font13',textcolor='FF9DB2B9',label='Music from your Format server',visible='System.AddonIsEnabled(plugin.audio.aperture.format)')
+control(music,'label',left=785,top=636,width=910,height=36,font='font13',textcolor='FF9DB2B9',label='Install or enable the Format add-on to stream music',visible='!System.AddonIsEnabled(plugin.audio.aperture.format)')
 E.indent(win,space='  '); E.ElementTree(win).write(ROOT/'skin/xml/Home.xml',encoding='utf-8',xml_declaration=True)

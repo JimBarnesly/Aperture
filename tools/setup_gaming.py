@@ -138,7 +138,7 @@ def make_core_addon(core, library, destination):
     ET.SubElement(requires,'import',addon='game.libretro',version='1.0.0')
     ET.SubElement(requires,'import',addon='game.controller.default',version='1.0.0')
     ext=ET.SubElement(addon,'extension',point='kodi.gameclient',library_linux=core.library)
-    for k,v in {'platforms':core.title,'extensions':core.extensions,'supports_vfs':'false' if core.key=='pcsxrearmed' else 'true','supports_standalone':'false','supports_disc_control':'true' if core.key=='pcsxrearmed' else 'false','libretro_core':core.library.removesuffix('.so')}.items():
+    for k,v in {'platforms':core.title,'extensions':core.extensions,'supports_vfs':'false' if core.key in ('pcsxrearmed','genesisplusgx') else 'true','supports_standalone':'false','supports_disc_control':'true' if core.key=='pcsxrearmed' else 'false','libretro_core':core.library.removesuffix('.so')}.items():
         ET.SubElement(ext,k).text=v
     meta=ET.SubElement(addon,'extension',point='xbmc.addon.metadata')
     for k,v in {'platform':'linux','license':core.license,'summary':'Local '+core.title+' core for Aperture','description':'Uses a separately sourced emulator library. No games or BIOS are included.'}.items():

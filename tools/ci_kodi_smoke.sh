@@ -410,7 +410,18 @@ try:
             checks.append({'check':f'home-focus-{cycle}-{control}','state':state()})
         for control,expected,name in [(100,10025,'movies'),(101,10025,'television'),(102,10821,'games'),(103,10502,'music'),(104,10025,'videos'),(105,10004,'settings')]:
             focus(control); before=press('Return')
+            if control == 103:
+                wait_for('Music choice opens on Local music', lambda s:s.get('window')==HOME and s.get('focus')==203, after=before)
+                before=press('Escape')
+                wait_for('Music choice Back returns to Music', lambda s:s.get('window')==HOME and s.get('focus')==103, after=before)
+                before=press('Right')
+                wait_for('Music choice reopens after Back', lambda s:s.get('window')==HOME and s.get('focus')==203, after=before)
+                before=press('Return')
             wait_for(name+' opened',lambda s:s.get('window')==expected and s.get('skin')=='skin.aperture',after=before)
+            if control == 103:
+                wait_for('Local library remains separate from Format', lambda s:s.get('folder')=='library://music/', after=before)
+            if control in (100,101,104):
+                wait_for('Unscanned video sources are reachable', lambda s:s.get('folder')=='sources://video/', after=before)
             if cycle==0: screenshot('03-'+name)
             for _ in range(5):
                 if state().get('window')==HOME: break

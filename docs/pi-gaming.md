@@ -58,7 +58,7 @@ Restart Kodi and enable **Aperture Game Library** and the **Aperture · …** em
 add-ons in Add-ons → My add-ons if Kodi asks. A copied user add-on can be disabled
 until this explicit enable; the installer does not bypass this by editing its DB.
 Open Games → Game add-ons → Aperture Game Library. Choose a system and game.
-The current skin's Games entry opens native Games; no dashboard duplication is added.
+The updated skin's Games entry opens Aperture Game Library when enabled, with native Games as its fallback; no dashboard duplication is added.
 
 Pair the 8BitDo yourself. The mode/transport determines its reported device name
 and layout; automatic mapping is not guaranteed. If necessary use Kodi Settings

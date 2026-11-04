@@ -293,8 +293,26 @@ class Driver:
         self.wait('accepted skin/sources-off persisted after restart', lambda s: setting_matches(s, False) and
             all(s.get('installed', {}).get(addon, {}).get('enabled') for addon in SUBJECTS))
         self.capture('zip-09-restarted-aperture')
-        # Reach the independently ZIP-installed Format plug-in through Home.
+        # Local music remains reachable alongside the independently installed
+        # Format add-on. Exercise Cancel and reopen through the actual Home UI.
         self.focus_home(103)
+        before = self.key('Return')
+        self.wait('ZIP-installed Music choice', lambda s:s.get('window') == 10000 and s.get('focus') == 203, after=before)
+        before = self.key('Escape')
+        self.wait('Music choice cancels to Home Music', lambda s:s.get('window') == 10000 and s.get('focus') == 103, after=before)
+        before = self.key('Right')
+        self.wait('Music choice reopens', lambda s:s.get('window') == 10000 and s.get('focus') == 203, after=before)
+        before = self.key('Return')
+        self.wait('ZIP-installed local music', lambda s:s.get('window') == 10502
+            and s.get('folder') == 'library://music/', after=before)
+        self.record('local-music-alongside-format')
+        self.key('Escape')
+        self.wait('Home after local music', lambda s:s.get('window') == 10000 and s.get('dialog') == 9999)
+        self.focus_home(103)
+        before = self.key('Right')
+        self.wait('Music choice before Format', lambda s:s.get('window') == 10000 and s.get('focus') == 203, after=before)
+        before = self.key('Down')
+        self.wait('Format choice focused', lambda s:s.get('window') == 10000 and s.get('focus') == 204, after=before)
         self.key('Return')
         self.wait('ZIP-installed Format root', lambda s: s.get('window') == 10502
             and s.get('folder', '').startswith('plugin://plugin.audio.aperture.format/'))
