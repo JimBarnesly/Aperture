@@ -88,12 +88,18 @@ sed -i '/<addon /s/id="skin.estuary"/id="skin.aperture"/; /<addon /s/name="Estua
 if [ "$BASELINE" -eq 0 ]; then
   # Use one complete, matching source checkout, never moving remote fragments.
   [ -f "$SOURCE_DIR/skin/xml/Home.xml" ] || fail 'Use the complete source checkout or install the complete ZIP through Kodi.'
-  HOME_SHA=536eda136f2c82441fbb43ca84156de435ce84321e8c6cd324c7eb0dc63e7122
+  HOME_SHA=ae1eb00d33f862db6c88e1fa73864d96a62c74cfb149023c021de65f35a5eeee
   cp "$SOURCE_DIR/skin/xml/Home.xml" "$STAGE/Home.xml"
   printf '%s  %s\n' "$HOME_SHA" "$STAGE/Home.xml" | sha256sum -c - >/dev/null || fail 'Home.xml integrity check failed'
   [ -d "$SOURCE_DIR/skin/media/aperture" ] || fail 'Matching Aperture artwork missing'
   [ -f "$SOURCE_DIR/skin/licenses/MediaStream-CC-BY-SA-3.0.txt" ] || fail 'Artwork attribution missing'
   cp "$STAGE/Home.xml" "$TMP/xml/Home.xml"
+  cp "$SOURCE_DIR/skin/xml/DialogButtonMenu.xml" "$TMP/xml/DialogButtonMenu.xml"
+  if command -v python3 >/dev/null 2>&1; then
+    python3 "$SOURCE_DIR/tools/style_dialogs.py" "$TMP"
+  else
+    printf "Python 3 unavailable: shared dialog palette remains upstream.\n"
+  fi
   [ -f "$SOURCE_DIR/skin/xml/MyGames.xml" ] || fail 'Matching game browser XML missing'
   GAMES_SHA=b37bdad96419ef0f3c8533638e43b7535f2e495707e314500d3592e93de232ba
   printf '%s  %s\n' "$GAMES_SHA" "$SOURCE_DIR/skin/xml/MyGames.xml" | sha256sum -c - >/dev/null || fail 'MyGames.xml integrity check failed'

@@ -16,6 +16,9 @@ class SkinInstallerTests(unittest.TestCase):
         (self.skin/'addon.xml').write_text('<?xml version="1.0"?>\n<addon id="skin.estuary" version="4.0.0" name="Estuary"><requires><import addon="xbmc.gui" version="5.17.0"/></requires></addon>\n')
         (self.skin/'xml/Font.xml').write_text('<fonts>\n<filename>regular.ttf</filename>\n<filename>arial.ttf</filename>\n</fonts>')
         (self.skin/'fonts/regular.ttf').write_bytes(b'original font')
+        (self.skin/'xml/Includes.xml').write_text('<includes><include name="DialogBackgroundCommons"><control type="group"/></include></includes>')
+        for name in ('Includes_Buttons.xml','Includes_DialogSelect.xml'):
+            (self.skin/'xml'/name).write_text('<includes/>')
         for file in ('Home.xml','Settings.xml','SettingsCategory.xml','DialogConfirm.xml'):
             (self.skin/'xml'/file).write_text('<window/>')
         self.bin=self.root/'bin';self.bin.mkdir()

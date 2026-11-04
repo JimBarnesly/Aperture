@@ -22,6 +22,9 @@ class SkinBuildTests(unittest.TestCase):
         (self.source/'xml').mkdir(parents=True)
         (self.source/'fonts').mkdir()
         (self.source/'fonts/regular.ttf').write_bytes(b'font fixture')
+        (self.source/'xml/Includes.xml').write_text('<includes><include name="DialogBackgroundCommons"><control type="group"/></include></includes>')
+        for name in ('Includes_Buttons.xml','Includes_DialogSelect.xml'):
+            (self.source/'xml'/name).write_text('<includes/>')
         (self.source/'addon.xml').write_text('<addon id="skin.estuary" version="4.0.0"><requires><import addon="xbmc.gui" version="5.17.0"/></requires><extension point="xbmc.addon.metadata"><license>Original</license></extension></addon>')
         (self.source/'xml/Font.xml').write_text('<fonts><fontset><font><name>font32</name><filename>regular.ttf</filename></font><font><name>font13</name><filename>regular.ttf</filename></font><font><name>font60</name><filename>regular.ttf</filename></font><font><name>font_clock</name><filename>regular.ttf</filename></font><font><name>font10</name><filename>regular.ttf</filename></font></fontset></fonts>')
         for name in ('Home.xml', 'Settings.xml', 'SettingsCategory.xml', 'DialogConfirm.xml'):

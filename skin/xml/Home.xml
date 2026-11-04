@@ -24,16 +24,6 @@
     <control type="group">
       <animation effect="fade" start="0" end="100" time="380" delay="320" tween="cubic" easing="out">WindowOpen</animation>
       <control type="label">
-        <left>80</left>
-        <top>75</top>
-        <width>535</width>
-        <height>65</height>
-        <font>font32</font>
-        <textcolor>FFB9CBCF</textcolor>
-        <align>right</align>
-        <label>Aperture</label>
-      </control>
-      <control type="label">
         <left>1480</left>
         <top>64</top>
         <width>358</width>

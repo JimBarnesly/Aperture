@@ -31,7 +31,6 @@ control(cs,'image',left=0,top=0,width=1920,height=1080,texture='aperture/bridge.
 blade=control(cs,'group'); animation(blade,'slide','-760,0','0,0',540,190)
 control(blade,'image',left=0,top=0,width=760,height=1080,texture='aperture/blade.png')
 menu=control(cs,'group'); animation(menu,'fade',0,100,380,320)
-control(menu,'label',left=80,top=75,width=535,height=65,font='font32',textcolor='FFB9CBCF',align='right',label='Aperture')
 control(menu,'label',left=1480,top=64,width=358,height=80,font='font_clock',textcolor='FFFFFFFF',shadowcolor='80000000',align='right',label='$INFO[System.Time]')
 items=[(100,'Movies'),(101,'TV shows'),(103,'Music'),(102,'Games'),(104,'Sources'),(105,'Settings')]
 actions={104:'ActivateWindow(Videos,sources://video/,return)',105:'ActivateWindow(Settings)'}

@@ -1,0 +1,48 @@
+name: Kodi 21.3 menu styling acceptance
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'tools/style_dialogs.py'
+      - 'skin/**'
+      - 'tools/build_skin.py'
+      - 'tools/menus_*'
+      - '.github/workflows/menus-smoke.yml'
+permissions:
+  contents: read
+jobs:
+  movies:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        sources: [empty]
+    container:
+      image: debian:forky-slim
+    defaults:
+      run:
+        shell: bash
+    env:
+      DEBIAN_FRONTEND: noninteractive
+      APERTURE_MOVIES_SCENARIO: ${{ matrix.sources }}
+    steps:
+      - name: Install signed distribution Kodi and synthetic fixture tools
+        run: |
+          apt-get update
+          apt-get install --yes --no-install-recommends ca-certificates git python3 python3-pil ffmpeg kodi kodi-bin kodi-data xvfb xauth x11-utils libgl1-mesa-dri fonts-noto-core fonts-noto-mono fonts-roboto-unhinted pulseaudio pulseaudio-utils
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Exercise disposable Kodi profile as unprivileged user
+        run: |
+          useradd --create-home --shell /bin/bash moviesqa
+          chown -R moviesqa:moviesqa "$GITHUB_WORKSPACE"
+          runuser -u moviesqa -- bash tools/menus_smoke.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: aperture-menus-${{ matrix.sources }}-${{ github.sha }}
+          path: build/menus-smoke/
+          if-no-files-found: warn
+          retention-days: 14
