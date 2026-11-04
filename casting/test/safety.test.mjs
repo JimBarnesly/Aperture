@@ -1,0 +1,16 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import {videoId,mediaUrl,numberIn,privateRuntime,privateLogger} from '../safety.mjs';
+import {makePlayer} from '../player.mjs';
+test('accepts only valid YouTube video ids',()=>{assert.equal(videoId('abcdefgh_12'),'abcdefgh_12');for(const x of ['../etc/passwd','https://x',undefined,'x;echo foo'])assert.throws(()=>videoId(x));});
+test('media origin is HTTPS googlevideo only',()=>{assert.match(mediaUrl('https://r1.googlevideo.com/videoplayback?x=1'),/^https/);for(const x of ['file:///etc/passwd','http://r1.googlevideo.com/a','https://googlevideo.com.evil.test/a','https://user:pass@r1.googlevideo.com/a','https://127.0.0.1/a'])assert.throws(()=>mediaUrl(x));});
+test('rejects invalid control ranges',()=>{assert.equal(numberIn(20,0,100),20);for(const x of [NaN,Infinity,-1,101])assert.throws(()=>numberIn(x,0,100));});
+test('private runtime rejects broad directories and symlinks',async()=>{const root=await fs.mkdtemp(path.join(os.tmpdir(),'cast-test-'));try{await fs.chmod(root,0o700);const dir=await privateRuntime(root);assert.equal((await fs.stat(dir)).mode&0o077,0);await fs.chmod(root,0o755);await assert.rejects(privateRuntime(root));await fs.chmod(root,0o700);await fs.symlink(root,root+'-link');await assert.rejects(privateRuntime(root+'-link'));}finally{await fs.rm(root,{recursive:true,force:true});await fs.rm(root+'-link',{force:true});}});
+test('third-party logger discards sensitive text',()=>{const log=privateLogger();for(const method of ['debug','info','warn','error'])assert.equal(log[method]('token=SECRET'),undefined);});
+const base=class {};
+test('player reports loaded, failed and invalid playback honestly',async()=>{let loads=0;const mpv={load:async()=>{loads++},command:async()=>0};const p=makePlayer(base,mpv,async()=> 'https://r1.googlevideo.com/a');assert.equal(await p.doPlay({id:'abcdefgh_12'}),true);assert.equal(loads,1);mpv.load=async()=>{throw Error('failure')};assert.equal(await p.doPlay({id:'abcdefgh_12'}),false);await assert.rejects(p.doPlay({id:'bad'}));});
+test('stale resolution never starts playback after stop',async()=>{let done,loads=0;const mpv={load:async()=>{loads++},command:async()=>0};const p=makePlayer(base,mpv,()=>new Promise(r=>done=r));const playing=p.doPlay({id:'abcdefgh_12'});await p.doStop();done('https://r1.googlevideo.com/a');assert.equal(await playing,false);assert.equal(loads,0);});
+test('volume never exceeds safe range',async()=>{const calls=[];const p=makePlayer(base,{command:async(...a)=>calls.push(a)},async()=>{});await assert.rejects(p.doSetVolume({level:101}));assert.equal(calls.length,0);await p.doSetVolume({level:40,muted:true});assert.deepEqual(calls,[['set_property','volume',40],['set_property','mute',true]]);});
