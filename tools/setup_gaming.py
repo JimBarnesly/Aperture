@@ -158,6 +158,9 @@ def make_core_addon(core, library, destination):
     for number in ('1','2'):
         ET.SubElement(ET.SubElement(topology,'port',id=number,type='controller'),'accepts',controller='game.controller.default')
     write_xml(destination/'resources/topology.xml',topology)
+    if core.key == 'pcsxrearmed':
+        # UI definitions only; never overwrite saved user settings or enable enhancement.
+        shutil.copytree(ROOT/'pcsx-settings/resources', destination/'resources', dirs_exist_ok=True)
     # Preserve the installed package's attribution/license without redistributing it remotely.
     if core.package:
         copyright=Path('/usr/share/doc')/core.package/'copyright'

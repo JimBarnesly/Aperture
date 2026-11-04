@@ -1,0 +1,28 @@
+msgid ""
+msgstr ""
+"Language: en_GB\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgctxt "#32000"
+msgid "PlayStation video"
+msgstr ""
+
+msgctxt "#32001"
+msgid "Optional image enhancement. Native resolution is the safest default."
+msgstr ""
+
+msgctxt "#32002"
+msgid "Enhanced resolution (2x)"
+msgstr ""
+
+msgctxt "#32003"
+msgid "Stop and restart the game after changing this. Doubles internal resolution for supported low-resolution modes, mainly improving 3D geometry. Pre-rendered 2D backgrounds gain little detail. May reduce speed or cause visual glitches; return to Native if that happens. Speed hacks stay disabled."
+msgstr ""
+
+msgctxt "#32004"
+msgid "Native (recommended)"
+msgstr ""
+
+msgctxt "#32005"
+msgid "Enhanced 2x (experimental)"
+msgstr ""

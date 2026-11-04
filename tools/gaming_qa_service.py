@@ -8,6 +8,7 @@ import subprocess
 import platform
 import xbmc
 import xbmcgui
+import xbmcaddon
 
 out=Path(os.environ['APERTURE_GAMING_OUT'])
 runtime=Path(os.environ['APERTURE_GAMING_RUNTIME'])
@@ -38,6 +39,20 @@ try:
     for addon in ('game.libretro','peripheral.joystick','game.libretro.aperture.nestopia','game.libretro.aperture.pcsxrearmed'):
         rpc('Addons.SetAddonEnabled',{'addonid':addon,'enabled':True})
     until('core enabled',lambda:xbmc.getCondVisibility('System.AddonIsEnabled(game.libretro.aperture.nestopia)'))
+    psx_addon=xbmcaddon.Addon('game.libretro.aperture.pcsxrearmed')
+    if psx_addon.getSetting('pcsx_rearmed_neon_enhancement_enable') != 'disabled':
+        raise RuntimeError('Enhanced resolution must default to disabled')
+    xbmc.executebuiltin('Addon.OpenSettings(game.libretro.aperture.pcsxrearmed)')
+    until('PSX settings UI',lambda:xbmcgui.getCurrentWindowDialogId()==10140)
+    monitor.waitForAbort(.5)
+    capture('psx-video-settings')
+    checks.append({'check':'psx-settings-ui-opens','dialog':xbmcgui.getCurrentWindowDialogId(),'native_default':True})
+    rpc('Input.Back')
+    until('settings closed',lambda:not xbmc.getCondVisibility('System.HasModalDialog'))
+    # Test-only preference in this disposable Kodi profile. User installations stay native.
+    psx_addon.setSetting('pcsx_rearmed_neon_enhancement_enable','enabled')
+    if psx_addon.getSetting('pcsx_rearmed_neon_enhancement_enable') != 'enabled':
+        raise RuntimeError('Cannot set string-valued enhancement option')
     systems=rpc('Files.GetDirectory',{'directory':'plugin://plugin.games.aperture/','media':'files'})['files']
     if not any('Nintendo' in item['label'] for item in systems): raise RuntimeError('NES system missing from actual plugin root')
     checks.append({'check':'actual-plugin-system-list','labels':[i['label'] for i in systems]})
@@ -66,6 +81,11 @@ try:
             if not any(p['type']=='game' for p in players): raise RuntimeError('Game stopped prematurely: '+system)
             shot=system+'-playing-'+str(cycle)
             capture(shot)
+            if system=='psx':
+                log=(out/'logs/kodi.log').read_text(errors='replace')
+                if 'Creating render buffer of size 640x480' not in log:
+                    raise RuntimeError('Enhanced PSX did not produce expected 640x480 frame')
+                checks.append({'check':'psx-enhanced-resolution-640x480'})
             means=subprocess.check_output(['convert',str(out/(shot+'.png')),'-format','%[fx:mean.r] %[fx:mean.g] %[fx:mean.b]','info:'],text=True,timeout=10)
             red,green,blue=map(float,means.split())
             if not (green>.1 and green>red*1.5 and green>blue*1.5):
