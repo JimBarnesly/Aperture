@@ -184,7 +184,7 @@ cat > "$KODI_DATA/userdata/advancedsettings.xml" <<'XML'
 XML
 mkdir -p "$KODI_DATA/userdata/keymaps"
 cat > "$KODI_DATA/userdata/keymaps/ci.xml" <<'XML'
-<keymap><global><keyboard><i>ActivateWindow(10032)</i></keyboard></global></keymap>
+<keymap><global><keyboard><i>ActivateWindow(10032)</i></keyboard></global><Home><keyboard><i>ActivateWindow(10032)</i></keyboard></Home></keymap>
 XML
 # Synthetic loopback Format server and read-only player observer. No user data.
 python3 "$ROOT/tests/kodi_format_fixture.py" prepare --runtime "$RUNTIME" --out "$OUT"

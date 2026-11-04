@@ -29,7 +29,7 @@ Use the complete, tested ZIPs from the candidate kit or matching CI artifact:
    does not silently enable that setting. Disable it again after installation.
 5. Choose Aperture in Settings > Interface > Skin. Select Keep only when the
    screen and controls respond. Otherwise let the automatic rollback happen.
-6. Open Format Music. Configure the reachable Format server address in the add-on
+6. Open Music. Configure the reachable Format server address in the add-on
    settings, then open Albums. Long-press an album (or press C) and choose **Play
    album** to play the complete release in disc/track order.
 
@@ -46,8 +46,9 @@ live replacement, preserve older add-ons outside Kodi's scan directory and leave
 settings, libraries, credentials and the add-on database alone.
 
 For an offline checkout set `APERTURE_SOURCE_DIR` to its absolute path. A custom
-profile can be supplied as `APERTURE_KODI_HOME`. The skin installer fetches only a
-pinned, hash-verified Home file if no checkout is supplied. Its `--baseline` mode
+profile can be supplied as `APERTURE_KODI_HOME`. The skin installer requires the
+complete matching checkout, including artwork and notices. A detached Format
+installer requires an explicit immutable `APERTURE_REF` commit SHA. Skin `--baseline` mode
 retains unmodified Estuary Home for diagnosis. It does not install or reconfigure
 the OS, stop services, flash storage, enable SSH or provision Format.
 

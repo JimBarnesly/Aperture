@@ -124,7 +124,7 @@ def prepare(root, runtime, base_system, out):
 <i>ActivateWindow(10032,lookandfeel.skin)</i>
 <n>ActivateWindow(10016,addons.unknownsources)</n>
 <h>ActivateWindow(10000)</h>
-</keyboard></global></keymap>''', encoding='utf-8')
+</keyboard></global><Home><keyboard><i>ActivateWindow(10032,lookandfeel.skin)</i></keyboard></Home></keymap>''', encoding='utf-8')
     observer = system / 'addons' / OBSERVER
     observer.mkdir()
     shutil.copy2(root / 'tools/zip_smoke_observer.py', observer / 'service.py')

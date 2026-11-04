@@ -1,6 +1,6 @@
 """Actual GUI/player Format assertions, called from ci_kodi_smoke.sh's driver.
 
-run(globals()) consumes existing state/wait_for/press/screenshot/find_label hooks.
+run(globals()) consumes state/wait_for/press/screenshot/find_label/settle_focus hooks.
 No network RPC is enabled; playback evidence comes from the read-only observer.
 """
 import json
@@ -33,9 +33,17 @@ def observation_is_fresh(actual, pid, after, now):
             and 0 <= now - actual.get("time", 0) < 3)
 
 
+def settled_observation(settle_focus, music, wait_music, description, predicate, after=0):
+    """Sample metadata after both GUI animation and the observer have advanced."""
+    settle_focus()
+    sequence = max(after, music().get("sequence", 0))
+    return wait_music(description, predicate, after=sequence)
+
+
 def run(hooks):
     state, wait_for, press = (hooks[key] for key in ("state", "wait_for", "press"))
     screenshot, find_label = hooks["screenshot"], hooks["find_label"]
+    settle_focus = hooks["settle_focus"]
     out = Path(os.environ["APERTURE_SMOKE_OUT"])
     config = json.loads((out / "format-expected.json").read_text())
     runtime = Path(config["runtime"])
@@ -65,6 +73,9 @@ def run(hooks):
             time.sleep(0.1)
         raise AssertionError("Timed out: {}; last actual Format state={}".format(description, last))
 
+    def settled_music(description, predicate, after=0):
+        return settled_observation(settle_focus, music, wait_music, description, predicate, after)
+
     def clock(actual):
         value = actual["player"]["properties"]["time"]
         return value["hours"] * 3600 + value["minutes"] * 60 + value["seconds"] + value["milliseconds"] / 1000
@@ -78,6 +89,12 @@ def run(hooks):
         actual = wait_music("Format folder before focusing " + title,
                             lambda s: route_is(s.get("folder", ""), action, **parameters), after=after)
         for step in range(max_steps + 1):
+            # A changed title can be the first frame of a moving container.
+            # Settle first, then take a newer metadata sample before deciding
+            # whether another arrow is necessary. Never act on the prior frame.
+            actual = settled_music("Stable Format focus toward " + title,
+                                   lambda s: route_is(s.get("folder", ""), action, **parameters),
+                                   after=actual["sequence"])
             if actual.get("focused_title") == title:
                 return actual
             if step == max_steps:
@@ -91,6 +108,7 @@ def run(hooks):
         raise AssertionError("Could not focus metadata title {!r}; actual={}".format(title, actual))
 
     def opened_albums(key="j"):
+        settle_focus()
         sequence = music().get("sequence", 0)
         before = press(key)
         wait_for("Format album list", lambda s: s.get("window") == 10502 and s.get("dialog") == 9999
@@ -102,12 +120,12 @@ def run(hooks):
 
     def return_home():
         for _ in range(7):
-            current = state()
+            current = settle_focus()
             if current.get("window") == 10000 and current.get("dialog") == 9999:
                 return
-            position = gui_position(current)
+            position = gui_position(current)[:3]
             before = press("Escape")
-            wait_for("Back changes Format folder or window", lambda s: gui_position(s) != position, after=before)
+            wait_for("Back changes Format folder or window", lambda s: gui_position(s)[:3] != position, after=before)
         raise AssertionError("Format did not return Home")
 
     try:
@@ -130,6 +148,10 @@ def run(hooks):
                 actual = wait_music("next ordered track " + config["expected_titles"][index + 1],
                                     lambda s: route_is(s.get("folder", ""), "album", album_id=config["album_id"])
                                     and s.get("focused_title") == config["expected_titles"][index + 1], after=sequence)
+                actual = settled_music("Stable ordered track " + config["expected_titles"][index + 1],
+                                       lambda s: route_is(s.get("folder", ""), "album", album_id=config["album_id"])
+                                       and s.get("focused_title") == config["expected_titles"][index + 1],
+                                       after=actual["sequence"])
         checks.append({"check": "displayed-track-order", "titles": observed})
         screenshot("format-02-track-order")
         sequence = music()["sequence"]
@@ -138,10 +160,12 @@ def run(hooks):
         find_title(album_title, "albums", after=sequence)
         before = press("c")
         wait_for("Album context menu", lambda s: s.get("dialog") == 10106, after=before)
+        settle_focus()
         find_label("Play album", "Down", 12)
         sequence = music()["sequence"]
         before = press("Return")
         wait_for("Context menu dismissed", lambda s: s.get("dialog") == 9999, after=before)
+        settle_focus()
         actual = wait_music("ordered album playback", lambda s: s.get("player") is not None
                             and s["player"]["properties"].get("speed") == 1
                             and track_id(s["player"]["item"]) == config["expected_ids"][0], after=sequence)
@@ -170,9 +194,11 @@ def run(hooks):
         offline.write_text("Synthetic CI outage\n")
         before = press("l")
         wait_for("Format outage error dialog", lambda s: s.get("dialog") == 12002, after=before)
+        settle_focus()
         screenshot("format-04-offline-error")
         before = press("Return")
         wait_for("Error dismissed", lambda s: s.get("dialog") == 9999, after=before)
+        settle_focus()
         # A fresh observer sequence alone does not prove refresh succeeded: it
         # could still describe the cached list. Change fixture content first.
         library_path = runtime / "format-fixture/library.json"
@@ -189,7 +215,7 @@ def run(hooks):
         before = press("l")
         wait_for("Format refresh recovered", lambda s: s.get("dialog") == 9999
                  and route_is(s.get("folder", ""), "albums"), after=before)
-        wait_music("Refreshed album metadata proves outage recovery",
+        settled_music("Refreshed album metadata proves outage recovery",
                    lambda s: route_is(s.get("folder", ""), "albums") and s.get("focused_title") == album_title,
                    after=sequence)
         screenshot("format-05-recovered")
