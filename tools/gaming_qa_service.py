@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import time
 import traceback
+import subprocess
 import xbmc
 import xbmcgui
 
@@ -26,8 +27,7 @@ def until(description,predicate,timeout=35):
     raise RuntimeError('Timed out '+description)
 def active(): return [{'type':'game'}] if xbmc.Player().isPlayingGame() else []
 def capture(name):
-    xbmc.executebuiltin('TakeScreenshot('+str(out/(name+'.png'))+',sync)')
-    until('screenshot '+name, lambda:(out/(name+'.png')).exists(), timeout=8)
+    subprocess.run(['import', '-window', 'root', str(out/(name+'.png'))], check=True, timeout=10)
 try:
     until('Home',lambda:xbmcgui.getCurrentWindowId()==10000)
     for addon in ('game.libretro','peripheral.joystick','game.libretro.aperture.nestopia','game.libretro.aperture.pcsxrearmed'):
@@ -43,9 +43,16 @@ try:
         if not game: raise RuntimeError('Synthetic game absent from actual plugin list: '+title)
         # Exercise the directory launch action and native core selection, not a direct ROM bypass.
         xbmc.executebuiltin('ActivateWindow(Games,'+folder+',return)')
-        until('Games directory',lambda:xbmcgui.getCurrentWindowId()==10821)
+        until('Games directory',lambda:xbmcgui.getCurrentWindowId()==10821 and xbmc.getInfoLabel('Container.FolderPath')==folder and not xbmc.getCondVisibility('System.HasModalDialog'))
+        monitor.waitForAbort(.6)
         for cycle in range(1):
-            xbmc.executebuiltin('ActivateWindow(Games,'+game['file']+',return)')
+            # Navigate and select the actual listed action as a controller would.
+            for _ in range(12):
+                if xbmc.getInfoLabel('ListItem.Label') == title: break
+                rpc('Input.Down')
+                monitor.waitForAbort(.2)
+            if xbmc.getInfoLabel('ListItem.Label') != title: raise RuntimeError('Cannot focus game action '+title)
+            rpc('Input.Select')
             until('RetroPlayer active '+system,lambda:any(p['type']=='game' for p in active()))
             monitor.waitForAbort(8)
             players=active()

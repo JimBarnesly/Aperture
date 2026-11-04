@@ -99,5 +99,5 @@ Unit tests cover discovery, path bounds, broken descriptors, cancellation, Kodi
 adapter contract, package planning, controller manifests and install rollback.
 The dedicated CI workflow builds PCSX from pinned source and attempts actual Kodi
 NES/PSX playback on x86_64 and ARM64 using original tiny hardware-test programs,
-with repeated start/stop and screenshots. Consult the exact commit's CI result;
+with start/stop and screenshots. Consult the exact commit's CI result;
 prepared tests do not mean they passed. Cloud ARM64 is not a physical Pi 5.

@@ -24,7 +24,7 @@ jobs:
       - name: Install signed distribution runtime and build tools
         run: |
           apt-get update
-          apt-get install --yes --no-install-recommends ca-certificates git python3 build-essential binutils gdb kodi kodi-bin kodi-data kodi-game-libretro kodi-peripheral-joystick libretro-nestopia xvfb xauth x11-utils libgl1-mesa-dri fonts-noto-core fonts-noto-mono fonts-roboto-unhinted pulseaudio pulseaudio-utils
+          apt-get install --yes --no-install-recommends ca-certificates git python3 imagemagick build-essential binutils gdb kodi kodi-bin kodi-data kodi-game-libretro kodi-peripheral-joystick libretro-nestopia xvfb xauth x11-utils libgl1-mesa-dri fonts-noto-core fonts-noto-mono fonts-roboto-unhinted pulseaudio pulseaudio-utils
       - uses: actions/checkout@v4
         with:
           persist-credentials: false

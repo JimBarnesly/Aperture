@@ -287,7 +287,7 @@ def main(argv=None):
     mode.add_argument('--check',action='store_true')
     mode.add_argument('--install',action='store_true')
     parser.add_argument('--rom-root')
-    parser.add_argument('--kodi-home',default=str(Path.home()/'.kodi'))
+    parser.add_argument('--kodi-home',default=os.environ.get('APERTURE_KODI_HOME',str(Path.home()/'.kodi')))
     parser.add_argument('--skip-psx-build',action='store_true',help='Install cartridge cores only; PSX remains unavailable')
     args=parser.parse_args(argv)
     kodi_home=Path(args.kodi_home).expanduser()
@@ -326,8 +326,11 @@ def main(argv=None):
     require_stopped()
     libraries={c.key:installed_core(c) for c in CORES if c.package and available[c.key]}
     if not args.skip_psx_build:
-        from build_pcsx_core import build_core
-        result=build_core(Path.home()/'.cache/aperture/pcsx-rearmed')
+        from build_pcsx_core import build_core, BuildError
+        try:
+            result=build_core(Path.home()/'.cache/aperture/pcsx-rearmed')
+        except BuildError as exc:
+            raise SetupError('PCSX build failed before profile changes: '+str(exc)) from exc
         libraries['pcsxrearmed']=Path(result)
     missing=[k for k,v in libraries.items() if not v or not v.is_file()]
     if missing: raise SetupError('Installed package did not provide expected core: '+', '.join(missing))

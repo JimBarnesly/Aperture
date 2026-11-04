@@ -142,10 +142,12 @@ The scanner/catalog have no Kodi imports and no third-party Python dependencies.
 
 - `xbmc.python.pluginsource` declares `<provides>game</provides>`.
 - Listings use `xbmcplugin.setContent(handle, "games")`.
-- Playable non-folder items set `IsPlayable=true`, disable content lookup, and
-  populate `ListItem.getGameInfoTag().setTitle()/setPlatform()`.
-- Selecting one resolves its revalidated path through
-  `xbmcplugin.setResolvedUrl(handle, True, listitem)` with the same game tag.
+- Game launch actions are folder items with `IsPlayable=false`, disabled content
+  lookup, and `ListItem.getGameInfoTag().setTitle()/setPlatform()` metadata.
+- Selecting one re-scans the system, handles any disc choice, closes the directory
+  action, and calls `xbmc.Player().play(real_path, listitem)` with a playable game tag.
+  This is intentional: Kodi 21's plugin resolver retains the plugin URL as Path
+  while RetroPlayer requires the real ROM Path. `setResolvedUrl` is not used.
 - No synthetic `application/x-game` MIME type, external-player parameter,
   `RetroArch` command, or hard-coded `gameclient` is used.
 - Kodi performs native core selection and owns missing-core / install / enable
@@ -182,7 +184,7 @@ python -m compileall -q games-kodi
 Fixtures are synthetic empty files and text descriptors, never redistributed
 ROM/BIOS data. Tests cover discovery, aliases, overlapping extensions, malformed
 descriptors, traversal, symlinks, VFS URI preservation, bounded scans, cancellation,
-native item/resolver calls, stale links, settings interruption, and disc-picker
+native item/launch calls, stale links, settings interruption, and disc-picker
 cancellation. Mocked Kodi tests verify our API contract; they **do not validate
 actual Kodi rendering, emulator availability, controller input, or emulation**.
 
