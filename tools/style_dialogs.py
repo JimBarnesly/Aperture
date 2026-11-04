@@ -38,8 +38,8 @@ def apply(skin):
         p=skin/'xml'/name
         tree=ET.parse(p)
         for node in tree.iter():
-            if node.get('colordiffuse')=='button_focus' and node.tag.startswith(('texture','alttexture')):
-                node.text='colors/white.png';node.attrib.pop('border',None)
+            if node.get('colordiffuse')=='button_focus' and node.tag.startswith(('texture','alttexture')) and 'border' not in node.attrib:
+                node.text='colors/white.png'
         ET.indent(tree);tree.write(p,encoding='utf-8',xml_declaration=True)
 if __name__=='__main__':
     import sys
