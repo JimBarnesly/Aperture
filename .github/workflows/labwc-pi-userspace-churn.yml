@@ -1,0 +1,56 @@
+name: Kodi exact Pi userspace output-size churn comparison
+on:
+  pull_request:
+    branches: [test/labwc-output-size-churn]
+    paths: ['tools/*labwc*pi_userspace*', 'tests/test_labwc_pi_userspace.py', '.github/workflows/labwc-pi-userspace-churn.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  rpt3-aperture-exact-pi-userspace:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 25
+    container:
+      image: debian:trixie-slim
+    defaults:
+      run:
+        shell: bash
+    env:
+      DEBIAN_FRONTEND: noninteractive
+      TZ: UTC
+      APERTURE_PI_USERSPACE_COMPARISON: exact-2026-11-05
+      APERTURE_WAYLAND_SKIN: aperture
+      APERTURE_WAYLAND_EXPERIMENT: output-size-churn
+      APERTURE_RPT3_SETUP: /tmp/labwc-rpt3-setup
+      APERTURE_WAYLAND_OUT: /tmp/labwc-rpt3-output
+    steps:
+      - name: Bootstrap signed Debian checkout prerequisites
+        run: |
+          apt-get -o APT::Update::Error-Mode=any update
+          apt-get install --yes --no-install-recommends ca-certificates git
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Install signed baseline and simulate exact Pi userspace-only upgrade
+        run: bash tools/install_labwc_pi_userspace_ci.sh
+      - name: Validate isolated diagnostic
+        run: |
+          python3 -m unittest discover -s tests -v
+          bash -n tools/ci_labwc_relaunch.sh tools/ci_labwc_pi_userspace.sh tools/install_labwc_pi_userspace_ci.sh
+      - name: Verify 4K30 and timed launch-two dimension churn before native Exit
+        env:
+          APERTURE_EXPECTED_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          useradd --create-home --shell /bin/bash waylandqa
+          chown -R waylandqa:waylandqa "$GITHUB_WORKSPACE" "$APERTURE_RPT3_SETUP"
+          runuser -u waylandqa -- bash tools/ci_labwc_pi_userspace.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: aperture-labwc-pi-userspace-churn-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            /tmp/labwc-rpt3-setup/
+            /tmp/labwc-rpt3-output/
+          if-no-files-found: warn
+          retention-days: 14
