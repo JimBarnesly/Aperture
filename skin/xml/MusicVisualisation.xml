@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<window>
+  <defaultcontrol />
+  <backgroundcolor>FF080D13</backgroundcolor>
+  <controls>
+    <control type="image">
+      <left>0</left><top>0</top><width>1920</width><height>1080</height>
+      <texture colordiffuse="FF080D13">colors/white.png</texture>
+    </control>
+    <control type="image">
+      <left>0</left><top>0</top><width>1920</width><height>1080</height>
+      <texture colordiffuse="22FFFFFF">aperture/bridge.png</texture>
+      <aspectratio>scale</aspectratio>
+    </control>
+    <control type="label">
+      <left>90</left><top>64</top><width>1400</width><height>50</height>
+      <font>font27</font><textcolor>FF9CCCD1</textcolor>
+      <label>APERTURE  /  NOW PLAYING</label>
+    </control>
+    <control type="label">
+      <left>1490</left><top>64</top><width>340</width><height>50</height>
+      <font>font27</font><textcolor>FF9CCCD1</textcolor><align>right</align>
+      <label>$INFO[System.Time]</label>
+    </control>
+    <control type="group" id="7100">
+      <visible>Player.HasAudio</visible>
+      <animation effect="fade" start="0" end="100" time="350">WindowOpen</animation>
+      <control type="group">
+        <left>530</left><top>90</top><width>860</width><height>860</height>
+        <animation effect="rotatex" start="48" end="48" center="430,430" time="0" condition="true">Conditional</animation>
+        <animation effect="zoom" start="82" end="100" center="430,430" time="650" tween="cubic" easing="out">WindowOpen</animation>
+        <control type="image">
+          <left>0</left><top>0</top><width>860</width><height>860</height>
+          <texture>aperture/music/platter.png</texture>
+        </control>
+        <control type="image" id="7101">
+          <left>72</left><top>72</top><width>716</width><height>716</height>
+          <aspectratio>scale</aspectratio>
+          <texture diffuse="aperture/music/disc-mask.png" fallback="DefaultAlbumCover.png">$INFO[MusicPlayer.Cover]</texture>
+          <animation effect="rotate" start="0" end="-360" center="auto" time="14000" loop="true" reversible="false" condition="Player.Playing + !Player.Paused">Conditional</animation>
+        </control>
+        <control type="image">
+          <left>72</left><top>72</top><width>716</width><height>716</height>
+          <texture>aperture/music/grooves.png</texture>
+        </control>
+        <control type="image">
+          <left>407</left><top>407</top><width>46</width><height>46</height>
+          <texture>aperture/music/spindle.png</texture>
+        </control>
+      </control>
+      <control type="label" id="7102">
+        <left>160</left><top>795</top><width>1600</width><height>65</height>
+        <font>font45</font><align>center</align><textcolor>FFF1F5F4</textcolor><scroll>true</scroll>
+        <label>$INFO[MusicPlayer.Title]</label>
+      </control>
+      <control type="label">
+        <left>160</left><top>865</top><width>1600</width><height>45</height>
+        <font>font27</font><align>center</align><textcolor>FF9CCCD1</textcolor><scroll>true</scroll>
+        <label>$INFO[MusicPlayer.Artist]$INFO[MusicPlayer.Album,  ·  ,]</label>
+      </control>
+      <control type="progress">
+        <left>260</left><top>944</top><width>1400</width><height>6</height>
+        <info>Player.Progress</info>
+        <texturebg colordiffuse="FF30414A">colors/white.png</texturebg>
+        <lefttexture /><midtexture colordiffuse="FF9CCCD1">colors/white.png</midtexture><righttexture /><overlaytexture />
+      </control>
+      <control type="label">
+        <left>90</left><top>921</top><width>145</width><height>45</height>
+        <font>font27</font><align>right</align><textcolor>FFBFCDD0</textcolor><label>$INFO[Player.Time]</label>
+      </control>
+      <control type="label">
+        <left>1685</left><top>921</top><width>145</width><height>45</height>
+        <font>font27</font><textcolor>FFBFCDD0</textcolor><label>$INFO[Player.Duration]</label>
+      </control>
+      <control type="label" id="7103">
+        <left>700</left><top>154</top><width>520</width><height>45</height>
+        <font>font27</font><align>center</align><textcolor>FFD9A15F</textcolor>
+        <label>PAUSED</label><visible>Player.Paused</visible>
+      </control>
+    </control>
+    <control type="label">
+      <left>160</left><top>490</top><width>1600</width><height>70</height>
+      <font>font45</font><align>center</align><textcolor>FFF1F5F4</textcolor>
+      <label>No music playing</label><visible>!Player.HasAudio</visible>
+    </control>
+    <control type="label">
+      <left>90</left><top>1000</top><width>1740</width><height>45</height>
+      <font>font27</font><align>center</align><textcolor>FF869BA5</textcolor>
+      <label>Select  Playback controls     ·     Back  Browse your library</label>
+    </control>
+  </controls>
+</window>

@@ -149,6 +149,74 @@ class FormatTest(unittest.TestCase):
         self.xbmc.Player.assert_not_called()
         self.xbmcgui.Dialog.return_value.ok.assert_called_once()
 
+    def set_browser_origin(self):
+        self.xbmc.getSkinDir.return_value = "skin.aperture"
+        self.xbmcgui.getCurrentWindowId.return_value = 10502
+        self.xbmcgui.getCurrentWindowDialogId.return_value = 9999
+        self.xbmc.getInfoLabel.side_effect = lambda key: {"Container.PluginName":self.addon.ADDON_ID,
+            "Container.FolderPath":"plugin://format/album"}.get(key, "")
+        self.xbmc.Monitor.return_value.abortRequested.return_value = False
+        self.xbmc.Monitor.return_value.waitForAbort.return_value = False
+
+    def test_now_playing_waits_for_exact_requested_stream(self):
+        self.set_browser_origin()
+        player = self.xbmc.Player.return_value
+        player.isPlayingAudio.return_value = True
+        player.getPlayingFile.side_effect = ["old-stream", "expected-stream"]
+        self.assertTrue(self.addon.show_now_playing("expected-stream", "plugin://format/album", player))
+        self.xbmc.executebuiltin.assert_called_once_with("ActivateWindow(visualisation)")
+        self.xbmc.Monitor.return_value.waitForAbort.assert_called_once_with(0.1)
+
+    def test_now_playing_never_steals_changed_navigation(self):
+        self.set_browser_origin()
+        self.xbmcgui.getCurrentWindowId.return_value = 10000
+        self.assertFalse(self.addon.show_now_playing("stream", "plugin://format/album"))
+        self.xbmc.executebuiltin.assert_not_called()
+
+    def test_now_playing_does_not_interrupt_dialog_or_fail_resolved_playback(self):
+        self.set_browser_origin()
+        self.xbmcgui.getCurrentWindowDialogId.return_value = 10100
+        self.assertIsNone(self.addon.presentation_origin())
+        self.xbmcgui.getCurrentWindowDialogId.return_value = 9999
+        self.xbmc.Player.return_value.isPlayingAudio.return_value = True
+        self.xbmc.Player.return_value.getPlayingFile.return_value = "stream"
+        self.xbmc.executebuiltin.side_effect = RuntimeError("private path")
+        self.assertFalse(self.addon.show_now_playing("stream", "plugin://format/album"))
+        self.assertNotIn("private path", self.xbmc.log.call_args.args[0])
+        self.xbmcplugin.setResolvedUrl.assert_not_called()
+
+    def test_now_playing_rechecks_folder_after_player_readiness(self):
+        self.set_browser_origin()
+        player = self.xbmc.Player.return_value
+        player.isPlayingAudio.return_value = True
+        def changed_folder():
+            self.xbmc.getInfoLabel.side_effect = lambda key: {"Container.PluginName":self.addon.ADDON_ID,
+                "Container.FolderPath":"plugin://format/different"}.get(key, "")
+            return "stream"
+        player.getPlayingFile.side_effect = changed_folder
+        self.assertFalse(self.addon.show_now_playing("stream", "plugin://format/album", player))
+        self.xbmc.executebuiltin.assert_not_called()
+
+    def test_track_entries_remain_direct_streams_for_native_queue_advancement(self):
+        self.run_action("album", album_id=ALBUM_ID)
+        self.assertTrue(all(entry[1].startswith("http://format.test:4534/api/audio?") for entry in self.items()))
+        self.xbmc.Player.assert_not_called()
+        self.xbmcplugin.setResolvedUrl.assert_not_called()
+
+    def test_now_playing_timeout_abort_and_non_aperture_are_safe(self):
+        self.set_browser_origin()
+        player = self.xbmc.Player.return_value
+        player.isPlayingAudio.return_value = False
+        self.assertFalse(self.addon.show_now_playing("stream", "plugin://format/album", player))
+        self.assertEqual(self.xbmc.Monitor.return_value.waitForAbort.call_count, 50)
+        self.xbmc.Monitor.return_value.abortRequested.return_value = True
+        self.assertFalse(self.addon.show_now_playing("stream", "plugin://format/album", player))
+        self.xbmc.getSkinDir.return_value = "skin.estuary"
+        self.assertIsNone(self.addon.presentation_origin())
+        self.assertFalse(self.addon.show_now_playing("stream", None, player))
+        self.xbmc.executebuiltin.assert_not_called()
+        player.play.assert_not_called()
+
     def test_missing_album_fails_directory(self):
         self.run_action("album", album_id="gone")
         self.assert_directory_result(False)

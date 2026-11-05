@@ -42,6 +42,7 @@ import time
 import traceback
 import xbmc
 import xbmcaddon
+import xbmcgui
 
 root = Path(xbmcaddon.Addon("service.aperture.formatsmoke").getAddonInfo("path")).resolve()
 config = json.loads((root / "config.json").read_text())
@@ -85,6 +86,11 @@ try:
                 if properties is not None:
                     player = {"item":item, "properties":properties}
             state = {"sequence":sequence, "time":time.time(), "pid":os.getpid(), "queue":queue, "player":player,
+                     "window":xbmcgui.getCurrentWindowId(),
+                     "nowplaying_visible":bool(xbmc.getCondVisibility("Control.IsVisible(7100)")),
+                     "paused_visible":bool(xbmc.getCondVisibility("Control.IsVisible(7103)")),
+                     "playing_title":xbmc.getInfoLabel("MusicPlayer.Title"),
+                     "playing_cover":xbmc.getInfoLabel("MusicPlayer.Cover"),
                      "folder":xbmc.getInfoLabel("Container.FolderPath"),
                      "focused_title":xbmc.getInfoLabel("ListItem.Title"),
                      "focused_label":xbmc.getInfoLabel("ListItem.Label"),
@@ -394,6 +400,8 @@ def fixture_handler(config, fixture, out):
                 if identifier not in config["files"]:
                     return b"Not a fixture track", "text/plain", 404
                 elif path == "/api/cover":
+                    if identifier == TRACK_IDS[-1]:
+                        return b"Synthetic missing artwork", "text/plain", 404
                     payload, mime = (fixture / "cover.png").read_bytes(), "image/png"
                 else:
                     payload, mime = (fixture / config["files"][identifier]).read_bytes(), "audio/wav"

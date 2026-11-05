@@ -9,6 +9,7 @@ from pathlib import Path
 import subprocess
 import time
 import traceback
+from PIL import Image, ImageChops, ImageStat
 from urllib.parse import parse_qs, urlsplit
 
 
@@ -153,6 +154,16 @@ def reopen_albums(press, wait_for, settle_focus, find_label):
 def successful_recovery_request(requests, started, completed):
     return any(row["path"] == "/api/library" and row["status"] == 200
                and started <= row["time"] <= completed for row in requests)
+
+
+def turntable_pixel_change(first, second):
+    """Compare only the central record, excluding clocks/progress and OSD labels."""
+    with Image.open(first) as a, Image.open(second) as b:
+        if a.size != (1920, 1080) or b.size != a.size:
+            raise AssertionError("Turntable evidence must be full-resolution Kodi screenshots")
+        box = (690, 370, 1230, 650)
+        delta = ImageChops.difference(a.convert("RGB").crop(box), b.convert("RGB").crop(box))
+        return sum(ImageStat.Stat(delta).mean) / 3
 
 
 def run(hooks):
@@ -549,15 +560,90 @@ def run(hooks):
                            and track_id(s["player"]["item"]) == config["expected_ids"][0]
                            and clock(s) >= initial_clock + 1.5, timeout=20, after=sequence)
         checks.append({"check":"album-playback", "queue":actual["queue"], "start_seconds":initial_clock, "later_seconds":clock(later)})
+        wait_music("Native turntable opens for explicit album playback",
+                   lambda s: s.get("window") == 12006 and s.get("nowplaying_visible") is True
+                   and s.get("playing_title") == config["expected_titles"][0])
         screenshot("format-03-playback")
+        time.sleep(1)
+        screenshot("format-03b-record-rotated")
+        moving = turntable_pixel_change(out / "screenshots/format-03-playback.png",
+                                        out / "screenshots/format-03b-record-rotated.png")
+        if moving < 0.5:
+            raise AssertionError("Record artwork did not visibly rotate: " + str(moving))
+        sequence = music()["sequence"]
+        press("space")
+        paused = wait_music("Pause stops actual audio and shows paused status", lambda s: s.get("player")
+                            and s["player"]["properties"].get("speed") == 0 and s.get("paused_visible") is True,
+                            after=sequence)
+        screenshot("format-03c-paused")
+        time.sleep(1)
+        screenshot("format-03d-paused-still")
+        still = turntable_pixel_change(out / "screenshots/format-03c-paused.png",
+                                      out / "screenshots/format-03d-paused-still.png")
+        if still > 0.15:
+            raise AssertionError("Paused record continued moving: " + str(still))
+        before = press("Return")
+        wait_for("Native music playback controls", lambda s: s.get("dialog") == 10120, after=before)
+        screenshot("format-03e-native-controls")
+        before = press("Escape")
+        wait_for("Music controls dismiss", lambda s: s.get("dialog") == 9999, after=before)
+        before = press("Escape")
+        wait_for("Back returns to same album shelf", lambda s: s.get("window") == 10502
+                 and route_is(s.get("folder", ""), "albums"), after=before)
+        sequence = music()["sequence"]
+        before = press("Down")
+        wait_for("Now playing button receives focus", lambda s: s.get("focus") == 65, after=before)
+        before = press("Return")
+        wait_for("Now playing reopens without a new stream", lambda s: s.get("window") == 12006, after=before)
+        actual = wait_music("Reopened record remains paused", lambda s: s.get("player")
+                            and s["player"]["properties"].get("speed") == 0 and s.get("nowplaying_visible") is True,
+                            after=sequence)
+        if actual["queue"] != paused["queue"] or abs(clock(actual) - clock(paused)) > 0.5:
+            raise AssertionError("Back/reopen changed playback queue or paused position")
+        sequence = actual["sequence"]
+        press("space")
+        wait_music("Resume native playback", lambda s: s.get("player")
+                   and s["player"]["properties"].get("speed") == 1, after=sequence)
+        checks.append({"check":"native-turntable-motion-pause-controls-back-reopen",
+                       "playing_pixel_change":moving, "paused_pixel_change":still})
         sequence = music()["sequence"]
         press("period")
         actual = wait_music("Skip reaches second track", lambda s: s.get("player") is not None
                             and track_id(s["player"]["item"]) == config["expected_ids"][1], after=sequence)
         checks.append({"check":"skip-next", "player":actual["player"]})
+        for expected_id in config["expected_ids"][2:]:
+            sequence = music()["sequence"]
+            press("period")
+            actual = wait_music("Next native album track", lambda s: s.get("player") is not None
+                                and track_id(s["player"]["item"]) == expected_id, after=sequence)
+        screenshot("format-03f-missing-art-fallback")
+        sequence = actual["sequence"]
+        press("comma")
+        actual = wait_music("Previous returns to third track", lambda s: s.get("player") is not None
+                            and track_id(s["player"]["item"]) == config["expected_ids"][2], after=sequence)
+        checks.append({"check":"turntable-skip-previous-and-missing-art", "player":actual["player"]})
         sequence = actual["sequence"]
         press("x")
         wait_music("Stop synthetic playback", lambda s: s.get("player") is None, after=sequence)
+        return_home()
+        opened_albums()
+        sequence = music()["sequence"]
+        before = press("Return")
+        wait_for("Select track from album", lambda s: s.get("window") == 10502
+                 and route_is(s.get("folder", ""), "album", album_id=config["album_id"]), after=before)
+        find_title(config["expected_titles"][0], "album", after=sequence, album_id=config["album_id"])
+        sequence = music()["sequence"]
+        press("Return")
+        wait_music("Direct native track plays", lambda s: s.get("player") is not None
+                   and track_id(s["player"]["item"]) == config["expected_ids"][0], after=sequence)
+        before = press("Right")
+        wait_for("Track list can reach Now playing", lambda s: s.get("focus") == 65, after=before)
+        before = press("Return")
+        wait_for("Direct track native turntable", lambda s: s.get("window") == 12006, after=before)
+        screenshot("format-03g-selected-track")
+        sequence = music()["sequence"]
+        press("x")
+        wait_music("Stop selected track", lambda s: s.get("player") is None, after=sequence)
         return_home()
         # HTTP 503 simulates server outage. No system networking is changed.
         opened_albums()
