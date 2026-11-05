@@ -94,6 +94,8 @@ for original in source.rglob('*'):
     shutil.copy2(target, copied)
 PY_COPY
 cp -a "$ROOT/build/skin.aperture" "$KODI_HOME/addons/skin.aperture"
+cp "$ROOT/tools/notification_qa.py" "$KODI_HOME/notification_qa.py"
+mkdir -p "$OUT/notifications"
 mkdir -p "$KODI_HOME/addons/service.aperture.cismoke"
 cat > "$KODI_HOME/addons/service.aperture.cismoke/addon.xml" <<'XML'
 <addon id="service.aperture.cismoke" name="Aperture CI observer" version="1.0.0" provider-name="Aperture CI">
@@ -186,6 +188,14 @@ mkdir -p "$KODI_DATA/userdata/keymaps"
 cat > "$KODI_DATA/userdata/keymaps/ci.xml" <<'XML'
 <keymap><global><keyboard><i>ActivateWindow(10032,lookandfeel.skin)</i></keyboard></global><Home><keyboard><i>ActivateWindow(10032,lookandfeel.skin)</i></keyboard></Home></keymap>
 XML
+python3 - <<'PY'
+import os, pathlib, xml.etree.ElementTree as ET
+p=pathlib.Path(os.environ['KODI_DATA'])/'userdata/keymaps/ci.xml'
+tree=ET.parse(p)
+for scope in ('global','Home'):
+    ET.SubElement(tree.find('./'+scope+'/keyboard'),'f8').text='RunScript('+str(pathlib.Path(os.environ['KODI_HOME'])/'notification_qa.py')+')'
+tree.write(p,encoding='utf-8',xml_declaration=True)
+PY
 # Synthetic loopback Format server and read-only player observer. No user data.
 python3 "$ROOT/tests/kodi_format_fixture.py" prepare --runtime "$RUNTIME" --out "$OUT"
 python3 "$ROOT/tests/kodi_format_fixture.py" serve --runtime "$RUNTIME" > "$KODI_TEMP/format-server.log" 2>&1 &
@@ -300,6 +310,35 @@ def press(key):
     subprocess.run(['xdotool','key','--clearmodifiers',key],check=True,timeout=10)
     return before
 
+def verify_notifications(stage):
+    folder=out/'notifications'
+    (folder/'request.txt').write_text(stage)
+    result_path=folder/(stage+'.json')
+    press('F8')
+    deadline=time.monotonic()+190
+    while time.monotonic()<deadline:
+        os.kill(pid,0)
+        if result_path.exists():
+            result=json.loads(result_path.read_text())
+            if result.get('status')=='failed':
+                raise AssertionError('Notification lifetime: '+str(result))
+            if result.get('status')=='passed':
+                for check in result['checks']:
+                    png=folder/check['screenshot']
+                    with Image.open(png) as im:
+                        rgb=im.convert('RGB')
+                        if rgb.size != (1920,1080) or max(ImageStat.Stat(rgb).stddev)<3:
+                            raise AssertionError('Notification screenshot missing rendered pixels')
+                        rgb.thumbnail((640,360))
+                        small=png.with_suffix('.preview.jpg'); rgb.save(small,quality=70)
+                    print(f'APERTURE_SCREENSHOT_BASE64_BEGIN {small.name}',flush=True)
+                    print(base64.b64encode(small.read_bytes()).decode(),flush=True)
+                    print(f'APERTURE_SCREENSHOT_BASE64_END {small.name}',flush=True)
+                checks.append({'check':'notification-lifetime-'+stage,'result':result})
+                return
+        time.sleep(.1)
+    raise AssertionError('Notification lifetime did not finish: '+stage)
+
 
 def labelled(s, text):
     return any(s.get(key,'').strip()==text for key in ('list_item','control_label'))
@@ -404,6 +443,7 @@ try:
     choose_skin('Aperture','skin.aperture')
     wait_for('Aperture Home focused',lambda s:s.get('focus') in graph and s.get('skin')=='skin.aperture')
     screenshot('02-aperture-home')
+    verify_notifications('initial')
     for cycle in range(3):
         for control in range(100,107):
             focus(control)
@@ -438,6 +478,7 @@ try:
     screenshot('04-estuary-recovery')
     choose_skin('Aperture','skin.aperture')
     screenshot('05-aperture-restored')
+    verify_notifications('after-reload')
     # Observe continued real GUI activity; stale observer data cannot pass.
     before=state()['sequence']; time.sleep(10)
     wait_for('Idle Home still responsive',lambda s:s.get('window')==HOME and s.get('skin')=='skin.aperture',after=before)
