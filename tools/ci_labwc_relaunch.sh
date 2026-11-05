@@ -45,7 +45,12 @@ XML
 : > "$APERTURE_WAYLAND_RUNTIME/labwc/shutdown"
 cat > "$APERTURE_WAYLAND_RUNTIME/session.sh" <<'SESSION'
 #!/usr/bin/env bash
-exec python3 "$APERTURE_WAYLAND_ROOT/tools/labwc_relaunch_driver.py"
+case "${APERTURE_WAYLAND_EXPERIMENT:-baseline}" in
+  baseline) driver=labwc_relaunch_driver.py ;;
+  output-size-churn) driver=labwc_output_churn.py ;;
+  *) echo 'Unknown isolated diagnostic experiment'; exit 2 ;;
+esac
+exec python3 "$APERTURE_WAYLAND_ROOT/tools/$driver"
 SESSION
 chmod 700 "$APERTURE_WAYLAND_RUNTIME/session.sh"
 set +e

@@ -47,14 +47,14 @@ def exit_mapping(path):
     return focus
 
 
-def home_state(state, skin, pid):
+def home_state(state, skin, pid, size=(1920, 1080)):
     return (state.get('pid') == pid and state.get('skin') == skin
         and state.get('window') == 10000 and state.get('dialog') == 9999
-        and state.get('home_visible') is True and state.get('width') == 1920
-        and state.get('height') == 1080)
+        and state.get('home_visible') is True and state.get('width') == size[0]
+        and state.get('height') == size[1])
 
 
-def pixel_evidence(path, text):
+def pixel_evidence(path, text, size=(1920, 1080)):
     with Image.open(path) as image:
         rgb = image.convert('RGB')
         stats = ImageStat.Stat(rgb)
@@ -66,8 +66,8 @@ def pixel_evidence(path, text):
         # A noisy/debug-overlay image cannot pass just through variance.
         return dict(size=list(rgb.size), stddev=stats.stddev, dark_fraction=dark_fraction,
             recognized_home_labels=labels,
-            home_pixels=rgb.size == (1920, 1080) and max(stats.stddev) > 3 and len(labels) >= 3,
-            black_frame=rgb.size == (1920, 1080) and dark_fraction > .995)
+            home_pixels=rgb.size == size and max(stats.stddev) > 3 and len(labels) >= 3,
+            black_frame=rgb.size == size and dark_fraction > .995)
 
 
 def prepare(root, runtime, skin):
@@ -118,6 +118,17 @@ def prepare(root, runtime, skin):
 
 
 class Driver:
+    expected_size = (1920, 1080)
+
+    def launch_started(self):
+        """Optional isolated diagnostic hook, before Home observation."""
+
+    def before_home_capture(self):
+        """Optional diagnostic barrier before the pre-input screenshot."""
+
+    def validate_home_before_input(self):
+        """Optional isolated diagnostic hook, before acceptance or input."""
+
     def __init__(self):
         self.root = Path(os.environ['APERTURE_WAYLAND_ROOT'])
         self.out = Path(os.environ['APERTURE_WAYLAND_OUT'])
@@ -221,7 +232,7 @@ class Driver:
         if ocr:
             text = subprocess.check_output(['tesseract', str(path), 'stdout', '--psm', '11'], stderr=subprocess.DEVNULL, text=True, timeout=30)
             (self.session / (name + '.ocr.txt')).write_text(text)
-        evidence = pixel_evidence(path, text)
+        evidence = pixel_evidence(path, text, self.expected_size)
         (self.session / (name + '.pixels.json')).write_text(json.dumps(evidence, indent=2) + '\n')
         (self.session / (name + '.state.json')).write_text(json.dumps(self.state(), indent=2) + '\n')
         if ocr:
@@ -247,15 +258,18 @@ class Driver:
         if persisted != self.skin:
             raise DiagnosticFailure('product_reproduction_candidate', 'Skin preference changed before relaunch')
         self.stdout = (self.session / 'kodi-stdout.log').open('w')
+        self.spawn_started_wall = time.time()
         self.process = subprocess.Popen([os.environ['APERTURE_KODI_BIN'], '--windowing=wayland', '-fs', '--debug', '--logging=console'],
             env=self.env, stdout=self.stdout, stderr=subprocess.STDOUT)
-        self.record('launch-started', pid=self.process.pid, compositor=self.compositor,
+        self.record('launch-started', pid=self.process.pid, compositor=self.compositor, spawn_started_wall=self.spawn_started_wall,
             profile=str(self.target / 'data'), settings_sha256=hashlib.sha256(settings.read_bytes()).hexdigest(), synthetic_keys_sent=0)
+        self.launch_started()
         category = 'harness_failure' if self.launch == 1 else 'product_reproduction_candidate'
         try:
-            self.wait('fresh Home before any input', lambda s: home_state(s, self.skin, self.process.pid), timeout=90, category=category)
+            self.wait('fresh Home before any input', lambda s: home_state(s, self.skin, self.process.pid, self.expected_size), timeout=90, category=category)
             time.sleep(2)  # Finish opening animation without applying any input.
-            state = self.wait('stable fresh Home', lambda s: home_state(s, self.skin, self.process.pid), category=category)
+            state = self.wait('stable fresh Home', lambda s: home_state(s, self.skin, self.process.pid, self.expected_size), category=category)
+            state = self.before_home_capture() or state
             pixels = self.capture('home-before-input', ocr=True)
         except Exception:
             try:
@@ -269,6 +283,7 @@ class Driver:
         if not pixels['home_pixels']:
             failure = ('product_reproduction_candidate' if self.launch > 1 else 'unexplained_visual_failure') if pixels['black_frame'] else 'harness_visual_validation_failure'
             raise DiagnosticFailure(failure, 'Home state exists but screenshot failed independent Home text/pixel validation: ' + str(pixels))
+        self.validate_home_before_input()
         self.record('home-before-input-passed', pid=self.process.pid, state=state, pixels=pixels,
             synthetic_keys_sent=0, screenshot=str((self.session / 'home-before-input.png').relative_to(self.out)))
 
@@ -363,12 +378,12 @@ class Driver:
             self.keeper_log.close()
 
 
-def main():
+def main(driver_class=Driver):
     out = Path(os.environ['APERTURE_WAYLAND_OUT'])
     driver = None
     result = dict(status='harness_failure', reason='Driver did not finish')
     try:
-        driver = Driver()
+        driver = driver_class()
         driver.setup_display()
         for _ in range(4):  # Initial launch plus three normal-Exit/relaunch cycles.
             driver.start()
