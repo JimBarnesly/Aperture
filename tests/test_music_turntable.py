@@ -12,6 +12,17 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class TurntableTests(unittest.TestCase):
+    def test_native_overlays_do_not_duplicate_header_or_footer(self):
+        tree = ET.parse(ROOT / 'skin/xml/MusicVisualisation.xml')
+        for identifier in ('7110', '7111'):
+            self.assertEqual(tree.findtext('.//control[@id="'+identifier+'"]/visible'),
+                             '!Window.IsVisible(seekbar)')
+        self.assertEqual(tree.findtext('.//control[@type="progress"]/visible'),
+                         '!Window.IsVisible(seekbar)')
+        tilt = tree.find('.//animation[@effect="rotatex"]')
+        self.assertEqual(tilt.get('center'), '460,0')  # Kodi's rotatex pivot is Y,Z.
+        self.assertEqual(tree.find('.//animation[@effect="zoom"]').get('center'), 'auto')
+
     def test_native_player_state_and_controls(self):
         tree = ET.parse(ROOT / 'skin/xml/MusicVisualisation.xml').getroot()
         self.assertEqual(tree.find('.//control[@id="7100"]/visible').text, 'Player.HasAudio')

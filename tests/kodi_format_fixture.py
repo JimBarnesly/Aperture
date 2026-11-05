@@ -26,6 +26,7 @@ ROOT = Path(__file__).resolve().parents[1]
 ADDON = "plugin.audio.aperture.format"
 OBSERVER = "service.aperture.formatsmoke"
 LABEL = "SYNTHETIC QA"
+TRACK_SECONDS = 90  # Leave time for full-resolution playback/overlay screenshots.
 ARTIST = "A SYNTHETIC QA"
 CATALOG_ID = "synthetic-catalog%00album, A & B"
 CATALOG_TITLE = "SYNTHETIC QA Mock Download"
@@ -87,7 +88,12 @@ try:
                     player = {"item":item, "properties":properties}
             state = {"sequence":sequence, "time":time.time(), "pid":os.getpid(), "queue":queue, "player":player,
                      "window":xbmcgui.getCurrentWindowId(),
+                     "dialog":xbmcgui.getCurrentWindowDialogId(),
                      "nowplaying_visible":bool(xbmc.getCondVisibility("Control.IsVisible(7100)")),
+                     "nowplaying_button_visible":bool(xbmc.getCondVisibility("Control.IsVisible(65)")),
+                     "native_seekbar_visible":bool(xbmc.getCondVisibility("Window.IsVisible(seekbar)")),
+                     "presentation_header_visible":bool(xbmc.getCondVisibility("Control.IsVisible(7110)")),
+                     "presentation_footer_visible":bool(xbmc.getCondVisibility("Control.IsVisible(7111)")),
                      "paused_visible":bool(xbmc.getCondVisibility("Control.IsVisible(7103)")),
                      "playing_title":xbmc.getInfoLabel("MusicPlayer.Title"),
                      "playing_cover":xbmc.getInfoLabel("MusicPlayer.Cover"),
@@ -123,7 +129,7 @@ def atomic(path, data):
 def fixture_library():
     tracks = [{"id":identifier, "title":"SYNTHETIC QA Disc {} Track {}".format(index // 2 + 1, index % 2 + 1),
                "artist":"A SYNTHETIC QA", "albumArtist":"A SYNTHETIC QA", "album":"SYNTHETIC QA Double",
-               "disc":index // 2 + 1, "track":index % 2 + 1, "duration":30, "year":"2026"}
+               "disc":index // 2 + 1, "track":index % 2 + 1, "duration":TRACK_SECONDS, "year":"2026"}
               for index, identifier in enumerate(TRACK_IDS)]
     return {"albums":[{"id":ALBUM_ID, "artist":"A SYNTHETIC QA", "title":"SYNTHETIC QA Double", "year":"2026",
                        "trackIds":[TRACK_IDS[2], TRACK_IDS[1], TRACK_IDS[3], TRACK_IDS[0]]}],
@@ -141,7 +147,7 @@ def fixture_preview():
     return {"id":CATALOG_ID, "artist":ARTIST, "title":CATALOG_TITLE, "year":"2026",
             "releaseId":"synthetic-release", "releaseTitle":CATALOG_TITLE, "country":"", "cover":"",
             "tracks":[{"disc":1, "position":i + 1, "title":"SYNTHETIC QA Catalogue Track {}".format(i + 1),
-                       "artist":ARTIST, "duration":30} for i in range(2)]}
+                       "artist":ARTIST, "duration":TRACK_SECONDS} for i in range(2)]}
 
 
 def fixture_health(**actions):
@@ -167,7 +173,7 @@ def fixture_write_allowed(health, path):
 def write_wav(path, frequency):
     rate = 8000
     # Quiet original sine tone; no downloaded or copyrighted source audio.
-    samples = b"".join(struct.pack("<h", round(300 * math.sin(2 * math.pi * frequency * i / rate))) for i in range(rate * 30))
+    samples = b"".join(struct.pack("<h", round(300 * math.sin(2 * math.pi * frequency * i / rate))) for i in range(rate * TRACK_SECONDS))
     with wave.open(str(path), "wb") as output:
         output.setnchannels(1)
         output.setsampwidth(2)

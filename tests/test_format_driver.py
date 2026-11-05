@@ -16,6 +16,16 @@ spec.loader.exec_module(driver)
 
 
 class DriverTest(unittest.TestCase):
+    def test_direct_track_navigation_waits_for_actual_playback_and_gui(self):
+        actual = {"window":10502, "dialog":9999, "nowplaying_button_visible":True,
+                  "format_view":"tracks", "list_visible":True, "shelf_visible":False,
+                  "focus":"63", "player":{"properties":{"time":{"seconds":1}}}}
+        self.assertTrue(driver.track_presentation_ready(actual))
+        for change in ({"dialog":10138}, {"nowplaying_button_visible":False},
+                       {"focus":"65"}, {"player":None}, {"window":12006},
+                       {"player":{"properties":{"time":{"seconds":0}}}}):
+            self.assertFalse(driver.track_presentation_ready(dict(actual, **change)), change)
+
     def test_exact_album_route_does_not_match_album_list(self):
         base = "plugin://plugin.audio.aperture.format/"
         self.assertTrue(driver.route_is(base + "?action=albums", "albums"))

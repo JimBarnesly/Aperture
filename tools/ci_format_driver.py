@@ -166,6 +166,14 @@ def turntable_pixel_change(first, second):
         return sum(ImageStat.Stat(delta).mean) / 3
 
 
+def track_presentation_ready(actual):
+    """Audio RPC appears before Kodi's own busy dialog finishes opening."""
+    return (actual.get("window") == 10502 and actual.get("dialog") == 9999
+            and actual.get("nowplaying_button_visible") is True
+            and view_is(actual, "tracks") and actual.get("player") is not None
+            and actual["player"]["properties"]["time"].get("seconds", 0) >= 1)
+
+
 def run(hooks):
     state, wait_for, press = (hooks[key] for key in ("state", "wait_for", "press"))
     screenshot, find_label = hooks["screenshot"], hooks["find_label"]
@@ -563,6 +571,10 @@ def run(hooks):
         wait_music("Native turntable opens for explicit album playback",
                    lambda s: s.get("window") == 12006 and s.get("nowplaying_visible") is True
                    and s.get("playing_title") == config["expected_titles"][0])
+        wait_music("Presentation yields to native playback overlay",
+                   lambda s: s.get("native_seekbar_visible") is True
+                   and s.get("presentation_header_visible") is False
+                   and s.get("presentation_footer_visible") is False)
         screenshot("format-03-playback")
         time.sleep(1)
         screenshot("format-03b-record-rotated")
@@ -570,6 +582,11 @@ def run(hooks):
                                         out / "screenshots/format-03b-record-rotated.png")
         if moving < 0.5:
             raise AssertionError("Record artwork did not visibly rotate: " + str(moving))
+        wait_music("Clean turntable after native playback overlay dismisses",
+                   lambda s: s.get("native_seekbar_visible") is False
+                   and s.get("presentation_header_visible") is True
+                   and s.get("presentation_footer_visible") is True)
+        screenshot("format-03j-clean-turntable")
         sequence = music()["sequence"]
         press("space")
         paused = wait_music("Pause stops actual audio and shows paused status", lambda s: s.get("player")
@@ -652,6 +669,8 @@ def run(hooks):
         press("Return")
         wait_music("Direct native track plays", lambda s: s.get("player") is not None
                    and track_id(s["player"]["item"]) == config["expected_ids"][0], after=sequence)
+        settled_music("Direct track ready for navigation after native busy dialog",
+                      track_presentation_ready, after=sequence)
         before = press("Right")
         wait_for("Track list can reach Now playing", lambda s: s.get("focus") == 65, after=before)
         before = press("Return")
