@@ -40,11 +40,34 @@ def display_title(item):
     return title or 'Untitled'
 
 
-def sidecar_candidates(path):
+def sidecar_candidates(path, include_folder=True):
     """Exact nearby art candidates only, never a recursive walk."""
     folder, name = posixpath.split(path)
     stem = posixpath.splitext(name)[0]
-    return {
-        'poster': [folder+'/'+stem+'-poster.jpg', folder+'/'+stem+'-poster.png', folder+'/poster.jpg', folder+'/poster.png'],
-        'fanart': [folder+'/'+stem+'-fanart.jpg', folder+'/'+stem+'-fanart.png', folder+'/fanart.jpg', folder+'/fanart.png'],
-    }
+    return {kind: [folder+'/'+stem+'-'+kind+extension for extension in ('.jpg', '.png')]
+            + ([folder+'/'+kind+extension for extension in ('.jpg', '.png')] if include_folder else [])
+            for kind in ('poster', 'fanart')}
+
+
+def artwork(item, exists, include_folder=False, poster=''):
+    """Explicit per-film choices win; never reuse a shared folder poster blindly."""
+    art = {key: value for key, value in (item.get('art') or {}).items()
+           if isinstance(value, str) and value}
+    if item.get('thumbnail'):
+        art.setdefault('thumb', item['thumbnail'])
+    exact = sidecar_candidates(item['file'], include_folder=False)
+    nearby = sidecar_candidates(item['file'], include_folder=include_folder)
+    for kind in ('poster', 'fanart'):
+        # A file-specific sidecar is an explicit local correction. Kodi's matched
+        # library art remains preferable to unqualified folder artwork.
+        candidate = next((path for path in exact[kind] if exists(path)), '')
+        if candidate:
+            art[kind] = candidate
+        elif not art.get(kind):
+            candidate = next((path for path in nearby[kind][len(exact[kind]):]
+                              if exists(path)), '')
+            if candidate:
+                art[kind] = candidate
+    if poster:
+        art['poster'] = poster
+    return art

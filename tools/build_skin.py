@@ -212,7 +212,8 @@ def main():
     format_version = ET.parse(ROOT / 'format-kodi/addon.xml').getroot().get('version')
     format_archive = archive.parent / f'plugin.audio.aperture.format-{format_version}.zip'
     format_digest = package_format(ROOT / 'format-kodi', format_archive)
-    movies_archive = archive.parent / 'plugin.video.aperture.movies-0.1.0.zip'
+    movies_version = ET.parse(ROOT / 'movies-kodi/addon.xml').getroot().get('version')
+    movies_archive = archive.parent / f'plugin.video.aperture.movies-{movies_version}.zip'
     movies_digest = package_movies(ROOT / 'movies-kodi', movies_archive)
     (archive.parent / 'checksums.json').write_text(json.dumps({archive.name: digest, format_archive.name: format_digest, movies_archive.name: movies_digest}, indent=2) + '\n')
     print(f'{digest}  {archive}')

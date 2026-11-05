@@ -37,4 +37,34 @@ class MovieSourceTests(unittest.TestCase):
         self.assertEqual(len(lib.sidecar_candidates('/Movies/A.mkv')['poster']),4)
         self.assertEqual(lib.sidecar_candidates('/Movies/A.mkv')['poster'][0],'/Movies/A-poster.jpg')
 
+    def test_explicit_sidecar_overrides_library_and_folder_art(self):
+        item = {'file':'/Movies/A.mkv', 'art':{'poster':'library-poster','fanart':'library-fanart'}}
+        art = lib.artwork(item, lambda path: path in {'/Movies/A-poster.jpg','/Movies/poster.jpg'}, True)
+        self.assertEqual(art['poster'], '/Movies/A-poster.jpg')
+        self.assertEqual(art['fanart'], 'library-fanart')
+
+    def test_manual_choice_wins_without_overwriting_other_art(self):
+        item = {'file':'/Movies/A.mkv', 'art':{'poster':'library-poster','fanart':'library-fanart'}}
+        art = lib.artwork(item, lambda path: True, True, poster='/chosen.png')
+        self.assertEqual(art['poster'], '/chosen.png')
+        self.assertEqual(item['art']['poster'], 'library-poster')
+
+    def test_folder_art_only_for_single_movie_directory(self):
+        exists = lambda path: path in {'/Movies/poster.jpg','/Movies/fanart.jpg'}
+        item = {'file':'/Movies/A.mkv'}
+        self.assertEqual(lib.artwork(item, exists), {})
+        self.assertEqual(lib.artwork(item, exists, True),
+                         {'poster':'/Movies/poster.jpg','fanart':'/Movies/fanart.jpg'})
+
+    def test_library_art_preferred_to_generic_folder_art(self):
+        item = {'file':'/Movies/A.mkv', 'art':{'poster':'library-poster'}}
+        art = lib.artwork(item, lambda path: path == '/Movies/poster.jpg', True)
+        self.assertEqual(art['poster'], 'library-poster')
+
+    def test_empty_art_keys_do_not_block_sidecars_and_thumb_is_not_a_poster(self):
+        item = {'file':'/Movies/A.mkv', 'art':{'poster':''}, 'thumbnail':'video-frame'}
+        art = lib.artwork(item, lambda path: False)
+        self.assertNotIn('poster', art)
+        self.assertEqual(art['thumb'], 'video-frame')
+
 if __name__=='__main__': unittest.main()
