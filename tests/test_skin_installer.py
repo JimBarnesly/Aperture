@@ -45,6 +45,40 @@ class SkinInstallerTests(unittest.TestCase):
         self.assertEqual((self.target/'xml/Home.xml').read_bytes(),(ROOT/'skin/xml/Home.xml').read_bytes())
         self.assertFalse((self.profile/'.aperture-skin-install.lock').exists())
 
+    def test_integrated_skin_and_format_update_preserves_games_and_profile(self):
+        self.existing()
+        shutil.copytree(ROOT/'games-kodi', self.profile/'addons/plugin.games.aperture',
+                        ignore=shutil.ignore_patterns('__pycache__'))
+        protected = {
+            'userdata/addon_data/plugin.games.aperture/settings.xml': b'configured ROM root',
+            'userdata/addon_data/plugin.games.aperture/library-v1/snapshot.json': b'cached seven systems',
+            'userdata/addon_data/plugin.games.aperture/library-v1/snapshot.attempt': b'existing attempt',
+            'userdata/addon_data/plugin.audio.aperture.format/settings.xml': b'preserved Format endpoint',
+            'userdata/Savestates/existing.sav': b'game save',
+            'userdata/addon_data/game.libretro.nestopia/save.sav': b'core save data',
+            'addons/game.libretro.nestopia/core.so': b'installed core',
+            'addons/plugin.video.aperture.movies/addon.py': b'installed Movies client',
+            'userdata/guisettings.xml': b'current skin and preferences',
+            'userdata/sources.xml': b'current media sources',
+        }
+        for relative, content in protected.items():
+            path=self.profile/relative;path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(content)
+        game_root=self.profile/'addons/plugin.games.aperture'
+        game_before={str(p.relative_to(game_root)):p.read_bytes() for p in game_root.rglob('*') if p.is_file()}
+        skin_result=self.run_install()
+        self.assertEqual(skin_result.returncode,0,skin_result.stderr)
+        self.fake('pidof','exit 1')
+        result=subprocess.run(['sh',str(ROOT/'install-format.sh')],env=self.env,text=True,capture_output=True)
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertEqual(game_before,{str(p.relative_to(game_root)):p.read_bytes() for p in game_root.rglob('*') if p.is_file()})
+        for relative,content in protected.items():
+            self.assertEqual((self.profile/relative).read_bytes(),content,relative)
+        for xml in ('MyGames.xml','MyMusicNav.xml','MusicVisualisation.xml'):
+            self.assertEqual((self.target/'xml'/xml).read_bytes(),(ROOT/'skin/xml'/xml).read_bytes())
+        for original in (ROOT/'skin/media/aperture/games/systems').iterdir():
+            self.assertEqual((self.target/'media/aperture/games/systems'/original.name).read_bytes(),original.read_bytes())
+        self.assertEqual(ET.parse(self.profile/'addons/plugin.audio.aperture.format/addon.xml').getroot().get('version'),'0.4.0')
+
     def test_baseline_retains_official_home(self):
         r=self.run_install('--baseline');self.assertEqual(r.returncode,0,r.stderr)
         self.assertEqual((self.target/'xml/Home.xml').read_text(),'<window/>')
