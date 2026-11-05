@@ -7,6 +7,7 @@ SETUP="${APERTURE_RPT3_SETUP:-/tmp/labwc-rpt3-setup}"
 mkdir -p "$SETUP"
 printf '{"status":"harness_failure","stage":"signed_package_setup","reason":"Package setup did not finish"}\n' > "$SETUP/result.json"
 exec > >(tee "$SETUP/install.log") 2>&1
+trap 'rc=$?; printf "{\"status\":\"harness_failure\",\"stage\":\"signed_package_setup\",\"reason\":\"Setup failed; see install.log\",\"exit_code\":%s,\"line\":%s}\n" "$rc" "$LINENO" > "$SETUP/result.json"' ERR
 KODI_VERSION='3:21.3+dfsg-1+rpt3'
 FFMPEG_VERSION='8:7.1.5-0+deb13u1+rpt2'
 MESA_VERSION='25.0.7-2+deb13u1'
@@ -19,12 +20,21 @@ apt-get install --yes --no-install-recommends ca-certificates curl gnupg git pyt
   "libgl1-mesa-dri=$MESA_VERSION" "libgbm1=$MESA_VERSION" libgl1 libgles2 \
   wtype grim wlr-randr wayland-utils procps tesseract-ocr tesseract-ocr-eng \
   fonts-noto-core fonts-noto-mono fonts-roboto-unhinted
+# The legacy standalone raspberrypi.gpg.key still has SHA-1 certifications.
+# The current official keyring renews that same key with SHA-512 certifications.
+# Extract only its pinned public certificate; do not run package scripts here.
 curl --fail --show-error --silent --location --proto '=https' --proto-redir '=https' \
-  https://archive.raspberrypi.com/debian/raspberrypi.gpg.key -o "$SETUP/raspberrypi.gpg.key"
-gpg --batch --show-keys --with-colons "$SETUP/raspberrypi.gpg.key" > "$SETUP/signing-key.txt"
+  https://archive.raspberrypi.com/debian/pool/main/r/raspberrypi-archive-keyring/raspberrypi-archive-keyring_2025.1+rpt1_all.deb \
+  -o "$SETUP/raspberrypi-keyring.deb"
+printf '%s  %s\n' '2e727149d7acb8cc7f604e66d0049161039c8aa1eaf1175e54f9e69d963d60e4' \
+  "$SETUP/raspberrypi-keyring.deb" | sha256sum --check
+mkdir "$SETUP/keyring-extracted"
+dpkg-deb --extract "$SETUP/raspberrypi-keyring.deb" "$SETUP/keyring-extracted"
+KEY="$SETUP/keyring-extracted/usr/share/keyrings/raspberrypi-archive-keyring.pgp"
+gpg --batch --show-keys --with-colons "$KEY" > "$SETUP/signing-key.txt"
 ACTUAL="$(awk -F: '$1 == "fpr" { print $10; exit }' "$SETUP/signing-key.txt")"
 [[ "$ACTUAL" == "$KEY_FINGERPRINT" ]] || { echo 'Official repository key fingerprint changed; stopping'; exit 2; }
-gpg --batch --dearmor --output /usr/share/keyrings/aperture-ci-raspberrypi.gpg "$SETUP/raspberrypi.gpg.key"
+cp "$KEY" /usr/share/keyrings/aperture-ci-raspberrypi.gpg
 printf '%s\n' 'deb [arch=arm64 signed-by=/usr/share/keyrings/aperture-ci-raspberrypi.gpg] https://archive.raspberrypi.com/debian/ trixie main' > /etc/apt/sources.list.d/aperture-ci-raspberrypi.list
 # Prefer Debian for unrelated packages. Explicit exact versions below select only
 # the requested Kodi and its required matching downstream FFmpeg userspace libraries.

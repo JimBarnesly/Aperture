@@ -41,7 +41,7 @@ class DownstreamRuntimeTests(unittest.TestCase):
 
     def test_signed_repository_and_pinned_versions_required(self):
         installer = (ROOT / 'tools/install_labwc_rpt3_ci.sh').read_text()
-        for token in ('signed-by=', 'CF8A1AF502A2AA2D763BAE7E82B129927FA3303E', 'APT::Update::Error-Mode=any', '3:21.3+dfsg-1+rpt3', '8:7.1.5-0+deb13u1+rpt2'):
+        for token in ('signed-by=', 'CF8A1AF502A2AA2D763BAE7E82B129927FA3303E', 'APT::Update::Error-Mode=any', '3:21.3+dfsg-1+rpt3', '8:7.1.5-0+deb13u1+rpt2', 'raspberrypi-archive-keyring_2025.1+rpt1_all.deb', 'sha256sum --check'):
             self.assertIn(token, installer)
         for forbidden in ('trusted=yes', 'allow-unauthenticated', 'AllowInsecureRepositories', 'allow-insecure-repositories'):
             self.assertNotIn(forbidden, installer)

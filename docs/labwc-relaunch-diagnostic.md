@@ -75,7 +75,11 @@ Pinned packages are Kodi, kodi-bin and kodi-data `3:21.3+dfsg-1+rpt3`; the seven
 required Raspberry Pi FFmpeg libraries `8:7.1.5-0+deb13u1+rpt2`; Debian Labwc
 `0.8.3-1`; and Debian Mesa graphics `25.0.7-2+deb13u1`. The official Raspberry Pi
 trixie repository is scoped by `signed-by`, with signing-key fingerprint
-`CF8A1AF502A2AA2D763BAE7E82B129927FA3303E`. APT signature verification remains
+`CF8A1AF502A2AA2D763BAE7E82B129927FA3303E`. The exact official keyring package `2025.1+rpt1` supplies its renewed SHA-512
+certifications, with package SHA256
+`2e727149d7acb8cc7f604e66d0049161039c8aa1eaf1175e54f9e69d963d60e4`.
+The legacy standalone key file was rejected by current APT policy for SHA-1
+certifications; verification was not weakened. APT signature verification remains
 mandatory. Debian remains preferred for unrelated packages. Missing pinned
 versions, signature failures, dependency constraints or a non-GLES runtime stop
 the diagnostic instead of silently approximating the requested environment.
