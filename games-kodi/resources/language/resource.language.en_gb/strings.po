@@ -81,3 +81,28 @@ msgstr ""
 msgctxt "#32019"
 msgid "Background refresh requested. Your saved library stays available."
 msgstr ""
+
+
+msgctxt "#32020"
+msgid "Refresh found no games. Saved library retained — review…"
+msgstr ""
+
+msgctxt "#32021"
+msgid "The scan found no games. The drive or share may be unavailable. Keep the saved library unless you know this source is intentionally empty. Clear only the saved game list? No game files will be deleted."
+msgstr ""
+
+msgctxt "#32022"
+msgid "Keep saved library"
+msgstr ""
+
+msgctxt "#32023"
+msgid "Clear saved list"
+msgstr ""
+
+msgctxt "#32024"
+msgid "The library changed or is being refreshed. Nothing was cleared. Review it and try again."
+msgstr ""
+
+msgctxt "#32025"
+msgid "Source identity could not be verified. Saved games retained; check the drive or share."
+msgstr ""

@@ -18,8 +18,13 @@ installation permission or a claim of Raspberry Pi acceptance.
   inside the add-on or skin directory. Reboots and ordinary package updates do
   not invalidate them. Each configured source has its own hashed identity.
 - A failed, cancelled or unreadable scan retains the previous complete snapshot.
-  Automatic empty results cannot erase a populated library when a disk/share is
-  absent. Manual refresh can confirm a genuinely empty library. Failed attempts
+  Empty results, including manual refreshes, cannot erase a populated library.
+  An existing empty mount point or VFS response is not proof that media is
+  available. The saved list remains browsable with an empty-result review action.
+  Only that separate, explicit confirmation clears the saved list when the user
+  knows the source is intentionally empty; it never deletes game files. Cancelling
+  keeps the index, and a busy worker or changed index rejects a stale confirmation.
+  A first index may legitimately be empty. Failed or ambiguous empty attempts
   retry after 15 minutes. OS locks prevent duplicate workers and release on crash.
 - Publication uses flushed temporary files and atomic replacement. Share URLs and
   credentials are not written into cache contents or plugin navigation links.
@@ -65,3 +70,28 @@ Check the exact candidate run before treating these runtime checks as passed.
 Synthetic desktop/ARM64 CI does not certify physical Pi power cycles, drive mount
 timing, physical input, audible output or the user's real collection. A native
 Kodi runtime is not installed in the editing workspace.
+
+
+## Removal guard
+
+A scan that removes any cached game or disc path must match the snapshot's
+recorded source identity before and after enumeration. On supported Linux local
+filesystems this includes the root directory device/inode, filesystem identity,
+and nested mount topology. Mount-session IDs must also remain unchanged during
+the scan. Losing a nested game volume is not treated as deleting its games.
+An unverified result preserves the entire old index and reports
+`source_unverified`; it retries after 15 minutes. Empty results additionally
+require the separate confirmation above, which checks source identity again.
+
+There is deliberately no migration that guesses a legacy snapshot's identity.
+Legacy snapshots remain readable and can gain entries, but cannot lose them.
+SMB/NFS URLs, network/FUSE mounts, unknown filesystem types, unavailable Linux
+mount information and other platforms provide no deletion proof. They preserve
+entries instead of assuming that an accessible path means an available drive.
+A device-number change after reboot may also conservatively block removals.
+No drive marker files are written and no automatic rebaseline is performed.
+
+These checks compare operating-system observations; they are not an atomic
+filesystem snapshot or a guarantee against concurrent hostile mount changes.
+Physical drive disconnect/reconnect and native confirmation UI still require
+separate acceptance. Unit tests use synthetic mount tables and media fixtures.

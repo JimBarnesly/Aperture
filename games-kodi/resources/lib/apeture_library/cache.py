@@ -15,6 +15,7 @@ import tempfile
 import time
 
 from .catalog import SYSTEM_BY_FOLDER, SYSTEM_BY_ID
+from .source import inspect_source
 from .scanner import Game, ScanResult, SystemLibrary, join_path, safe_name
 
 SCHEMA = 1
@@ -127,7 +128,7 @@ class LibraryCache:
             if os.path.exists(temporary):
                 os.unlink(temporary)
 
-    def publish(self, result):
+    def publish(self, result, source_identity=None):
         # Incomplete/unreadable scans must never erase a last-known-good library.
         if any(issue.code in ("unsafe_path", "unreadable_directory") for issue in result.issues):
             raise ValueError("Incomplete scan cannot replace library cache")
@@ -140,11 +141,39 @@ class LibraryCache:
                      for game in library.games]
             libraries.append({"system": system_id, "games": games})
         self._write(self.path, {"schema": SCHEMA, "source": self.key,
-                                "completed": self.now(), "libraries": libraries})
+                                "completed": self.now(), "libraries": libraries,
+                                "source_identity": source_identity})
 
     def request_refresh(self):
         """Explicit user refresh, independent of navigation and cache lifetime."""
         self._write(self.request_path, {"requested": self.now()})
+
+    def source_identity(self):
+        try:
+            value = self._read(self.path).get("source_identity")
+            return value if isinstance(value, str) and len(value) == 64 else None
+        except (OSError, ValueError, TypeError, AttributeError):
+            return None
+
+    def confirm_empty(self, expected_completed):
+        """Clear only after a separate user confirmation, never from a scan.
+
+        Recheck under the worker lock so a newer scan cannot be discarded by an
+        older dialog. No ROM file is inspected, modified or deleted here.
+        """
+        with self.refresh_lock() as acquired:
+            if not acquired or self.status() != "empty_retained":
+                return False
+            current = self.load()
+            if current is None or current[1] != expected_completed:
+                return False
+            source = inspect_source(self.root)
+            if not source or source["identity"] != self.source_identity():
+                self.mark_attempt("source_unverified")
+                return False
+            self.publish(ScanResult((), ()), source["identity"])
+            self.mark_attempt("ready")
+            return True
 
     def status(self):
         try:
@@ -159,7 +188,7 @@ class LibraryCache:
         try:
             attempt = self._read(self.attempt_path)
             age = now - _timestamp(attempt["started"])
-            if attempt.get("status") in ("indexing", "unavailable"):
+            if attempt.get("status") in ("indexing", "unavailable", "empty_retained", "source_unverified"):
                 # A failed explicit refresh also retries, even if the older
                 # snapshot was originally created less than a day ago.
                 return not 0 <= age < RETRY_SECONDS
@@ -209,8 +238,9 @@ def refresh(cache, scanner, cancelled=lambda: False):
     with cache.refresh_lock() as acquired:
         if not acquired or not cache.due():
             return False
-        explicit = cache.request_path.exists()
         previous = cache.load()
+        known_identity = cache.source_identity()
+        before = inspect_source(cache.root)
         started = cache.now()
         # Consume only the request that preceded this attempt. A newer request
         # arriving during the scan remains pending for the next service tick.
@@ -224,11 +254,25 @@ def refresh(cache, scanner, cancelled=lambda: False):
             if cancelled():
                 from .scanner import ScanCancelled
                 raise ScanCancelled()
-            if not result.libraries and previous and previous[0].libraries and not explicit:
-                raise ValueError("Empty background scan cannot erase a populated library")
-            cache.publish(result)
+            after = inspect_source(cache.root)
+            stable = before is not None and before == after
+            def paths(snapshot):
+                return {path for library in snapshot.libraries for game in library.games
+                        for path in (game.path,) + game.discs}
+            removals = previous and paths(previous[0]) - paths(result)
+            if removals and (not stable or known_identity != before["identity"]):
+                cache.mark_attempt("source_unverified", started)
+                return False
+            if not result.libraries and previous and previous[0].libraries:
+                cache.mark_attempt("empty_retained", started)
+                return False
+            # Never adopt a replacement source as trusted merely because it
+            # produced additions. Legacy snapshots remain deletion-protected.
+            identity = known_identity if previous else (before["identity"] if stable else None)
+            cache.publish(result, identity)
         except Exception:
             cache.mark_attempt("unavailable", started)
             raise
         cache.mark_attempt("ready", started)
         return True
+

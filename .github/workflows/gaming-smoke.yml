@@ -1,7 +1,7 @@
 name: Kodi gaming core acceptance
 on:
   push:
-    branches: [fix/kodi21-startup, fix/games-persistent-selector]
+    branches: [fix/kodi21-startup, fix/games-persistent-selector, fix/games-source-removal-guard]
   workflow_dispatch:
 permissions:
   contents: read
@@ -43,3 +43,4 @@ jobs:
           path: build/gaming-smoke/
           if-no-files-found: warn
           retention-days: 14
+
