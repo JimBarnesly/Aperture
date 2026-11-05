@@ -3,6 +3,8 @@ on:
   workflow_dispatch:
   push:
     paths:
+      - 'install.sh'
+      - 'tests/test_skin_installer.py'
       - 'tools/style_dialogs.py'
       - 'skin/**'
       - 'tools/build_skin.py'

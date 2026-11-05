@@ -51,10 +51,11 @@ class SkinInstallerTests(unittest.TestCase):
                         ignore=shutil.ignore_patterns('__pycache__'))
         protected = {
             'userdata/addon_data/plugin.games.aperture/settings.xml': b'configured ROM root',
-            'userdata/addon_data/plugin.games.aperture/library-cache/snapshot.json': b'cached seven systems',
-            'userdata/addon_data/plugin.games.aperture/library-cache/scan-attempt.json': b'existing attempt',
+            'userdata/addon_data/plugin.games.aperture/library-v1/snapshot.json': b'cached seven systems',
+            'userdata/addon_data/plugin.games.aperture/library-v1/snapshot.attempt': b'existing attempt',
             'userdata/addon_data/plugin.audio.aperture.format/settings.xml': b'preserved Format endpoint',
             'userdata/Savestates/existing.sav': b'game save',
+            'userdata/addon_data/game.libretro.nestopia/save.sav': b'core save data',
             'addons/game.libretro.nestopia/core.so': b'installed core',
             'addons/plugin.video.aperture.movies/addon.py': b'installed Movies client',
             'userdata/guisettings.xml': b'current skin and preferences',
