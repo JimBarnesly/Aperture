@@ -347,6 +347,7 @@
             <texture>aperture/games/systems/carousel-line.png</texture>
           </control>
         </focusedlayout>
+        <onfocus condition="String.IsEqual(Container.Property(Aperture.LibraryState),ready) + ListItem.IsParentFolder + !String.IsEmpty(Container(59).ListItem(1).Property(Aperture.System))">SetFocus(59,1,absolute)</onfocus>
       </control>
       <control type="label">
         <left>640</left>

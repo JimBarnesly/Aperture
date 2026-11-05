@@ -69,8 +69,12 @@ def verify_cached_navigation(cache):
     before = cache_evidence(cache)
     root = 'plugin://plugin.games.aperture/'
     for cycle in range(3):
-        xbmc.executebuiltin('ActivateWindow(Home)')
-        until('Home before cached entry', lambda: xbmcgui.getCurrentWindowId()==10000)
+        if xbmcgui.getCurrentWindowId() != 10000:
+            xbmc.executebuiltin('ActivateWindow(Home)')
+            until('Home before cached entry', lambda: xbmcgui.getCurrentWindowId()==10000)
+        # Wait for the previous window animation/activation to finish. A state
+        # snapshot taken mid-transition is not a completed navigation action.
+        monitor.waitForAbort(.6)
         started = time.monotonic()
         xbmc.executebuiltin('ActivateWindow(Games,'+root+',return)')
         until('cached Games entry', lambda: xbmcgui.getCurrentWindowId()==10821
@@ -78,14 +82,17 @@ def verify_cached_navigation(cache):
               and xbmc.getInfoLabel('Container.Property(Aperture.LibraryState)')=='ready'
               and not xbmc.getCondVisibility('System.HasModalDialog'))
         elapsed = time.monotonic() - started
+        monitor.waitForAbort(.6)
         if os.environ.get('APERTURE_GAMING_SKIN') != 'classic':
             until('selector visible', lambda: xbmc.getCondVisibility('Control.IsVisible(59)'))
             initial = xbmc.getInfoLabel('ListItem.Property(Aperture.System)')
-            rpc('Input.Right'); monitor.waitForAbort(.3)
+            rpc('Input.Right'); monitor.waitForAbort(.5)
             right = xbmc.getInfoLabel('ListItem.Property(Aperture.System)')
-            rpc('Input.Left'); monitor.waitForAbort(.3)
-            if not initial or initial == right or xbmc.getInfoLabel('ListItem.Property(Aperture.System)') != initial:
-                raise RuntimeError('Horizontal system navigation failed to return to its original system')
+            rpc('Input.Left'); monitor.waitForAbort(.5)
+            restored = xbmc.getInfoLabel('ListItem.Property(Aperture.System)')
+            if not initial or initial == right or restored != initial:
+                raise RuntimeError('Horizontal system focus mismatch: initial={!r}, right={!r}, restored={!r}'.format(initial, right, restored))
+            checks.append({'check':'horizontal-system-selection-'+str(cycle), 'initial':initial, 'right':right, 'restored':restored})
         if cache_evidence(cache) != before:
             raise RuntimeError('Games reentry unexpectedly rewrote cache or started another scan')
         checks.append({'check':'cached-root-entry-'+str(cycle), 'seconds':round(elapsed,3), 'no_new_scan':True})
