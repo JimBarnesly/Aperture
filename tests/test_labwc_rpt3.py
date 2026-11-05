@@ -28,7 +28,7 @@ class DownstreamRuntimeTests(unittest.TestCase):
             module.package_evidence(self.packages().replace('25.0.7-2+deb13u1', '26.1.6-1'))
 
     def test_actual_gles_llvmpipe_native_wayland(self):
-        log = 'GL_RENDERER = llvmpipe (LLVM 19)\nGL_VERSION = OpenGL ES 3.2 Mesa 25.0.7\nBinding Wayland protocol wl_shm version 1\n'
+        log = 'EGL_VERSION = 1.5\nGL_RENDERER = llvmpipe (LLVM 19)\nGL_VERSION = OpenGL ES 3.2 Mesa 25.0.7\nBinding Wayland protocol wl_shm version 1\n'
         self.assertTrue(module.gles_evidence(log)['native_wayland'])
         for changed in (log.replace('OpenGL ES 3.2', '4.6 (Core Profile)'), log.replace('llvmpipe', 'V3D'), log.replace('Binding Wayland protocol', 'X11')):
             with self.assertRaises(ValueError):

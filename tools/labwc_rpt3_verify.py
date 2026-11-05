@@ -20,8 +20,8 @@ def package_evidence(text):
 
 
 def gles_evidence(log):
-    renderer = re.findall(r'GL_RENDERER\s*=\s*(.+)', log)
-    version = re.findall(r'GL_VERSION\s*=\s*(.+)', log)
+    renderer = re.findall(r'\bGL_RENDERER\s*=\s*(.+)', log)
+    version = re.findall(r'\bGL_VERSION\s*=\s*(.+)', log)
     if len(renderer) != 1 or 'llvmpipe' not in renderer[0].lower():
         raise ValueError('Exactly one llvmpipe renderer must be established')
     if len(version) != 1 or not version[0].startswith('OpenGL ES '):
