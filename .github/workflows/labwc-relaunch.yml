@@ -37,7 +37,7 @@ jobs:
           bash -n tools/ci_labwc_relaunch.sh
       - name: Run software-only compositor and same-profile normal Exit cycles
         env:
-          GITHUB_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          APERTURE_EXPECTED_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           useradd --create-home --shell /bin/bash waylandqa
           chown -R waylandqa:waylandqa "$GITHUB_WORKSPACE"
@@ -83,7 +83,7 @@ jobs:
           bash -n tools/ci_labwc_rpt3.sh tools/install_labwc_rpt3_ci.sh
       - name: Verify native rpt3 GLES and four normal Exit launches
         env:
-          GITHUB_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          APERTURE_EXPECTED_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           useradd --create-home --shell /bin/bash waylandqa
           chown -R waylandqa:waylandqa "$GITHUB_WORKSPACE" "$APERTURE_RPT3_SETUP"

@@ -89,3 +89,14 @@ installation plan, full installed versions and all lifecycle evidence. This
 closes only the package/GLES comparison if it passes. It still cannot establish
 physical Pi graphics-driver, output, CEC, controller, audio or persisted-profile
 behavior, and it applies no production patch or workaround.
+
+## Source provenance
+
+`commit.txt` and `tree.txt` come from the actual checked-out Git HEAD and tree.
+The workflow passes the intended PR head through `APERTURE_EXPECTED_COMMIT`;
+a mismatch or modified tracked source fails before GUI startup. The separate
+`source-provenance.json` records both identities and the GitHub event SHA for
+context. GitHub's protected `GITHUB_SHA` can identify the synthetic PR merge
+commit even when checkout explicitly selects the PR head; it must not label the
+tested source. Run 42040483312 checked out head `8fb37975` in all four checkout
+logs but mislabeled its old `commit.txt` with that event merge SHA.

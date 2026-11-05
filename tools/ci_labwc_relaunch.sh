@@ -2,12 +2,12 @@
 # Diagnostic only. Never use a real profile, seat, display, input device or bus.
 set -Eeuo pipefail
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
-COMMIT="${GITHUB_SHA:-$(git -C "$ROOT" rev-parse HEAD)}"
 OUT="${APERTURE_WAYLAND_OUT:-$ROOT/build/labwc-relaunch}"
 [[ ! -d "$OUT" || -z "$(ls -A "$OUT")" ]] || { echo 'Output must be empty'; exit 2; }
 mkdir -p "$OUT"
 OUT="$(cd -- "$OUT" && pwd)"
 printf '{"status":"harness_failure","stage":"preflight","reason":"Harness did not finish"}\n' > "$OUT/result.json"
+python3 "$ROOT/tools/labwc_source_provenance.py" "$ROOT" "$OUT"
 [[ "$EUID" != 0 ]] || { echo 'Refusing root GUI execution'; exit 2; }
 [[ ! -e /dev/dri && ! -e /dev/input ]] || { echo 'Unexpected hardware device tree'; exit 2; }
 for command in labwc dbus-run-session wtype grim wlr-randr wayland-info tesseract python3 dpkg-query timeout; do
@@ -35,7 +35,6 @@ export KODI_BIN_HOME="$(dirname -- "$APERTURE_KODI_BIN")" KODI_BINADDON_PATH="$(
 "$APERTURE_KODI_BIN" --help > "$OUT/kodi-help.txt" 2>&1 || true
 labwc --version > "$OUT/labwc-version.txt" 2>&1
 dpkg-query -W kodi kodi-bin kodi-data labwc libegl-mesa0 libgl1-mesa-dri wtype grim wlr-randr wayland-utils > "$OUT/runtime-packages.txt"
-printf '%s\n' "$COMMIT" > "$OUT/commit.txt"
 grep -Eq 'Center 21\.3([ .]|$)' "$OUT/kodi-version.txt" || { cat "$OUT/kodi-version.txt"; echo 'Kodi 21.3 required'; exit 2; }
 grep -qi wayland "$OUT/kodi-help.txt" || { cat "$OUT/kodi-help.txt"; echo 'Wayland backend not advertised'; exit 2; }
 python3 "$ROOT/tools/build_skin.py" > "$OUT/skin-build.log" 2>&1
