@@ -14,7 +14,10 @@ for command in labwc dbus-run-session wtype grim wlr-randr wayland-info tesserac
   command -v "$command" >/dev/null || { echo "Missing prerequisite: $command"; exit 2; }
 done
 export APERTURE_WAYLAND_ROOT="$ROOT" APERTURE_WAYLAND_OUT="$OUT"
-export APERTURE_WAYLAND_RUNTIME="$(mktemp -d "${RUNNER_TEMP:-/tmp}/aperture-labwc.XXXXXXXX")"
+# Runner temp is owned by the container runner, not our disposable user.
+# Keep assignment separate from export so mktemp failure cannot be masked.
+APERTURE_WAYLAND_RUNTIME="$(mktemp -d /tmp/aperture-labwc.XXXXXXXX)"
+export APERTURE_WAYLAND_RUNTIME
 export HOME="$APERTURE_WAYLAND_RUNTIME/home"
 export XDG_RUNTIME_DIR="$APERTURE_WAYLAND_RUNTIME/run"
 export XDG_CONFIG_HOME="$HOME/.config" XDG_DATA_HOME="$HOME/.local/share" XDG_CACHE_HOME="$HOME/.cache"
