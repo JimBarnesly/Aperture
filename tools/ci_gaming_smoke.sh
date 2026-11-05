@@ -65,6 +65,13 @@ for screenshot in sorted(out.glob('*.png'))[:20]:
     print('APERTURE_SCREENSHOT_BASE64_BEGIN ' + preview.name, flush=True)
     print(base64.b64encode(preview.read_bytes()).decode(), flush=True)
     print('APERTURE_SCREENSHOT_BASE64_END ' + preview.name, flush=True)
+    if screenshot.stem == 'persistent-games-selector':
+        large = screenshot.with_suffix('.full.jpg')
+        subprocess.run(['convert', str(screenshot), '-resize', '1280x720', '-quality', '85', str(large)],
+                       check=True, timeout=10)
+        print('APERTURE_SCREENSHOT_BASE64_BEGIN ' + large.name, flush=True)
+        print(base64.b64encode(large.read_bytes()).decode(), flush=True)
+        print('APERTURE_SCREENSHOT_BASE64_END ' + large.name, flush=True)
 PY
 python3 - "$OUT/result.json" <<'PY'
 import json,sys

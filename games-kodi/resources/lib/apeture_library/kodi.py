@@ -207,6 +207,11 @@ class Plugin:
         xbmcplugin.endOfDirectory(self.handle, succeeded=True, updateListing=update, cacheToDisc=False)
         if xbmc.getSkinDir() == "skin.aperture":
             xbmc.executebuiltin("Container.SetViewMode({})".format(60 if system_id else 59))
+            if not system_id and state == "ready":
+                # A separate bounded script waits until Kodi has restored the
+                # prior directory selection. Never queue this on container focus.
+                script = os.path.join(self.addon.getAddonInfo("path"), "focus.py")
+                xbmc.executebuiltin('RunScript("{}")'.format(script))
 
     def error(self, exc):
         xbmc.log("Aperture: operation failed ({})".format(type(exc).__name__), xbmc.LOGERROR)

@@ -50,18 +50,6 @@ class SystemCarouselTests(unittest.TestCase):
   self.assertIsNone(self.carousel.find('onback'))
   self.assertIsNone(self.carousel.find('content'))
 
- def test_first_focus_skips_parent_only_for_ready_systems(self):
-  actions=self.carousel.findall('onfocus')
-  self.assertEqual(len(actions),1)
-  self.assertEqual(actions[0].text,'SetFocus(59,1,absolute)')
-  self.assertEqual(actions[0].get('condition'),
-   'String.IsEqual(Container.Property(Aperture.LibraryState),ready) + ListItem.IsParentFolder + !String.IsEmpty(Container(59).ListItem(1).Property(Aperture.System))')
-  # Never change the global parent-folder setting, run a scan, or steal
-  # ordinary Left/Right. Real systems restored by Kodi do not match the guard.
-  self.assertEqual(self.carousel.findtext('onleft'),'59')
-  self.assertEqual(self.carousel.findtext('onright'),'59')
-  self.assertIsNone(self.tree.find('.//control[@id="60"]/onfocus'))
-
  def test_every_supported_system_has_distinct_original_art(self):
   import importlib.util, struct
   spec=importlib.util.spec_from_file_location('game_art',ROOT/'tools/build_game_art.py')

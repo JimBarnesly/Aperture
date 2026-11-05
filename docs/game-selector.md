@@ -36,11 +36,12 @@ The existing game-detail artwork remains untouched by this selector patch.
 - Both retain the `list` view type and are first in the view preference list.
   This preserves Kodi's fallback to the correct view when Back restores a
   directory. Native non-Aperture game views remain available.
-- No click or Back handlers override Kodi directory navigation. A guarded
-  control-focus action skips the parent tile only when a ready root currently
-  selects that tile and its next entry is an actual system. It does not intercept
-  Left/Right or change the global parent-folder setting. A restored real-system
-  selection does not match the guard.
+- No click or Back handlers override Kodi directory navigation. A bounded
+  add-on helper waits for initial directory/history restoration, then selects the
+  first console only if the parent item is still focused. Restored console or
+  utility selections, newer navigation, and modal dialogs are not overridden.
+  A queued skin `onfocus` action is deliberately avoided because it can execute
+  after history restoration and reset the previously selected system.
 - System identities and cached counts come from the companion Games add-on.
   `Aperture.Action` distinguishes utility items. Combine with the persistent
   library-cache candidate, not the old add-on that rescans on entry.
