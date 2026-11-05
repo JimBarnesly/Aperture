@@ -260,7 +260,7 @@ def refresh(cache, scanner, cancelled=lambda: False):
                 return {path for library in snapshot.libraries for game in library.games
                         for path in (game.path,) + game.discs}
             removals = previous and paths(previous[0]) - paths(result)
-            if removals and (not stable or known_identity != before["identity"]):
+            if removals and (result.issues or not stable or known_identity != before["identity"]):
                 cache.mark_attempt("source_unverified", started)
                 return False
             if not result.libraries and previous and previous[0].libraries:

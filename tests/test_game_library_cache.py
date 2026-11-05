@@ -196,6 +196,16 @@ class CacheTests(unittest.TestCase):
         self.assertTrue(c.refresh(self.cache, lambda: partial))
         self.assertEqual(len(self.cache.load()[0].libraries[0].games), 1)
 
+    def test_descriptor_or_directory_issues_cannot_remove_cached_games(self):
+        self.cache.publish(self.result, c.inspect_source(str(self.root))["identity"])
+        before = self.cache.path.read_bytes()
+        for code in ("invalid_cue", "invalid_playlist", "unreadable_directory", "unsafe_path"):
+            self.cache.request_refresh()
+            result = ScanResult((), (ScanIssue(code, "synthetic"),))
+            self.assertFalse(c.refresh(self.cache, lambda: result))
+            self.assertEqual(self.cache.path.read_bytes(), before)
+            self.assertEqual(self.cache.status(), "source_unverified")
+
     def test_legacy_snapshot_never_adopts_unproven_deletion_identity(self):
         self.cache.publish(self.result)
         self.cache.request_refresh()
