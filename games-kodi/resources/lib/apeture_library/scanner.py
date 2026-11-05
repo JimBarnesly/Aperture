@@ -308,3 +308,57 @@ def scan_library(root, filesystem=None, cancelled: Callable[[], bool] = lambda: 
     libraries.sort(key=lambda library: library.system.name.casefold())
     check_cancel()
     return ScanResult(tuple(libraries), tuple(issues))
+
+
+def validate_launch(path, root, system_id, filesystem=None):
+    """Check only the chosen file/descriptor, never rescan a system at launch.
+
+    Cached discovery is not permission to follow a replaced symlink or a newly
+    unsafe CUE member. Kodi still owns core/content compatibility validation.
+    """
+    filesystem = filesystem or LocalFileSystem()
+    prefix = root.rstrip("/\\") + ("/" if is_uri(root) else os.sep)
+    if not path.startswith(prefix):
+        return False
+    parts = path[len(prefix):].replace(os.sep, "/").split("/")
+    if len(parts) < 2 or not all(safe_name(part) for part in parts):
+        return False
+    system = SYSTEM_BY_FOLDER.get(parts[0].casefold())
+    if system is None or system.id != system_id or extension(path) not in system.extensions:
+        return False
+    if extension(path) in PLAYLIST_EXTENSIONS:
+        return False
+    boundary = join_path(root, parts[0])
+
+    def available(candidate):
+        if not candidate.startswith(boundary.rstrip("/\\") + ("/" if is_uri(boundary) else os.sep)):
+            return False
+        cursor = root
+        for part in candidate[len(prefix):].replace(os.sep, "/").split("/"):
+            if not safe_name(part):
+                return False
+            cursor = join_path(cursor, part)
+            if not filesystem.safe(cursor, root):
+                return False
+        if isinstance(filesystem, LocalFileSystem):
+            return os.path.isfile(candidate)
+        return filesystem.exists(candidate)
+
+    if not available(path):
+        return False
+    if extension(path) == ".cue":
+        refs = []
+        try:
+            for line in filesystem.read_text(path, MANIFEST_LIMIT).splitlines():
+                if re.match(r"^\s*FILE\b", line, re.IGNORECASE):
+                    match = _CUE_FILE.match(line)
+                    if not match:
+                        return False
+                    ref = reference_path(path, match.group(1) or match.group(2), boundary)
+                    if not ref or ref == path or not available(ref):
+                        return False
+                    refs.append(ref)
+            return bool(refs)
+        except (OSError, IOError, ValueError, UnicodeError):
+            return False
+    return True

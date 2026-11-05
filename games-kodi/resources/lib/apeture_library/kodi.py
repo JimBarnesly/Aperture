@@ -5,7 +5,6 @@ SPDX-License-Identifier: GPL-3.0-or-later
 
 import hashlib
 import os
-import time
 from urllib.parse import parse_qs, unquote, urlencode, urlsplit
 
 import xbmc
@@ -14,6 +13,7 @@ import xbmcgui
 import xbmcplugin
 import xbmcvfs
 
+from .cache import LibraryCache
 from .catalog import SYSTEM_BY_ID
 from .scanner import LocalFileSystem, ScanCancelled, ScanError, filename, is_uri, scan_library
 
@@ -41,6 +41,9 @@ class KodiFileSystem:
         if not xbmcvfs.exists(path.rstrip("/") + "/"):
             raise OSError("VFS directory unavailable")
         return xbmcvfs.listdir(path)
+
+    def exists(self, path):
+        return xbmcvfs.exists(path)
 
     def read_text(self, path, limit):
         with xbmcvfs.File(path) as stream:
@@ -89,29 +92,41 @@ class Plugin:
     def text(self, identifier):
         return self.addon.getLocalizedString(identifier)
 
-    def scan(self, system_id=None):
+    def cache(self):
         root, filesystem = configured_source(self.addon.getSetting("rom_root"))
-        if not root:
-            return scan_library("")
-        progress = xbmcgui.DialogProgress()
-        progress.create(self.text(32000), self.text(32010))
-        last_update = [0.0]
-        def report(count):
-            now = time.monotonic()
-            if now - last_update[0] >= .2:
-                progress.update(0, "Checking {:,} entries…".format(count))
-                last_update[0] = now
-        try:
-            return scan_library(root, filesystem,
-                                cancelled=lambda: self.monitor.abortRequested() or progress.iscanceled(),
-                                system_id=system_id, systems_only=system_id is None,
-                                progress=report)
-        finally:
-            progress.close()
+        profile = xbmcvfs.translatePath(self.addon.getAddonInfo("profile"))
+        return LibraryCache(profile, root), filesystem
+
+    def library(self, system_id=None):
+        cache, _ = self.cache()
+        if not cache.root:
+            from .scanner import ScanResult
+            return ScanResult((), ()), "unconfigured"
+        snapshot = cache.load()
+        if snapshot is None:
+            state = cache.status()
+            if state == "ready":
+                # Publication may have completed between the first read and
+                # status read. Do not queue a duplicate scan for that race.
+                snapshot = cache.load()
+                if snapshot is None:
+                    if not cache.request_path.exists():
+                        cache.request_refresh()
+                    state = "indexing"
+            if snapshot is None:
+                from .scanner import ScanResult
+                return ScanResult((), ()), state
+        result, _ = snapshot
+        if system_id:
+            from .scanner import ScanResult
+            result = ScanResult(tuple(library for library in result.libraries
+                                      if library.system.id == system_id), ())
+        return result, "ready" if result.libraries else "empty"
 
     def action_item(self, label, action, special_sort=None):
         item = xbmcgui.ListItem(label=label, offscreen=True)
         item.setProperty("IsPlayable", "false")
+        item.setProperty("Aperture.Action", action)
         item.setArt({"icon": "DefaultAddonGame.png"})
         if special_sort:
             item.setProperty("SpecialSort", special_sort)
@@ -153,10 +168,7 @@ class Plugin:
         xbmcplugin.setPluginCategory(self.handle, self.text(32000))
         items = []
         try:
-            result = self.scan(system_id)
-            state = "ready" if result.libraries else "empty"
-            if not self.addon.getSetting("rom_root").strip():
-                state = "unconfigured"
+            result, state = self.library(system_id)
             if system_id:
                 xbmcplugin.setPluginCategory(self.handle, SYSTEM_BY_ID[system_id].name)
                 for library in result.libraries:
@@ -170,15 +182,12 @@ class Plugin:
                     item.setProperty("IsPlayable", "false")
                     item.setProperty("Aperture.System", library.system.id)
                     item.setProperty("Aperture.SystemName", library.system.name)
-                    item.setProperty("Aperture.GameCount", "")
+                    item.setProperty("Aperture.GameCount", str(len(library.games)))
                     item.setArt({"icon": "DefaultAddonGame.png"})
                     items.append((url(action="system", system=library.system.id), item, True))
-            if result.issues:
-                xbmcgui.Dialog().notification(self.text(32000), self.text(32012),
-                                             xbmcgui.NOTIFICATION_WARNING)
-                # Never log a ROM path or an SMB URL (which may have credentials).
-                xbmc.log("Aperture: {} scan issue(s); some entries skipped".format(len(result.issues)), xbmc.LOGWARNING)
-            if state != "ready":
+            if state in ("indexing", "unavailable"):
+                items.append(self.action_item(self.text(32017 if state == "indexing" else 32018), "root", "top"))
+            if state in ("unconfigured", "empty"):
                 items.append(self.action_item(self.text(32004 if state == "unconfigured" else 32005), "settings", "top"))
         except ScanCancelled:
             xbmcplugin.setProperty(self.handle, "Aperture.LibraryState", "cancelled")
@@ -188,14 +197,21 @@ class Plugin:
             state = "error"
             self.error(exc)
             items.append(self.action_item(self.text(32006), "settings", "top"))
-        if state == "ready":
+        if state in ("ready", "unavailable", "indexing"):
             items.append(self.action_item(self.text(32006), "settings", "bottom"))
+        if self.addon.getSetting("rom_root").strip():
+            items.append(self.action_item(self.text(32016), "refresh", "bottom"))
         items.append(self.action_item(self.text(32007), "help", "bottom"))
         xbmcplugin.setProperty(self.handle, "Aperture.LibraryState", state)
         xbmcplugin.addDirectoryItems(self.handle, items, totalItems=len(items))
         xbmcplugin.endOfDirectory(self.handle, succeeded=True, updateListing=update, cacheToDisc=False)
         if xbmc.getSkinDir() == "skin.aperture":
             xbmc.executebuiltin("Container.SetViewMode({})".format(60 if system_id else 59))
+            if not system_id and state == "ready":
+                # A separate bounded script waits until Kodi has restored the
+                # prior directory selection. Never queue this on container focus.
+                script = os.path.join(self.addon.getAddonInfo("path"), "focus.py")
+                xbmc.executebuiltin('RunScript("{}")'.format(script))
 
     def error(self, exc):
         xbmc.log("Aperture: operation failed ({})".format(type(exc).__name__), xbmc.LOGERROR)
@@ -203,7 +219,7 @@ class Plugin:
 
     def play(self, system_id, key):
         try:
-            result = self.scan(system_id)
+            result, _ = self.library(system_id)
             game = next((game for library in result.libraries for game in library.games
                          if game_key(game) == key), None)
             if game is None:
@@ -217,6 +233,12 @@ class Plugin:
                 if selected < 0:
                     raise ScanCancelled()
                 path = game.discs[selected]
+            cache, filesystem = self.cache()
+            from .scanner import validate_launch
+            if not validate_launch(path, cache.root, system_id, filesystem):
+                xbmcgui.Dialog().ok(self.text(32000), self.text(32013))
+                self.finish_action()
+                return
             # Kodi 21's resolver keeps the plugin URL as Path; RetroPlayer
             # requires the actual local ROM as Path, not merely DynPath.
             self.finish_action()
@@ -243,6 +265,13 @@ def run(argv):
             plugin.play(system_id, parameters.get("game", [""])[0])
         elif action == "system" and system_id in SYSTEM_BY_ID:
             plugin.directory(system_id)
+        elif action == "refresh":
+            cache, _ = plugin.cache()
+            if cache.root:
+                cache.request_refresh()
+                xbmcgui.Dialog().notification(plugin.text(32000), plugin.text(32019))
+            if handle >= 0:
+                plugin.directory(update=True)
         elif action == "settings":
             plugin.addon.openSettings()
             if handle >= 0:

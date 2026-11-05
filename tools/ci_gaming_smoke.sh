@@ -36,11 +36,19 @@ for _ in {1..100}; do xdpyinfo >/dev/null 2>&1 && pactl info >/dev/null 2>&1 && 
 xdpyinfo >/dev/null; pactl info > "$OUT/pulse-info.txt"
 GL_INTERFACE=glx
 [[ "$(uname -m)" != aarch64 ]] || GL_INTERFACE=egl
-timeout --kill-after=5s 180s gdb --batch --return-child-result -ex run -ex 'thread apply all bt 20' --args "$KODI_BIN" --windowing=x11 --gl-interface="$GL_INTERFACE" --audio-backend=pulseaudio --debug -fs > "$OUT/kodi.stdout" 2>&1 & K_PID=$!
-for _ in {1..1800}; do
-  [[ -f "$OUT/result.json" ]] && break
-  kill -0 "$K_PID" 2>/dev/null || { echo 'Kodi exited without test result'; cat "$OUT/kodi.stdout"; exit 1; }
-  sleep .1
+for phase in first restart; do
+  export APERTURE_GAMING_PHASE="$phase"
+  timeout --kill-after=5s 240s gdb --batch --return-child-result -ex run -ex 'thread apply all bt 20' --args "$KODI_BIN" --windowing=x11 --gl-interface="$GL_INTERFACE" --audio-backend=pulseaudio --debug -fs > "$OUT/kodi-$phase.stdout" 2>&1 & K_PID=$!
+  for _ in {1..2400}; do
+    [[ -f "$OUT/result.json" ]] && break
+    [[ "$phase" == first && -f "$OUT/restart-request.json" ]] && break
+    kill -0 "$K_PID" 2>/dev/null || { echo 'Kodi exited without test result'; cat "$OUT/kodi-$phase.stdout"; exit 1; }
+    sleep .1
+  done
+  # The QA service requests normal Quit. Never kill it to fake restart success.
+  wait "$K_PID"
+  K_PID=''
+  [[ ! -f "$OUT/result.json" ]] || break
 done
 # Bounded visual evidence for reviewers whose connector cannot download artifacts.
 # These are disposable synthetic-fixture captures, never the user's media.
@@ -57,6 +65,13 @@ for screenshot in sorted(out.glob('*.png'))[:20]:
     print('APERTURE_SCREENSHOT_BASE64_BEGIN ' + preview.name, flush=True)
     print(base64.b64encode(preview.read_bytes()).decode(), flush=True)
     print('APERTURE_SCREENSHOT_BASE64_END ' + preview.name, flush=True)
+    if screenshot.stem == 'persistent-games-selector':
+        large = screenshot.with_suffix('.full.jpg')
+        subprocess.run(['convert', str(screenshot), '-resize', '1280x720', '-quality', '85', str(large)],
+                       check=True, timeout=10)
+        print('APERTURE_SCREENSHOT_BASE64_BEGIN ' + large.name, flush=True)
+        print(base64.b64encode(large.read_bytes()).decode(), flush=True)
+        print('APERTURE_SCREENSHOT_BASE64_END ' + large.name, flush=True)
 PY
 python3 - "$OUT/result.json" <<'PY'
 import json,sys

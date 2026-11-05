@@ -6,6 +6,9 @@ import time
 import traceback
 import subprocess
 import platform
+import hashlib
+import sys
+import xbmcvfs
 import xbmc
 import xbmcgui
 import xbmcaddon
@@ -52,8 +55,89 @@ def capture(name):
         until('native screenshot',lambda:(out/(name+'.png')).exists(),timeout=8)
     else:
         subprocess.run(['import', '-window', 'root', str(out/(name+'.png'))], check=True, timeout=10)
+def saved_library():
+    addon = xbmcaddon.Addon('plugin.games.aperture')
+    sys.path.insert(0, os.path.join(addon.getAddonInfo('path'), 'resources', 'lib'))
+    from apeture_library.cache import LibraryCache
+    return LibraryCache(xbmcvfs.translatePath(addon.getAddonInfo('profile')), addon.getSetting('rom_root'))
+
+def cache_evidence(cache):
+    return {'snapshot': hashlib.sha256(cache.path.read_bytes()).hexdigest(),
+            'attempt': hashlib.sha256(cache.attempt_path.read_bytes()).hexdigest()}
+
+def verify_cached_navigation(cache):
+    before = cache_evidence(cache)
+    root = 'plugin://plugin.games.aperture/'
+    for cycle in range(3):
+        if xbmcgui.getCurrentWindowId() != 10000:
+            xbmc.executebuiltin('ActivateWindow(Home)')
+            until('Home before cached entry', lambda: xbmcgui.getCurrentWindowId()==10000)
+        # Wait for the previous window animation/activation to finish. A state
+        # snapshot taken mid-transition is not a completed navigation action.
+        monitor.waitForAbort(.6)
+        started = time.monotonic()
+        xbmc.executebuiltin('ActivateWindow(Games,'+root+',return)')
+        until('cached Games entry', lambda: xbmcgui.getCurrentWindowId()==10821
+              and xbmc.getInfoLabel('Container.FolderPath')==root
+              and xbmc.getInfoLabel('Container.Property(Aperture.LibraryState)')=='ready'
+              and not xbmc.getCondVisibility('System.HasModalDialog'))
+        elapsed = time.monotonic() - started
+        monitor.waitForAbort(.6)
+        if os.environ.get('APERTURE_GAMING_SKIN') != 'classic':
+            until('selector visible', lambda: xbmc.getCondVisibility('Control.IsVisible(59)'))
+            until('initial console focus', lambda: bool(xbmc.getInfoLabel('ListItem.Property(Aperture.System)')), timeout=5)
+            initial = xbmc.getInfoLabel('ListItem.Property(Aperture.System)')
+            rpc('Input.Right'); monitor.waitForAbort(.5)
+            right = xbmc.getInfoLabel('ListItem.Property(Aperture.System)')
+            rpc('Input.Left'); monitor.waitForAbort(.5)
+            restored = xbmc.getInfoLabel('ListItem.Property(Aperture.System)')
+            if not initial or initial == right or restored != initial:
+                raise RuntimeError('Horizontal system focus mismatch: initial={!r}, right={!r}, restored={!r}'.format(initial, right, restored))
+            checks.append({'check':'horizontal-system-selection-'+str(cycle), 'initial':initial, 'right':right, 'restored':restored})
+        if cache_evidence(cache) != before:
+            raise RuntimeError('Games reentry unexpectedly rewrote cache or started another scan')
+        checks.append({'check':'cached-root-entry-'+str(cycle), 'seconds':round(elapsed,3), 'no_new_scan':True})
+    capture('persistent-games-selector')
+
+def verify_library_dialogs(cache):
+    before = cache_evidence(cache)
+    root = 'plugin://plugin.games.aperture/'
+    selected = xbmc.getInfoLabel('ListItem.Property(Aperture.System)')
+    for name, command, dialog in (
+            ('settings', 'Addon.OpenSettings(plugin.games.aperture)', 10140),
+            ('help', 'RunPlugin('+root+'?action=help)', 12002)):
+        xbmc.executebuiltin(command)
+        until('library '+name+' dialog opens', lambda: xbmcgui.getCurrentWindowDialogId()==dialog)
+        monitor.waitForAbort(.5)
+        capture('library-'+name)
+        rpc('Input.Back')
+        until('library '+name+' dialog closes', lambda: not xbmc.getCondVisibility('System.HasModalDialog'))
+        monitor.waitForAbort(.5)
+        if xbmc.getInfoLabel('Container.FolderPath') != root:
+            raise RuntimeError('Library '+name+' dismissal changed the directory')
+        if selected and xbmc.getInfoLabel('ListItem.Property(Aperture.System)') != selected:
+            raise RuntimeError('Library '+name+' dismissal lost the selected system')
+        if cache_evidence(cache) != before:
+            raise RuntimeError('Library '+name+' dismissal caused a scan')
+        checks.append({'check':'library-'+name+'-dismissal-preserves-selection-and-cache'})
+
 try:
     until('Home',lambda:xbmcgui.getCurrentWindowId()==10000)
+    cache = saved_library()
+    until('background library service publishes snapshot', lambda: cache.load() is not None and cache.status() == 'ready', timeout=45)
+    if os.environ.get('APERTURE_GAMING_PHASE') == 'restart':
+        prior = json.loads((out/'restart-request.json').read_text())
+        checks.extend(prior['checks'])
+        if cache_evidence(cache) != prior['cache']:
+            raise RuntimeError('Native Kodi restart rescanned or replaced the fresh saved library')
+        verify_cached_navigation(cache)
+        checks.append({'check':'native-restart-preserves-library-without-scan', 'cache':cache_evidence(cache)})
+        (out/'result.json').write_text(json.dumps({'status':'passed','checks':checks,
+            'limitations':['Isolated native Kodi restart, not a physical Pi power cycle',
+                           'Synthetic original games only; no physical controllers or audible hardware acceptance']},indent=2))
+        raise SystemExit(0)
+    verify_cached_navigation(cache)
+    verify_library_dialogs(cache)
     for addon in ('game.libretro','peripheral.joystick','game.libretro.aperture.nestopia','game.libretro.aperture.pcsxrearmed'):
         rpc('Addons.SetAddonEnabled',{'addonid':addon,'enabled':True})
     until('core enabled',lambda:xbmc.getCondVisibility('System.AddonIsEnabled(game.libretro.aperture.nestopia)'))
@@ -102,6 +186,7 @@ try:
                 if xbmc.getInfoLabel('ListItem.Property(Aperture.System)')==system: break
                 rpc('Input.Right'); monitor.waitForAbort(.2)
             if xbmc.getInfoLabel('ListItem.Property(Aperture.System)')!=system: raise RuntimeError('Cannot focus console '+system)
+            monitor.waitForAbort(.5)
             capture(system+'-console-cards')
             rpc('Input.Select')
             until('Games directory',lambda:xbmcgui.getCurrentWindowId()==10821 and xbmc.getInfoLabel('Container.FolderPath')==folder and xbmc.getCondVisibility('Control.IsVisible(60)') and not xbmc.getCondVisibility('System.HasModalDialog'))
@@ -145,12 +230,15 @@ try:
                 if xbmc.getInfoLabel('Container.FolderPath')!=folder:
                     raise RuntimeError('Stop did not preserve the '+system+' game directory')
                 open_console_cards()
+                monitor.waitForAbort(.7)
+                until('Back restores selected console '+system,
+                      lambda: xbmc.getInfoLabel('ListItem.Property(Aperture.System)') == system)
                 capture(system+'-back-to-console-cards')
                 checks.append({'check':'back-to-console-cards-'+system,
                                'folder':xbmc.getInfoLabel('Container.FolderPath'),
-                               'view':59})
+                               'view':59, 'selected_system':xbmc.getInfoLabel('ListItem.Property(Aperture.System)')})
     result={'status':'passed','checks':checks,'limitations':['Synthetic original NES/PSX programs only','No physical Pi, 8BitDo, Bluetooth, BIOS or commercial-game testing','No audible hardware-output test']}
-    (out/'result.json').write_text(json.dumps(result,indent=2))
+    (out/'restart-request.json').write_text(json.dumps({'checks':checks,'cache':cache_evidence(cache)},indent=2))
 except Exception as exc:
     try:
         capture('failure')
