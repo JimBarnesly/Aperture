@@ -157,6 +157,7 @@ class FormatTest(unittest.TestCase):
             "Container.FolderPath":"plugin://format/album"}.get(key, "")
         self.xbmc.Monitor.return_value.abortRequested.return_value = False
         self.xbmc.Monitor.return_value.waitForAbort.return_value = False
+        self.xbmc.Player.return_value.getTime.return_value = 1
 
     def test_now_playing_waits_for_exact_requested_stream(self):
         self.set_browser_origin()
@@ -196,6 +197,26 @@ class FormatTest(unittest.TestCase):
         player.getPlayingFile.side_effect = changed_folder
         self.assertFalse(self.addon.show_now_playing("stream", "plugin://format/album", player))
         self.xbmc.executebuiltin.assert_not_called()
+
+    def test_now_playing_waits_for_own_busy_dialog_without_closing_it(self):
+        self.set_browser_origin()
+        player = self.xbmc.Player.return_value
+        player.isPlayingAudio.return_value = True
+        player.getPlayingFile.return_value = "stream"
+        self.xbmcgui.getCurrentWindowDialogId.side_effect = [10138, 10138, 9999, 9999]
+        self.assertTrue(self.addon.show_now_playing("stream", "plugin://format/album", player))
+        self.xbmc.executebuiltin.assert_called_once_with("ActivateWindow(visualisation)")
+        self.xbmc.Monitor.return_value.waitForAbort.assert_called_once_with(0.1)
+
+    def test_now_playing_waits_for_actual_clock_not_early_player_flag(self):
+        self.set_browser_origin()
+        player = self.xbmc.Player.return_value
+        player.isPlayingAudio.return_value = True
+        player.getPlayingFile.return_value = "stream"
+        player.getTime.side_effect = [0, 0, 0.2]
+        self.assertTrue(self.addon.show_now_playing("stream", "plugin://format/album", player))
+        self.assertEqual(self.xbmc.Monitor.return_value.waitForAbort.call_count, 2)
+        self.xbmc.executebuiltin.assert_called_once_with("ActivateWindow(visualisation)")
 
     def test_track_entries_remain_direct_streams_for_native_queue_advancement(self):
         self.run_action("album", album_id=ALBUM_ID)

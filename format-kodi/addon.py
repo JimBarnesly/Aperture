@@ -351,11 +351,11 @@ def tracks(handle, server, data, album):
         xbmcplugin.addDirectoryItem(handle, media(server, "/api/audio", track["id"]), item, False)
 
 
-def presentation_origin():
+def presentation_origin(allow_busy=False):
     """Only explicit playback from Aperture's Format browser can open its player."""
     try:
         if (xbmc.getSkinDir() != "skin.aperture" or xbmcgui.getCurrentWindowId() != 10502
-                or xbmcgui.getCurrentWindowDialogId() != 9999
+                or xbmcgui.getCurrentWindowDialogId() not in ((9999, 10138) if allow_busy else (9999,))
                 or xbmc.getInfoLabel("Container.PluginName") != ADDON_ID):
             return None
         return xbmc.getInfoLabel("Container.FolderPath")
@@ -380,15 +380,19 @@ def _show_now_playing(path, origin, player):
     player = player or xbmc.Player()
     monitor = xbmc.Monitor()
     for _ in range(50):
-        if monitor.abortRequested() or presentation_origin() != origin:
+        # Kodi can show its own cancellable busy dialog while opening this
+        # stream. Wait for it to close; user dialogs still cancel presentation.
+        if monitor.abortRequested() or presentation_origin(allow_busy=True) != origin:
             return False
         try:
-            ready = player.isPlayingAudio() and player.getPlayingFile() == path
+            # isPlayingAudio becomes true before Kodi opens its playback-busy
+            # dialog. Require the actual stream clock too, or a queued window
+            # activation can race that dialog and be refused by Kodi.
+            ready = (player.isPlayingAudio() and player.getPlayingFile() == path
+                     and player.getTime() >= 0.1)
         except RuntimeError:
             ready = False  # A player can disappear between read-only calls.
-        if ready:
-            if presentation_origin() != origin:
-                return False
+        if ready and presentation_origin() == origin:
             xbmc.executebuiltin("ActivateWindow(visualisation)")
             return True
         if monitor.waitForAbort(0.1):

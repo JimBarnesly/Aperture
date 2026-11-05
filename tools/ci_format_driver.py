@@ -604,8 +604,16 @@ def run(hooks):
         press("space")
         wait_music("Resume native playback", lambda s: s.get("player")
                    and s["player"]["properties"].get("speed") == 1, after=sequence)
+        screenshot("format-03h-resumed")
+        time.sleep(1)
+        screenshot("format-03i-resumed-rotating")
+        resumed = turntable_pixel_change(out / "screenshots/format-03h-resumed.png",
+                                        out / "screenshots/format-03i-resumed-rotating.png")
+        if resumed < 0.5:
+            raise AssertionError("Record did not resume rotation: " + str(resumed))
         checks.append({"check":"native-turntable-motion-pause-controls-back-reopen",
-                       "playing_pixel_change":moving, "paused_pixel_change":still})
+                       "playing_pixel_change":moving, "paused_pixel_change":still,
+                       "resumed_pixel_change":resumed})
         sequence = music()["sequence"]
         press("period")
         actual = wait_music("Skip reaches second track", lambda s: s.get("player") is not None
@@ -617,10 +625,18 @@ def run(hooks):
             actual = wait_music("Next native album track", lambda s: s.get("player") is not None
                                 and track_id(s["player"]["item"]) == expected_id, after=sequence)
         screenshot("format-03f-missing-art-fallback")
-        sequence = actual["sequence"]
+        actual = music()
+        sequence, previous_time = actual["sequence"], clock(actual)
         press("comma")
-        actual = wait_music("Previous returns to third track", lambda s: s.get("player") is not None
-                            and track_id(s["player"]["item"]) == config["expected_ids"][2], after=sequence)
+        actual = wait_music("Previous changes track or restarts current track", lambda s: s.get("player") is not None
+                            and (track_id(s["player"]["item"]) == config["expected_ids"][2]
+                                 or (track_id(s["player"]["item"]) == config["expected_ids"][3]
+                                     and clock(s) < previous_time - 0.1)), after=sequence)
+        if track_id(actual["player"]["item"]) == config["expected_ids"][3]:
+            sequence = actual["sequence"]
+            press("comma")
+            actual = wait_music("Previous from restarted track returns to third", lambda s: s.get("player") is not None
+                                and track_id(s["player"]["item"]) == config["expected_ids"][2], after=sequence)
         checks.append({"check":"turntable-skip-previous-and-missing-art", "player":actual["player"]})
         sequence = actual["sequence"]
         press("x")
