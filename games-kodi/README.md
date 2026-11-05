@@ -24,9 +24,26 @@ not that its contents, BIOS, emulator, or host device have been validated.
    to install a game add-on; Aperture neither silently installs cores nor
    downloads ROMs, BIOS, covers, or metadata.
 
-You can back out of settings, scanning, disc selection, or Kodi's emulator
-chooser without a fallback launch. Refresh/reopen the list after changing files.
-There is no persistent cache or background scan.
+You can back out of settings, disc selection, or Kodi's emulator chooser without
+a fallback launch. Opening Games or a system reads a saved local library and
+never scans the media tree or displays a scan dialog. A separate quiet service
+builds the initial library and refreshes it at most once a day. **Refresh library
+in background** requests an earlier refresh without blocking browsing.
+
+Snapshots live in Kodi's add-on data profile, not inside the skin or add-on code.
+They survive ordinary skin/add-on updates, Kodi restarts and machine reboots.
+The last complete snapshot remains usable when a drive/share is unavailable or
+an update is cancelled. Publication uses an atomic, flushed replacement;
+concurrent workers cannot publish over one another. A missing/empty mount cannot
+automatically erase a populated snapshot. An explicit refresh can confirm a
+truly empty library. Failures are retried after 15 minutes, independently of menu
+entry. Changing the configured ROM root selects a separate snapshot. The initial
+index appears automatically if its first-run placeholder is still on screen.
+
+Cached paths are relative to the configured source, so SMB credentials are not
+copied into snapshot files or plugin links. Only the selected file and its CUE
+members are checked at launch; opening or launching a game never rescans the
+whole system. Actual game/core/BIOS compatibility still belongs to Kodi.
 
 ## Folder convention
 
@@ -128,7 +145,7 @@ Cancellation closes progress and terminates the pending Kodi callback. Slow
 provider I/O can delay cancellation until the current VFS operation returns.
 
 This is a normal read-only application, not a defence against concurrent hostile
-filesystem mutation. Playback re-scans the selected system, but files can still
+filesystem mutation. Playback validates the selected file and descriptor members, but files can still
 change between discovery and Kodi opening them. Use trusted game collections.
 Logs contain counts/error types, not ROM paths, filenames, or share credentials.
 Plugin URLs/favourites carry only a SHA-256 path identity; no caller-supplied
@@ -144,7 +161,7 @@ The scanner/catalog have no Kodi imports and no third-party Python dependencies.
 - Game launch actions are folder items with `IsPlayable=false` and disabled
   content lookup. They deliberately have no GameInfoTag, so Kodi's context-menu
   Play action cannot mistake an action folder for a playable game archive.
-- Selecting one re-scans the system, handles any disc choice, closes the directory
+- Selecting one validates the cached target, handles any disc choice, closes the directory
   action, and calls `xbmc.Player().play(real_path, listitem)` with a playable game tag.
   This is intentional: Kodi 21's plugin resolver retains the plugin URL as Path
   while RetroPlayer requires the real ROM Path. `setResolvedUrl` is not used.
@@ -197,9 +214,12 @@ License: GPL-3.0-or-later; see the bundled `LICENSE.txt` and repository `LICENSE
 
 ### Large HDD collections
 
-Opening the library lists recognised immediate system folders without walking
-every ROM or reading every CUE/M3U first. Empty recognised folders may appear;
-open a system to scan its games. Counts are not invented before that scan.
-Selected-system scans display an updating entry count and can be cancelled,
-including while a large local directory is being enumerated. A blocked filesystem
-operation can still delay cancellation; the add-on does not forcibly unmount disks.
+Opening the library reads the saved local snapshot, without enumerating the ROM
+root or reading CUE/M3U files. Only populated systems and their cached game counts
+appear. The first full index and later daily refreshes run quietly in a separate
+service, so a new installation can briefly show a nonblocking preparation tile.
+Backing out does not cancel that service or force another scan on the next entry.
+A Kodi shutdown cancels before publication and retains the previous snapshot.
+A blocked filesystem call can still delay shutdown; the add-on does not forcibly
+unmount disks. Real Pi/drive latency and power-cycle acceptance remain separate
+from isolated CI.

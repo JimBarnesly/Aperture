@@ -34,7 +34,7 @@ def update(kodi_home):
             shutil.copytree(source,stage,ignore=shutil.ignore_patterns('__pycache__','*.pyc'))
             require_stopped()
             backup=atomic_install(Path(tmp),kodi_home)
-        print('Game browser updated. Existing ROM folder, cores, BIOS and saves are unchanged.')
+        print('Game browser updated. Existing ROM folder, saved library, cores, BIOS and saves are unchanged.')
         if backup: print('Previous browser backup:',backup)
         return backup
     finally:

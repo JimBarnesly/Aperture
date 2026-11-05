@@ -101,7 +101,7 @@ if [ "$BASELINE" -eq 0 ]; then
     printf "Python 3 unavailable: shared dialog palette remains upstream.\n"
   fi
   [ -f "$SOURCE_DIR/skin/xml/MyGames.xml" ] || fail 'Matching game browser XML missing'
-  GAMES_SHA=7b4660e84fda2da2bf64488af4ae157de9ef3873e8bf6bd409572378109f901c
+  GAMES_SHA=0338a9eac75c4b3200ec050df0cd66d21f7bec9557293066aa7a5c9419dfeb5b
   printf '%s  %s\n' "$GAMES_SHA" "$SOURCE_DIR/skin/xml/MyGames.xml" | sha256sum -c - >/dev/null || fail 'MyGames.xml integrity check failed'
   cp "$SOURCE_DIR/skin/xml/MyGames.xml" "$TMP/xml/MyGames.xml"
   [ -f "$SOURCE_DIR/skin/xml/MyVideoNav.xml" ] || fail 'Matching movie browser XML missing'

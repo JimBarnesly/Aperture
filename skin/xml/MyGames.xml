@@ -120,128 +120,274 @@
         <top>0</top>
         <width>1920</width>
         <height>1080</height>
-        <texture>aperture/bridge.png</texture>
-      </control>
-      <control type="image">
-        <left>0</left>
-        <top>0</top>
-        <width>1920</width>
-        <height>1080</height>
-        <texture border="30">aperture/games/panel.png</texture>
+        <texture>aperture/games/systems/carousel-backdrop.png</texture>
       </control>
       <control type="label">
         <left>90</left>
-        <top>65</top>
+        <top>58</top>
         <width>1000</width>
         <height>55</height>
         <font>font32</font>
         <label>APERTURE  /  PLAY</label>
-        <textcolor>FF76E9DC</textcolor>
+        <textcolor>FF8DE3D4</textcolor>
       </control>
       <control type="label">
         <left>1470</left>
-        <top>70</top>
+        <top>64</top>
         <width>350</width>
         <height>45</height>
         <font>font27</font>
         <label>$INFO[System.Time]</label>
-        <textcolor>FFAACBD0</textcolor>
+        <align>right</align>
+        <textcolor>FFA9BAC0</textcolor>
       </control>
       <control type="label">
         <left>90</left>
-        <top>137</top>
-        <width>1700</width>
+        <top>131</top>
+        <width>1400</width>
         <height>88</height>
         <font>font60</font>
-        <label>Choose your system</label>
-        <textcolor>FFE4F5F5</textcolor>
+        <label>Your systems</label>
+        <textcolor>FFF0F3EC</textcolor>
       </control>
-      <control type="panel" id="59">
-        <left>80</left>
-        <top>330</top>
-        <width>1760</width>
-        <height>550</height>
+      <control type="label">
+        <left>94</left>
+        <top>222</top>
+        <width>1560</width>
+        <height>48</height>
+        <font>font27</font>
+        <label>Choose a console. Find your next favourite.</label>
+        <textcolor>FFA9BAC0</textcolor>
+      </control>
+      <control type="wraplist" id="59">
+        <left>30</left>
+        <top>303</top>
+        <width>1860</width>
+        <height>630</height>
         <orientation>horizontal</orientation>
-        <!-- Share a view type with the game list so Kodi falls back to the
-             eligible Aperture view when Back restores a directory. -->
-        <viewtype label="Consoles">list</viewtype>
+        <viewtype label="System carousel">list</viewtype>
         <visible>String.IsEqual(Container.PluginName,plugin.games.aperture) + String.IsEqual(Container.Property(Aperture.View),systems)</visible>
-        <scrolltime>220</scrolltime>
+        <scrolltime>240</scrolltime>
+        <focusposition>1</focusposition>
+        <preloaditems>2</preloaditems>
         <onup>59</onup>
         <ondown>59</ondown>
         <onleft>59</onleft>
         <onright>59</onright>
-        <itemlayout width="440" height="550">
+        <itemlayout width="620" height="630">
           <control type="image">
-            <left>12</left>
-            <top>12</top>
-            <width>416</width>
-            <height>520</height>
-            <texture border="35">aperture/games/card.png</texture>
+            <left>28</left>
+            <top>34</top>
+            <width>564</width>
+            <height>494</height>
+            <aspectratio>keep</aspectratio>
+            <texture fallback="aperture/games/systems/default.png">$INFO[ListItem.Property(Aperture.System),aperture/games/systems/,.png]</texture>
+            <colordiffuse>99FFFFFF</colordiffuse>
+            <visible>!ListItem.IsParentFolder + String.IsEmpty(ListItem.Property(Aperture.Action))</visible>
           </control>
           <control type="image">
-            <left>35</left>
-            <top>58</top>
-            <width>370</width>
-            <height>270</height>
-            <texture fallback="aperture/games/default.png">$INFO[ListItem.Property(Aperture.System),aperture/games/,.png]</texture>
+            <left>28</left>
+            <top>34</top>
+            <width>564</width>
+            <height>494</height>
             <aspectratio>keep</aspectratio>
+            <texture fallback="aperture/games/systems/default.png">aperture/games/systems/utility-back.png</texture>
+            <colordiffuse>99FFFFFF</colordiffuse>
+            <visible>ListItem.IsParentFolder</visible>
+          </control>
+          <control type="image">
+            <left>28</left>
+            <top>34</top>
+            <width>564</width>
+            <height>494</height>
+            <aspectratio>keep</aspectratio>
+            <texture fallback="aperture/games/systems/default.png">aperture/games/systems/utility-settings.png</texture>
+            <colordiffuse>99FFFFFF</colordiffuse>
+            <visible>!ListItem.IsParentFolder + String.IsEqual(ListItem.Property(Aperture.Action),settings)</visible>
+          </control>
+          <control type="image">
+            <left>28</left>
+            <top>34</top>
+            <width>564</width>
+            <height>494</height>
+            <aspectratio>keep</aspectratio>
+            <texture fallback="aperture/games/systems/default.png">aperture/games/systems/utility-help.png</texture>
+            <colordiffuse>99FFFFFF</colordiffuse>
+            <visible>!ListItem.IsParentFolder + String.IsEqual(ListItem.Property(Aperture.Action),help)</visible>
+          </control>
+          <control type="image">
+            <left>28</left>
+            <top>34</top>
+            <width>564</width>
+            <height>494</height>
+            <aspectratio>keep</aspectratio>
+            <texture fallback="aperture/games/systems/default.png">aperture/games/systems/utility-refresh.png</texture>
+            <colordiffuse>99FFFFFF</colordiffuse>
+            <visible>!ListItem.IsParentFolder + String.IsEqual(ListItem.Property(Aperture.Action),refresh)</visible>
+          </control>
+          <control type="image">
+            <left>28</left>
+            <top>34</top>
+            <width>564</width>
+            <height>494</height>
+            <aspectratio>keep</aspectratio>
+            <texture fallback="aperture/games/systems/default.png">aperture/games/systems/utility-refresh.png</texture>
+            <colordiffuse>99FFFFFF</colordiffuse>
+            <visible>!ListItem.IsParentFolder + String.IsEqual(ListItem.Property(Aperture.Action),root)</visible>
           </control>
           <control type="textbox">
-            <left>43</left>
-            <top>350</top>
-            <width>355</width>
-            <height>95</height>
+            <left>28</left>
+            <top>546</top>
+            <width>564</width>
+            <height>82</height>
             <font>font32</font>
+            <align>center</align>
+            <aligny>center</aligny>
             <label>$INFO[ListItem.Label]</label>
-            <textcolor>FFE4F5F5</textcolor>
+            <textcolor>FF91A0A7</textcolor>
+            <visible>!ListItem.IsParentFolder</visible>
+          </control>
+          <control type="textbox">
+            <left>28</left>
+            <top>546</top>
+            <width>564</width>
+            <height>82</height>
+            <font>font32</font>
+            <align>center</align>
+            <aligny>center</aligny>
+            <label>Back</label>
+            <textcolor>FF91A0A7</textcolor>
+            <visible>ListItem.IsParentFolder</visible>
           </control>
         </itemlayout>
-        <focusedlayout width="440" height="550">
+        <focusedlayout width="620" height="630">
           <control type="image">
-            <left>12</left>
-            <top>12</top>
-            <width>416</width>
-            <height>520</height>
-            <texture border="35">aperture/games/card-focus.png</texture>
+            <left>10</left>
+            <top>8</top>
+            <width>600</width>
+            <height>525</height>
+            <aspectratio>keep</aspectratio>
+            <texture fallback="aperture/games/systems/default.png">$INFO[ListItem.Property(Aperture.System),aperture/games/systems/,.png]</texture>
+            <visible>!ListItem.IsParentFolder + String.IsEmpty(ListItem.Property(Aperture.Action))</visible>
           </control>
           <control type="image">
-            <left>35</left>
-            <top>58</top>
-            <width>370</width>
-            <height>270</height>
-            <texture fallback="aperture/games/default.png">$INFO[ListItem.Property(Aperture.System),aperture/games/,.png]</texture>
+            <left>10</left>
+            <top>8</top>
+            <width>600</width>
+            <height>525</height>
             <aspectratio>keep</aspectratio>
+            <texture fallback="aperture/games/systems/default.png">aperture/games/systems/utility-back.png</texture>
+            <visible>ListItem.IsParentFolder</visible>
+          </control>
+          <control type="image">
+            <left>10</left>
+            <top>8</top>
+            <width>600</width>
+            <height>525</height>
+            <aspectratio>keep</aspectratio>
+            <texture fallback="aperture/games/systems/default.png">aperture/games/systems/utility-settings.png</texture>
+            <visible>!ListItem.IsParentFolder + String.IsEqual(ListItem.Property(Aperture.Action),settings)</visible>
+          </control>
+          <control type="image">
+            <left>10</left>
+            <top>8</top>
+            <width>600</width>
+            <height>525</height>
+            <aspectratio>keep</aspectratio>
+            <texture fallback="aperture/games/systems/default.png">aperture/games/systems/utility-help.png</texture>
+            <visible>!ListItem.IsParentFolder + String.IsEqual(ListItem.Property(Aperture.Action),help)</visible>
+          </control>
+          <control type="image">
+            <left>10</left>
+            <top>8</top>
+            <width>600</width>
+            <height>525</height>
+            <aspectratio>keep</aspectratio>
+            <texture fallback="aperture/games/systems/default.png">aperture/games/systems/utility-refresh.png</texture>
+            <visible>!ListItem.IsParentFolder + String.IsEqual(ListItem.Property(Aperture.Action),refresh)</visible>
+          </control>
+          <control type="image">
+            <left>10</left>
+            <top>8</top>
+            <width>600</width>
+            <height>525</height>
+            <aspectratio>keep</aspectratio>
+            <texture fallback="aperture/games/systems/default.png">aperture/games/systems/utility-refresh.png</texture>
+            <visible>!ListItem.IsParentFolder + String.IsEqual(ListItem.Property(Aperture.Action),root)</visible>
           </control>
           <control type="textbox">
-            <left>43</left>
-            <top>350</top>
-            <width>355</width>
-            <height>95</height>
+            <left>28</left>
+            <top>546</top>
+            <width>564</width>
+            <height>82</height>
             <font>font32</font>
+            <align>center</align>
+            <aligny>center</aligny>
             <label>$INFO[ListItem.Label]</label>
-            <textcolor>FF173D47</textcolor>
+            <textcolor>FFF0F3EC</textcolor>
+            <visible>!ListItem.IsParentFolder</visible>
+          </control>
+          <control type="textbox">
+            <left>28</left>
+            <top>546</top>
+            <width>564</width>
+            <height>82</height>
+            <font>font32</font>
+            <align>center</align>
+            <aligny>center</aligny>
+            <label>Back</label>
+            <textcolor>FFF0F3EC</textcolor>
+            <visible>ListItem.IsParentFolder</visible>
+          </control>
+          <control type="image">
+            <left>247</left>
+            <top>0</top>
+            <width>126</width>
+            <height>4</height>
+            <texture>aperture/games/systems/carousel-line.png</texture>
           </control>
         </focusedlayout>
       </control>
       <control type="label">
-        <left>95</left>
-        <top>975</top>
-        <width>1400</width>
-        <height>45</height>
+        <left>640</left>
+        <top>939</top>
+        <width>640</width>
+        <height>36</height>
         <font>font27</font>
-        <label>D-pad  Browse     •     Select  Open     •     Back  Return     •     Menu  Options</label>
-        <textcolor>FFAACBD0</textcolor>
+        <align>center</align>
+        <label>$INFO[ListItem.Property(Aperture.GameCount),, games]</label>
+        <textcolor>FF8DE3D4</textcolor>
+        <visible>!String.IsEmpty(ListItem.Property(Aperture.GameCount)) + !String.IsEqual(ListItem.Property(Aperture.GameCount),1)</visible>
       </control>
       <control type="label">
-        <left>1570</left>
-        <top>975</top>
-        <width>260</width>
+        <left>640</left>
+        <top>939</top>
+        <width>640</width>
+        <height>36</height>
+        <font>font27</font>
+        <align>center</align>
+        <label>1 game</label>
+        <textcolor>FF8DE3D4</textcolor>
+        <visible>String.IsEqual(ListItem.Property(Aperture.GameCount),1)</visible>
+      </control>
+      <control type="label">
+        <left>90</left>
+        <top>1001</top>
+        <width>1500</width>
         <height>45</height>
         <font>font27</font>
-        <label>$INFO[Container(59).CurrentItem] / $INFO[Container(59).NumItems]</label>
-        <textcolor>FF76E9DC</textcolor>
+        <label>Left / Right  Browse     •     Select  Open     •     Back  Return</label>
+        <textcolor>FFA9BAC0</textcolor>
+      </control>
+      <control type="label">
+        <left>1600</left>
+        <top>1001</top>
+        <width>230</width>
+        <height>45</height>
+        <font>font27</font>
         <align>right</align>
+        <label>$INFO[Container(59).CurrentItem] / $INFO[Container(59).NumItems]</label>
+        <textcolor>FF8DE3D4</textcolor>
       </control>
     </control>
     <control type="group">

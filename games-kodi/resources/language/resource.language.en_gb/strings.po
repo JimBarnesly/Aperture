@@ -65,3 +65,19 @@ msgstr ""
 msgctxt "#32015"
 msgid "This library link is not valid. Returning to your systems."
 msgstr ""
+
+msgctxt "#32016"
+msgid "Refresh library in background"
+msgstr ""
+
+msgctxt "#32017"
+msgid "Preparing your library in the background…"
+msgstr ""
+
+msgctxt "#32018"
+msgid "Library unavailable. Check your ROM folder and try Refresh."
+msgstr ""
+
+msgctxt "#32019"
+msgid "Background refresh requested. Your saved library stays available."
+msgstr ""

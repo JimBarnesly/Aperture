@@ -6,6 +6,9 @@ import time
 import traceback
 import subprocess
 import platform
+import hashlib
+import sys
+import xbmcvfs
 import xbmc
 import xbmcgui
 import xbmcaddon
@@ -52,8 +55,58 @@ def capture(name):
         until('native screenshot',lambda:(out/(name+'.png')).exists(),timeout=8)
     else:
         subprocess.run(['import', '-window', 'root', str(out/(name+'.png'))], check=True, timeout=10)
+def saved_library():
+    addon = xbmcaddon.Addon('plugin.games.aperture')
+    sys.path.insert(0, os.path.join(addon.getAddonInfo('path'), 'resources', 'lib'))
+    from apeture_library.cache import LibraryCache
+    return LibraryCache(xbmcvfs.translatePath(addon.getAddonInfo('profile')), addon.getSetting('rom_root'))
+
+def cache_evidence(cache):
+    return {'snapshot': hashlib.sha256(cache.path.read_bytes()).hexdigest(),
+            'attempt': hashlib.sha256(cache.attempt_path.read_bytes()).hexdigest()}
+
+def verify_cached_navigation(cache):
+    before = cache_evidence(cache)
+    root = 'plugin://plugin.games.aperture/'
+    for cycle in range(3):
+        xbmc.executebuiltin('ActivateWindow(Home)')
+        until('Home before cached entry', lambda: xbmcgui.getCurrentWindowId()==10000)
+        started = time.monotonic()
+        xbmc.executebuiltin('ActivateWindow(Games,'+root+',return)')
+        until('cached Games entry', lambda: xbmcgui.getCurrentWindowId()==10821
+              and xbmc.getInfoLabel('Container.FolderPath')==root
+              and xbmc.getInfoLabel('Container.Property(Aperture.LibraryState)')=='ready'
+              and not xbmc.getCondVisibility('System.HasModalDialog'))
+        elapsed = time.monotonic() - started
+        if os.environ.get('APERTURE_GAMING_SKIN') != 'classic':
+            until('selector visible', lambda: xbmc.getCondVisibility('Control.IsVisible(59)'))
+            initial = xbmc.getInfoLabel('ListItem.Property(Aperture.System)')
+            rpc('Input.Right'); monitor.waitForAbort(.3)
+            right = xbmc.getInfoLabel('ListItem.Property(Aperture.System)')
+            rpc('Input.Left'); monitor.waitForAbort(.3)
+            if not initial or initial == right or xbmc.getInfoLabel('ListItem.Property(Aperture.System)') != initial:
+                raise RuntimeError('Horizontal system navigation failed to return to its original system')
+        if cache_evidence(cache) != before:
+            raise RuntimeError('Games reentry unexpectedly rewrote cache or started another scan')
+        checks.append({'check':'cached-root-entry-'+str(cycle), 'seconds':round(elapsed,3), 'no_new_scan':True})
+    capture('persistent-games-selector')
+
 try:
     until('Home',lambda:xbmcgui.getCurrentWindowId()==10000)
+    cache = saved_library()
+    until('background library service publishes snapshot', lambda: cache.load() is not None and cache.status() == 'ready', timeout=45)
+    if os.environ.get('APERTURE_GAMING_PHASE') == 'restart':
+        prior = json.loads((out/'restart-request.json').read_text())
+        checks.extend(prior['checks'])
+        if cache_evidence(cache) != prior['cache']:
+            raise RuntimeError('Native Kodi restart rescanned or replaced the fresh saved library')
+        verify_cached_navigation(cache)
+        checks.append({'check':'native-restart-preserves-library-without-scan', 'cache':cache_evidence(cache)})
+        (out/'result.json').write_text(json.dumps({'status':'passed','checks':checks,
+            'limitations':['Isolated native Kodi restart, not a physical Pi power cycle',
+                           'Synthetic original games only; no physical controllers or audible hardware acceptance']},indent=2))
+        raise SystemExit(0)
+    verify_cached_navigation(cache)
     for addon in ('game.libretro','peripheral.joystick','game.libretro.aperture.nestopia','game.libretro.aperture.pcsxrearmed'):
         rpc('Addons.SetAddonEnabled',{'addonid':addon,'enabled':True})
     until('core enabled',lambda:xbmc.getCondVisibility('System.AddonIsEnabled(game.libretro.aperture.nestopia)'))
@@ -150,7 +203,7 @@ try:
                                'folder':xbmc.getInfoLabel('Container.FolderPath'),
                                'view':59})
     result={'status':'passed','checks':checks,'limitations':['Synthetic original NES/PSX programs only','No physical Pi, 8BitDo, Bluetooth, BIOS or commercial-game testing','No audible hardware-output test']}
-    (out/'result.json').write_text(json.dumps(result,indent=2))
+    (out/'restart-request.json').write_text(json.dumps({'checks':checks,'cache':cache_evidence(cache)},indent=2))
 except Exception as exc:
     try:
         capture('failure')

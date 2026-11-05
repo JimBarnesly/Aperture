@@ -11,6 +11,7 @@ from urllib.parse import parse_qs, urlsplit
 
 LIB = Path(__file__).resolve().parents[1] / "games-kodi/resources/lib"
 sys.path.insert(0, str(LIB))
+from apeture_library.cache import LibraryCache
 from apeture_library.scanner import scan_library  # noqa: E402
 
 
@@ -52,6 +53,8 @@ class AdapterTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
         self.addon = Mock()
+        self.profile = self.root / ".profile"
+        self.addon.getAddonInfo.return_value = str(self.profile)
         self.addon.getSetting.return_value = str(self.root)
         self.addon.getLocalizedString.side_effect = lambda identifier: "text-{}".format(identifier)
         self.dialog = Mock()
@@ -62,9 +65,9 @@ class AdapterTests(unittest.TestCase):
         self.monitor.abortRequested.return_value = False
         self.plugin_api = Mock()
         self.vfs = Mock()
-        self.vfs.translatePath.return_value = str(self.root)
+        self.vfs.translatePath.side_effect = lambda path: str(self.root) if path.startswith("special://") else path
         self.player = Mock()
-        self.xbmc = types.SimpleNamespace(getSkinDir=lambda: "skin.estuary", executebuiltin=Mock(), Player=lambda: self.player, Monitor=lambda: self.monitor, log=Mock(),
+        self.xbmc = types.SimpleNamespace(getSkinDir=lambda: "skin.estuary", getCondVisibility=Mock(return_value=False), executebuiltin=Mock(), Player=lambda: self.player, Monitor=lambda: self.monitor, log=Mock(),
                                          LOGWARNING=2, LOGERROR=3)
         modules = {
             "xbmc": self.xbmc,
@@ -86,14 +89,22 @@ class AdapterTests(unittest.TestCase):
         path.write_text(content, encoding="utf-8")
         return path
 
-    def run_plugin(self, query=""):
+    def seed_cache(self):
+        cache = LibraryCache(self.profile, str(self.root))
+        cache.publish(scan_library(str(self.root)))
+        return cache
+
+    def run_plugin(self, query="", warm=True):
+        if warm and self.addon.getSetting.return_value == str(self.root):
+            if LibraryCache(self.profile, str(self.root)).load() is None:
+                self.seed_cache()
         self.module.run([self.module.BASE_URL, "42", "?" + query])
 
     def directory_items(self):
         return self.plugin_api.addDirectoryItems.call_args.args[1]
 
     def one_game(self):
-        return scan_library(str(self.root)).libraries[0].games[0]
+        return self.seed_cache().load()[0].libraries[0].games[0]
 
     def test_root_lists_system_folders_without_scanning_games(self):
         self.put("nes/Game.nes")
@@ -101,9 +112,9 @@ class AdapterTests(unittest.TestCase):
         self.run_plugin()
         systems = [(uri, item, folder) for uri, item, folder in self.directory_items()
                    if "Aperture.System" in item.properties]
-        self.assertEqual(len(systems), 2)
+        self.assertEqual(len(systems), 1)
         self.assertEqual(systems[0][1].properties["Aperture.System"], "nes")
-        self.assertEqual(systems[0][1].properties["Aperture.GameCount"], "")
+        self.assertEqual(systems[0][1].properties["Aperture.GameCount"], "1")
         self.assertTrue(systems[0][2])
         self.plugin_api.setContent.assert_called_once_with(42, "games")
         self.plugin_api.endOfDirectory.assert_called_once_with(42, succeeded=True, updateListing=False, cacheToDisc=False)
@@ -174,21 +185,52 @@ class AdapterTests(unittest.TestCase):
         self.assertEqual(item.label, "text-32004")
         self.assertTrue(folder)
 
-    def test_unavailable_root_has_recovery_settings_and_no_path_in_log(self):
-        self.addon.getSetting.return_value = str(self.root / "private-missing")
-        self.run_plugin()
-        self.plugin_api.setProperty.assert_called_with(42, "Aperture.LibraryState", "error")
-        self.assertIn("action=settings", self.directory_items()[0][0])
-        self.assertNotIn("private-missing", self.xbmc.log.call_args.args[0])
-        self.progress.close.assert_called_once()
-
-    def test_scan_cancel_closes_progress_and_finishes_directory(self):
-        self.progress.iscanceled.return_value = True
-        self.run_plugin()
-        self.progress.close.assert_called_once()
-        self.plugin_api.addDirectoryItems.assert_not_called()
-        self.plugin_api.endOfDirectory.assert_called_once_with(42, succeeded=False, cacheToDisc=False)
+    def test_cold_root_is_nonblocking_and_never_scans(self):
+        self.put("nes/Demo.nes")
+        with patch.object(self.module, "scan_library", side_effect=AssertionError("foreground scan")):
+            self.run_plugin(warm=False)
+        self.plugin_api.setProperty.assert_called_with(42, "Aperture.LibraryState", "indexing")
+        self.progress.create.assert_not_called()
         self.dialog.ok.assert_not_called()
+
+    def test_missing_source_uses_last_good_cache_without_access(self):
+        self.put("nes/Demo.nes")
+        self.seed_cache()
+        with patch.object(self.module, "scan_library", side_effect=AssertionError("foreground scan")):
+            self.run_plugin()
+            self.run_plugin("action=system&system=nes")
+        self.progress.create.assert_not_called()
+        self.dialog.ok.assert_not_called()
+        self.assertEqual(self.directory_items()[0][1].label, "Demo")
+
+    def test_repeated_entries_new_plugin_instances_never_scan(self):
+        self.put("nes/Demo.nes")
+        self.seed_cache()
+        with patch.object(self.module, "scan_library", side_effect=AssertionError("foreground scan")):
+            for _ in range(3):
+                self.run_plugin()
+                self.run_plugin("action=system&system=nes")
+        self.progress.create.assert_not_called()
+        self.dialog.ok.assert_not_called()
+
+    def test_refresh_is_queued_without_scanning_or_clearing_list(self):
+        self.put("nes/Demo.nes")
+        cache = self.seed_cache()
+        with patch.object(self.module, "scan_library", side_effect=AssertionError("foreground scan")):
+            self.run_plugin("action=refresh")
+        self.assertTrue(cache.request_path.exists())
+        self.assertEqual(self.directory_items()[0][1].properties["Aperture.GameCount"], "1")
+        self.progress.create.assert_not_called()
+
+    def test_replaced_symlink_cannot_launch_from_cache(self):
+        path = self.put("nes/Demo.nes")
+        key = self.module.game_key(self.one_game())
+        path.unlink()
+        other = self.put("other/Outside.nes")
+        path.symlink_to(other)
+        self.run_plugin("action=play&system=nes&game=" + key)
+        self.player.play.assert_not_called()
+        self.dialog.ok.assert_called_once_with("text-32000", "text-32013")
 
     def test_settings_cancel_returns_to_empty_directory_without_loop(self):
         self.addon.getSetting.return_value = ""
@@ -231,6 +273,75 @@ class AdapterTests(unittest.TestCase):
                     "smb://host/share/../private", "smb://host/share?option=1"):
             with self.subTest(uri=uri), self.assertRaises(self.module.ScanError):
                 self.module.configured_source(uri)
+
+    def load_background(self):
+        self.xbmc.getInfoLabel = Mock(return_value="")
+        modules = {"xbmc": self.xbmc, "xbmcaddon": types.SimpleNamespace(Addon=lambda identifier: self.addon),
+                   "xbmcvfs": self.vfs, "apeture_library.kodi": self.module}
+        spec = importlib.util.spec_from_file_location("apeture_library.background_test", LIB / "apeture_library/background.py")
+        background = importlib.util.module_from_spec(spec)
+        with patch.dict(sys.modules, modules):
+            spec.loader.exec_module(background)
+        return background
+
+    def test_background_service_builds_cache_without_progress_or_navigation(self):
+        self.put("nes/Demo.nes")
+        background = self.load_background()
+        self.assertTrue(background.tick(self.addon, self.monitor))
+        self.assertFalse(background.tick(self.addon, self.monitor))
+        self.assertEqual(LibraryCache(self.profile, str(self.root)).load()[0].libraries[0].games[0].title, "Demo")
+        self.xbmc.executebuiltin.assert_not_called()
+        self.progress.create.assert_not_called()
+
+    def test_background_completes_first_run_placeholder_without_stealing_focus(self):
+        self.put("nes/Demo.nes")
+        background = self.load_background()
+        self.xbmc.getInfoLabel.side_effect = lambda label: self.module.BASE_URL if label == "Container.FolderPath" else "indexing"
+        self.assertTrue(background.tick(self.addon, self.monitor))
+        self.xbmc.executebuiltin.assert_called_once_with("Container.Refresh")
+
+    def test_background_defers_placeholder_refresh_until_modal_closes(self):
+        self.put("nes/Demo.nes")
+        background = self.load_background()
+        self.xbmc.getInfoLabel.side_effect = lambda label: self.module.BASE_URL if label == "Container.FolderPath" else "indexing"
+        self.xbmc.getCondVisibility.return_value = True
+        self.assertTrue(background.tick(self.addon, self.monitor))
+        self.xbmc.executebuiltin.assert_not_called()
+        self.xbmc.getCondVisibility.return_value = False
+        self.assertFalse(background.tick(self.addon, self.monitor))
+        self.xbmc.executebuiltin.assert_called_once_with("Container.Refresh")
+
+    def test_publication_race_does_not_enqueue_another_scan(self):
+        self.put("nes/Demo.nes")
+        cache = self.seed_cache()
+        cache.mark_attempt("ready")
+        snapshot = cache.load()
+        with patch.object(LibraryCache, "load", side_effect=[None, snapshot]):
+            self.run_plugin(warm=False)
+        self.assertFalse(cache.request_path.exists())
+        self.plugin_api.setProperty.assert_called_with(42, "Aperture.LibraryState", "ready")
+
+    def test_background_does_not_refresh_a_populated_list(self):
+        self.put("nes/Demo.nes")
+        background = self.load_background()
+        self.xbmc.getInfoLabel.side_effect = lambda label: self.module.BASE_URL if label == "Container.FolderPath" else "ready"
+        self.assertTrue(background.tick(self.addon, self.monitor))
+        self.xbmc.executebuiltin.assert_not_called()
+
+    def test_service_missing_root_defers_without_dialog_or_cache_erasure(self):
+        self.put("nes/Demo.nes")
+        cache = self.seed_cache()
+        cache.request_refresh()
+        background = self.load_background()
+        before = cache.path.read_bytes()
+        with patch.object(background, "scan_library", side_effect=self.module.ScanError("private root offline")):
+            self.monitor.waitForAbort.return_value = True
+            background.run_service()
+        self.assertEqual(cache.path.read_bytes(), before)
+        self.assertEqual(cache.status(), "unavailable")
+        self.assertNotIn("private", self.xbmc.log.call_args.args[0])
+        self.dialog.ok.assert_not_called()
+        self.progress.create.assert_not_called()
 
     def test_vfs_directory_exists_check_retains_trailing_slash(self):
         fs = self.module.KodiFileSystem()

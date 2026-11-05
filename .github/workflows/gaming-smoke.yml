@@ -1,7 +1,7 @@
 name: Kodi gaming core acceptance
 on:
   push:
-    branches: [fix/kodi21-startup]
+    branches: [fix/kodi21-startup, fix/games-persistent-selector]
   workflow_dispatch:
 permissions:
   contents: read
