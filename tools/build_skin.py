@@ -118,6 +118,7 @@ def assemble(source: Path, output: Path, home: Path, font_roots=()):
         music = ROOT / 'skin/xml/MyMusicNav.xml'
         if music.is_file():
             shutil.copy2(music, staged / 'xml/MyMusicNav.xml')
+        shutil.copy2(ROOT / 'skin/xml/MusicVisualisation.xml', staged / 'xml/MusicVisualisation.xml')
         for folder in ('media', 'licenses'):
             extra=ROOT/'skin'/folder
             if extra.is_dir(): shutil.copytree(extra, staged/folder, dirs_exist_ok=True)

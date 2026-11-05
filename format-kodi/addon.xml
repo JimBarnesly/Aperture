@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<addon id="plugin.audio.aperture.format" name="Format for Aperture" version="0.3.0" provider-name="JimBarnesly">
+<addon id="plugin.audio.aperture.format" name="Format for Aperture" version="0.4.0" provider-name="JimBarnesly">
   <requires><import addon="xbmc.python" version="3.0.0"/></requires>
   <extension point="xbmc.python.pluginsource" library="addon.py">
     <provides>audio</provides>

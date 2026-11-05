@@ -351,6 +351,55 @@ def tracks(handle, server, data, album):
         xbmcplugin.addDirectoryItem(handle, media(server, "/api/audio", track["id"]), item, False)
 
 
+def presentation_origin(allow_busy=False):
+    """Only explicit playback from Aperture's Format browser can open its player."""
+    try:
+        if (xbmc.getSkinDir() != "skin.aperture" or xbmcgui.getCurrentWindowId() != 10502
+                or xbmcgui.getCurrentWindowDialogId() not in ((9999, 10138) if allow_busy else (9999,))
+                or xbmc.getInfoLabel("Container.PluginName") != ADDON_ID):
+            return None
+        return xbmc.getInfoLabel("Container.FolderPath")
+    except Exception:
+        return None
+
+
+def show_now_playing(path, origin, player=None):
+    """Wait briefly for this exact stream; never steal later navigation or retry it."""
+    if origin is None:
+        return False
+    try:
+        return _show_now_playing(path, origin, player)
+    except Exception as error:
+        # Presentation is optional after playback has started/resolved. Never
+        # fail an already-resolved handle or expose paths from a GUI error.
+        xbmc.log("Aperture Format: now-playing presentation unavailable ({})".format(type(error).__name__), xbmc.LOGERROR)
+        return False
+
+
+def _show_now_playing(path, origin, player):
+    player = player or xbmc.Player()
+    monitor = xbmc.Monitor()
+    for _ in range(50):
+        # Kodi can show its own cancellable busy dialog while opening this
+        # stream. Wait for it to close; user dialogs still cancel presentation.
+        if monitor.abortRequested() or presentation_origin(allow_busy=True) != origin:
+            return False
+        try:
+            # isPlayingAudio becomes true before Kodi opens its playback-busy
+            # dialog. Require the actual stream clock too, or a queued window
+            # activation can race that dialog and be refused by Kodi.
+            ready = (player.isPlayingAudio() and player.getPlayingFile() == path
+                     and player.getTime() >= 0.1)
+        except RuntimeError:
+            ready = False  # A player can disappear between read-only calls.
+        if ready and presentation_origin() == origin:
+            xbmc.executebuiltin("ActivateWindow(visualisation)")
+            return True
+        if monitor.waitForAbort(0.1):
+            return False
+    return False
+
+
 def play_album(server, data, album):
     # Finish validation and item construction before touching the user's queue.
     prepared = [(media(server, "/api/audio", track["id"]), track_item(server, track, album))
@@ -360,7 +409,10 @@ def play_album(server, data, album):
     for path, item in prepared:
         playlist.add(path, item)
     playlist.unshuffle()
-    xbmc.Player().play(playlist, startpos=0)
+    origin = presentation_origin()
+    player = xbmc.Player()
+    player.play(playlist, startpos=0)
+    show_now_playing(prepared[0][0], origin, player)
 
 
 def add_album(handle, server, album, prefix=""):

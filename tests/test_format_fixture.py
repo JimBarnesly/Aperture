@@ -37,7 +37,7 @@ class FixtureTest(unittest.TestCase):
             with wave.open(str(path)) as stream:
                 self.assertEqual(stream.getnchannels(), 1)
                 self.assertEqual(stream.getsampwidth(), 2)
-                self.assertEqual(stream.getnframes() / stream.getframerate(), 30)
+                self.assertEqual(stream.getnframes() / stream.getframerate(), fixture.TRACK_SECONDS)
         self.assertTrue(fixture.cover_png().startswith(b"\x89PNG\r\n\x1a\n"))
 
     def test_fixture_requires_sorting_and_encodes_real_path_edge_cases(self):

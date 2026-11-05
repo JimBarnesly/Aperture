@@ -95,6 +95,8 @@ class Driver:
         raise AssertionError('Timed out: {}; actual state={}'.format(description, self.latest))
 
     def start(self, skin):
+        if self.process is not None and self.process.poll() is None:
+            raise AssertionError('Cannot relaunch while the previous Kodi child is alive')
         self.session += 1
         (self.out / 'state.json').unlink(missing_ok=True)
         self.latest = {}
@@ -112,8 +114,67 @@ class Driver:
         if title not in ('Kodi', 'Kodi from Debian'):
             raise AssertionError('Unexpected fresh Kodi X window')
         subprocess.run(['xdotool', 'windowfocus', '--sync', windows[0]], check=True, timeout=10)
+        self.record('zip-session-started', session=self.session, pid=self.kodi_pid,
+                    profile=str(self.target / 'data'), requested_skin=skin)
 
-    def stop(self):
+    def archive_session(self):
+        if self.stdout:
+            self.stdout.close()
+            self.stdout = None
+        log = self.out / 'logs/kodi.log'
+        if log.exists():
+            shutil.copy2(log, self.out / 'logs' / ('session-{}.log'.format(self.session)))
+
+    def exit_native(self):
+        """Accept only the installed skin's verified Exit action, never power-off.
+
+        No signal fallback belongs here: a timeout/crash fails acceptance even
+        if emergency cleanup can subsequently terminate the isolated child.
+        """
+        child, pid = self.process, self.kodi_pid
+        if child is None or child.pid != pid or child.poll() is not None:
+            raise AssertionError('Native Exit requires the original live Kodi child')
+        menu = ET.parse(self.target / 'data/addons/skin.aperture/xml/DialogButtonMenu.xml').getroot()
+        panels = menu.findall(".//control[@id='9000']")
+        exits = [item for panel in panels for item in panel.findall('./content/item')
+                 if item.findtext('label') == '$LOCALIZE[13012]']
+        if (len(panels) != 1 or len(exits) != 1
+                or [node.text for node in exits[0].findall('onclick')] != ['Quit()']):
+            raise AssertionError('Installed power-menu Exit is not uniquely mapped to Quit()')
+        self.wait('Home before native Exit', lambda s: s.get('skin') == 'skin.aperture'
+            and s.get('window') == 10000 and s.get('dialog') == 9999)
+        before = self.key('s')  # Kodi's native power-menu key, not a Quit shortcut.
+        self.wait('native power menu', lambda s: s.get('skin') == 'skin.aperture'
+            and s.get('dialog') == 10111, after=before)
+        self.find('Exit')
+        self.capture('zip-native-exit-session-' + str(self.session))
+        selected = self.settle_focus()
+        if (selected.get('pid') != pid or selected.get('skin') != 'skin.aperture'
+                or selected.get('dialog') != 10111 or selected.get('focus') != 9000
+                or selected.get('list_item') != 'Exit'
+                or not 0 <= time.time() - selected.get('time', 0) < 3):
+            raise AssertionError('Native Exit focus changed; refusing to activate a power action')
+        if self.process is not child or child.poll() is not None:
+            raise AssertionError('Original Kodi child changed before native Exit')
+        evidence = dict(check='zip-native-exit', session=self.session, pid=pid,
+                        profile=str(self.target / 'data'), state=dict(selected),
+                        method='power-menu Exit', status='pending', returncode=None)
+        self.checks.append(evidence)
+        # key() requires a subsequent observer frame, which a real Exit need not
+        # produce. Reap exactly the Popen child instead of treating stale UI as exit.
+        try:
+            subprocess.run(['xdotool', 'key', '--clearmodifiers', 'Return'], check=True, timeout=10)
+            result = child.wait(timeout=30)
+        except subprocess.TimeoutExpired:
+            evidence['status'] = 'timed-out'
+            raise AssertionError('Native Exit did not terminate the original Kodi child')
+        evidence.update(returncode=result, completed=time.time(), status='passed' if result == 0 else 'failed')
+        self.archive_session()
+        if result != 0:
+            raise AssertionError('Native Exit was not clean: ' + str(result))
+
+    def emergency_cleanup(self):
+        """Failure-only cleanup; never evidence for normal Exit acceptance."""
         if self.process is not None and self.process.poll() is None:
             if self.kodi_pid is not None:
                 try:
@@ -132,13 +193,8 @@ class Driver:
                         pass
                 self.process.kill()
                 self.process.wait(timeout=5)
-                raise AssertionError('Kodi did not shut down cleanly for persistence test')
-        if self.stdout:
-            self.stdout.close()
-            self.stdout = None
-        log = self.out / 'logs/kodi.log'
-        if log.exists():
-            shutil.copy2(log, self.out / 'logs' / ('session-{}.log'.format(self.session)))
+                raise AssertionError('Emergency cleanup required SIGKILL')
+        self.archive_session()
 
     def key(self, key):
         before = self.state().get('sequence', 0)
@@ -330,7 +386,7 @@ class Driver:
         self.record('zip-installed-bytes-match', packages=verification)
         self.set_unknown_sources(False)
         self.choose_skin(skin_name, 'skin.aperture', 'zip-08-accepted-aperture')
-        self.stop()
+        self.exit_native()
         self.start('skin.aperture')
         self.wait('accepted skin/sources-off persisted after restart', lambda s: setting_matches(s, False) and
             installed_matches(s, self.packages, self.target / 'data'))
@@ -342,13 +398,13 @@ class Driver:
         # Recovery is accepted, not just a test profile config-file replacement.
         self.choose_skin('Estuary', 'skin.estuary', 'zip-12-recovery-estuary')
         self.choose_skin(skin_name, 'skin.aperture', 'zip-13-return-aperture')
-        self.stop()
+        self.exit_native()
         self.start('skin.aperture')
         self.wait('recovered preference and all installed add-ons persist', lambda s: setting_matches(s, False)
             and installed_matches(s, self.packages, self.target / 'data'))
         self.capture('zip-14-final-restart')
         verify_installed(self.target / 'packages', self.target / 'data', self.packages)
-        self.stop()
+        self.exit_native()
         for path in (self.out / 'logs').glob('session-*.log'):
             log = path.read_text(encoding='utf-8', errors='replace')
             for marker in ('Error loading skin', 'failed to load skin', 'EXCEPTION Thrown (PythonToCppException)',
@@ -356,7 +412,7 @@ class Driver:
                 if marker.lower() in log.lower():
                     raise AssertionError('Fresh ZIP runtime error: ' + marker)
         shutil.copy2(self.target / 'data/userdata/guisettings.xml', self.out / 'final-guisettings.xml')
-        return {'status': 'passed', 'scope': 'Fresh Format, Movies and skin ZIP installs, native media entry, accepted skin selection, persistent restart and accepted Estuary recovery',
+        return {'status': 'passed', 'scope': 'Fresh Format, Movies and skin ZIP installs, native media entry, accepted skin selection, native power-menu Exit/relaunch persistence and accepted Estuary recovery',
             'checks': self.checks, 'packages': verification, 'unknown_sources_restored': True,
             'limitations': ['CI-only disposable profile and entry-window hotkeys', 'No Pi/hardware/controller/audio-output/core acceptance',
                 'No production network source or streaming acceptance']}
@@ -400,8 +456,8 @@ def main():
         (out / 'result.json').write_text(json.dumps(result, indent=2) + '\n', encoding='utf-8')
         raise
     finally:
-        if driver:
-            driver.stop()
+        if driver and driver.process is not None and driver.process.poll() is None:
+            driver.emergency_cleanup()
     (out / 'result.json').write_text(json.dumps(result, indent=2) + '\n', encoding='utf-8')
     print('PASS: fresh Kodi ZIP installs, accepted skin switching, restart persistence and Estuary recovery verified.', flush=True)
 
