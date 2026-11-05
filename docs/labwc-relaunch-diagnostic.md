@@ -46,3 +46,42 @@ Run on a disposable machine with the workflow's dependencies:
 
 Use a new empty output directory for another skin/run. Do not run against a real
 user profile or connected hardware session.
+
+## Verified desktop baseline and configure-delay interpretation
+
+At head `ca36d4581936db3f687b14d8d01934b430c55ce6`, both skins passed
+[run 42037056930](https://github.com/JimBarnesly/Aperture/actions/runs/42037056930):
+four successful Home launches and four native Exit status-zero results per skin.
+That runtime used Kodi `2:21.3+dfsg-2`, Labwc/wlroots `0.20.2`, Mesa `26.1.6`
+and llvmpipe OpenGL 4.6, not GLES.
+
+Labwc's "did not respond to configure request in 100 ms" warnings also occurred
+in these successful runs. In Aperture launch four, the second configure arrived
+at 13:36:44.627 UTC; Kodi processed it at 13:36:50.657, applied it at
+13:36:50.761 and acknowledged it at 13:36:50.764. The roughly 6.14-second delay
+ended in a rendered Home before input. Compare elapsed time, eventual application
+state, acknowledgement and frame commits. A warning alone is not a blackout
+reproduction or proof that the configure/apply queue remains stuck.
+
+## Exact downstream ARM64 comparison
+
+The additional `rpt3-arm64` jobs use Debian trixie on an ARM64 CI runner, with no
+Pi hardware, hardware devices, host session or privileged container. The original
+passing lifecycle harness remains unchanged. A wrapper verifies all packages and
+requires the real Kodi runtime log to identify native Wayland, llvmpipe and
+`OpenGL ES` on all four launches; desktop GL or another package cannot pass.
+
+Pinned packages are Kodi, kodi-bin and kodi-data `3:21.3+dfsg-1+rpt3`; the seven
+required Raspberry Pi FFmpeg libraries `8:7.1.5-0+deb13u1+rpt2`; Debian Labwc
+`0.8.3-1`; and Debian Mesa graphics `25.0.7-2+deb13u1`. The official Raspberry Pi
+trixie repository is scoped by `signed-by`, with signing-key fingerprint
+`CF8A1AF502A2AA2D763BAE7E82B129927FA3303E`. APT signature verification remains
+mandatory. Debian remains preferred for unrelated packages. Missing pinned
+versions, signature failures, dependency constraints or a non-GLES runtime stop
+the diagnostic instead of silently approximating the requested environment.
+
+Artifacts retain the signed InRelease, signing-key fingerprint, package policy,
+installation plan, full installed versions and all lifecycle evidence. This
+closes only the package/GLES comparison if it passes. It still cannot establish
+physical Pi graphics-driver, output, CEC, controller, audio or persisted-profile
+behavior, and it applies no production patch or workaround.
