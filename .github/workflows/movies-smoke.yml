@@ -7,6 +7,7 @@ on:
       - 'skin/**'
       - 'tools/build_skin.py'
       - 'tools/movies_*'
+      - 'tests/test_movie*.py'
       - '.github/workflows/movies-smoke.yml'
 permissions:
   contents: read
@@ -36,6 +37,7 @@ jobs:
           persist-credentials: false
       - name: Exercise disposable Kodi profile as unprivileged user
         run: |
+          python3 -m unittest discover -s tests -v
           useradd --create-home --shell /bin/bash moviesqa
           chown -R moviesqa:moviesqa "$GITHUB_WORKSPACE"
           runuser -u moviesqa -- bash tools/movies_smoke.sh

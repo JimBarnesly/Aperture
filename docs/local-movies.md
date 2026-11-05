@@ -17,7 +17,29 @@ Each stage preserves a backup under the Kodi profile's aperture-backups. Restart
 
 ## Artwork and information
 
-Uses metadata/art already returned by Kodi plus exact existing sidecar files (`Film-poster.jpg`, `Film-fanart.jpg`, `poster.jpg`, `fanart.jpg`, and PNG variants). Sources with sharing disabled are browsed through Kodi's local VFS without enabling sharing; that fallback uses filenames and local artwork rather than JSON-RPC library metadata. No automatic internet scraping or downloads. Files without artwork get an original cinematic fallback. No made-up ratings, synopsis, runtime or genres. For extensive library metadata, configure Kodi's ordinary scraper separately with the user's permission.
+Artwork is chosen in this order:
+
+1. An explicit local poster choice made through the movie's context menu.
+2. An exact existing sidecar (`Film-poster.jpg`, `Film-fanart.jpg`, or PNG variant).
+3. Matched artwork already returned by Kodi.
+4. Existing `poster.jpg` / `fanart.jpg` or PNG variants, only when the directory contains one movie file. A shared folder image is not assigned to several unrelated movies.
+5. The original cinematic fallback. A video-frame thumbnail is not treated as a portrait poster.
+
+Highlight a movie and open its context menu to **Choose local poster...**, or **Use automatic poster** to clear the choice. Choose an existing local JPEG, PNG or WebP. Only a small reference is stored in the add-on's Kodi profile, not beside the film; neither the picture nor the movie is copied, changed or deleted. Cancelling leaves the previous choice intact. Keep the chosen picture at its location. If it is moved or unavailable, normal artwork selection resumes. To replace cached picture contents immediately, choose an image with a new filename rather than overwriting the same image.
+
+Sources with sharing disabled still use Kodi's local VFS without enabling sharing. That fallback has filenames and local artwork, not JSON-RPC library metadata. Browsing and choosing a local picture do not start a scan, make provider requests or export the collection. No made-up ratings, synopsis, runtime or genres.
+
+## Automatic poster sourcing: next integration
+
+This candidate improves local artwork correctness and manual correction. **It does not yet automatically source missing posters.** First inspect the device's existing scraper/library state read-only. Keep any ongoing pinned installation separate from this candidate.
+
+The recommended first provider is Team Kodi's [The Movie Database Python](https://kodi.tv/addons/omega/metadata.themoviedb.org.python/) scraper from the official repository. It can populate the movie library with metadata and posters. Use an existing TMDB identifier where available; otherwise confirm title/year matches, especially remakes. A filename-only guess must not silently replace a known film identity. Unmatched films keep the fallback and remain playable.
+
+Before an authorized scan, review the **source-specific** scraper settings. [Kodi documents](https://kodi.wiki/view/Add-on:The_Movie_Database_Python) that this scraper can also contact fanart.tv, IMDb and Trakt. For a TMDB-only first pass, turn off those extras and use TMDB poster/fanart settings. Approval must cover sending movie lookup titles/years or IDs to TMDB and downloading their artwork. Scan/database/cache changes belong in the Kodi profile; do not export NFOs or artwork onto the media drive. No new API credential is required by this local-poster candidate.
+
+For selection, prefer a clear portrait poster for the confirmed movie in the chosen language, at a useful display resolution. TMDB's [default poster selection](https://developer.themoviedb.org/docs/image-languages) uses the requested language and falls back to the original language or highest-rated image. This is a useful starting point, not proof of an objectively best image. Keep a manual alternative: Kodi's [Information → Choose Art](https://kodi.wiki/view/Artwork/Changing) exposes other scraper results for library entries; Aperture's local choice remains available independently.
+
+Acceptance still needs to verify that real library artwork reaches Aperture for the configured source, including sharing-disabled sources. Do not enable sharing just to expose metadata. If Kodi refuses those directory RPC results, add a read-only exact-path library lookup or retain local artwork; do not guess a match by filename alone. Test a small approved sample before a full scan, including two same-title films, missing art, offline browsing, manual correction and reset.
 
 ## Boundaries
 
