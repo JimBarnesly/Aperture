@@ -193,7 +193,7 @@ import os, pathlib, xml.etree.ElementTree as ET
 p=pathlib.Path(os.environ['KODI_DATA'])/'userdata/keymaps/ci.xml'
 tree=ET.parse(p)
 for scope in ('global','Home'):
-    ET.SubElement(tree.find('./'+scope+'/keyboard'),'f8').text='RunScript('+str(pathlib.Path(os.environ['KODI_HOME'])/'notification_qa.py')+')'
+    ET.SubElement(tree.find('./'+scope+'/keyboard'),'n').text='RunScript('+str(pathlib.Path(os.environ['KODI_HOME'])/'notification_qa.py')+')'
 tree.write(p,encoding='utf-8',xml_declaration=True)
 PY
 # Synthetic loopback Format server and read-only player observer. No user data.
@@ -314,10 +314,13 @@ def verify_notifications(stage):
     folder=out/'notifications'
     (folder/'request.txt').write_text(stage)
     result_path=folder/(stage+'.json')
-    press('F8')
+    press('n')
+    start_deadline=time.monotonic()+10
     deadline=time.monotonic()+190
     while time.monotonic()<deadline:
         os.kill(pid,0)
+        if not result_path.exists() and time.monotonic()>start_deadline:
+            raise AssertionError('Notification CI shortcut did not start fixture: '+stage)
         if result_path.exists():
             result=json.loads(result_path.read_text())
             if result.get('status')=='failed':

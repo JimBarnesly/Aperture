@@ -1,6 +1,6 @@
 """Synthetic notification lifetime check for a disposable Kodi CI profile only.
 
-Loaded by the CI-only F8 keymap. Never bundled into the installed skin/add-ons.
+Loaded by the CI-only N keymap. Never bundled into the installed skin/add-ons.
 No CEC calls, setting changes, remote access, or personal content are involved.
 """
 import json
@@ -50,6 +50,7 @@ def run():
         temporary.replace(result_path)
 
     try:
+        save()
         wait_for(False, 15)
         for name, caption, body in CASES:
             started = time.monotonic()
