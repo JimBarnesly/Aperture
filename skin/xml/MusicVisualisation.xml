@@ -28,26 +28,26 @@
       <visible>Player.HasAudio</visible>
       <animation effect="fade" start="0" end="100" time="350">WindowOpen</animation>
       <control type="group">
-        <left>530</left><top>30</top><width>860</width><height>860</height>
+        <left>580</left><top>70</top><width>760</width><height>760</height>
         <!-- Kodi rotatex center is Y,Z, not X,Y. Keep the depth pivot at zero. -->
-        <animation effect="rotatex" start="48" end="48" center="460,0" time="0" condition="true">Conditional</animation>
+        <animation effect="rotatex" start="48" end="48" center="450,0" time="0" condition="true">Conditional</animation>
         <animation effect="zoom" start="82" end="100" center="auto" time="650" tween="cubic" easing="out">WindowOpen</animation>
         <control type="image">
-          <left>0</left><top>0</top><width>860</width><height>860</height>
+          <left>0</left><top>0</top><width>760</width><height>760</height>
           <texture>aperture/music/platter.png</texture>
         </control>
         <control type="image" id="7101">
-          <left>72</left><top>72</top><width>716</width><height>716</height>
+          <left>64</left><top>64</top><width>632</width><height>632</height>
           <aspectratio>scale</aspectratio>
           <texture diffuse="aperture/music/disc-mask.png" fallback="DefaultAlbumCover.png">$INFO[MusicPlayer.Cover]</texture>
           <animation effect="rotate" start="0" end="-360" center="auto" time="14000" loop="true" reversible="false" condition="Player.Playing + !Player.Paused">Conditional</animation>
         </control>
         <control type="image">
-          <left>72</left><top>72</top><width>716</width><height>716</height>
+          <left>64</left><top>64</top><width>632</width><height>632</height>
           <texture>aperture/music/grooves.png</texture>
         </control>
         <control type="image">
-          <left>407</left><top>407</top><width>46</width><height>46</height>
+          <left>360</left><top>360</top><width>40</width><height>40</height>
           <texture>aperture/music/spindle.png</texture>
         </control>
       </control>

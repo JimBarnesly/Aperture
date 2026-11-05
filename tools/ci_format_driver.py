@@ -151,6 +151,17 @@ def reopen_albums(press, wait_for, settle_focus, find_label):
     settle_focus()
 
 
+def return_to_album_shelf(press, wait_for, settle_focus, album_id):
+    """Stop remembers the track folder; use its real parent, not ActivateWindow."""
+    wait_for("Stopped track returns to its album folder", lambda s: s.get("window") == 10502
+             and s.get("dialog") == 9999 and route_is(s.get("folder", ""), "album", album_id=album_id))
+    settle_focus()
+    before = press("BackSpace")
+    wait_for("Back from stopped track to album shelf", lambda s: s.get("window") == 10502
+             and s.get("dialog") == 9999 and route_is(s.get("folder", ""), "albums"), after=before)
+    settle_focus()
+
+
 def successful_recovery_request(requests, started, completed):
     return any(row["path"] == "/api/library" and row["status"] == 200
                and started <= row["time"] <= completed for row in requests)
@@ -679,9 +690,9 @@ def run(hooks):
         sequence = music()["sequence"]
         press("x")
         wait_music("Stop selected track", lambda s: s.get("player") is None, after=sequence)
-        return_home()
+        return_to_album_shelf(press, wait_for, settle_focus, config["album_id"])
         # HTTP 503 simulates server outage. No system networking is changed.
-        opened_albums()
+        find_title(album_title, "albums")
         offline = runtime / "format-fixture/offline"
         offline.write_text("Synthetic CI outage\n")
         before = press("l")

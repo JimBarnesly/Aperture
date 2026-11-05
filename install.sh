@@ -113,7 +113,7 @@ if [ "$BASELINE" -eq 0 ]; then
   printf '%s  %s\n' "$MUSIC_SHA" "$SOURCE_DIR/skin/xml/MyMusicNav.xml" | sha256sum -c - >/dev/null || fail 'MyMusicNav.xml integrity check failed'
   cp "$SOURCE_DIR/skin/xml/MyMusicNav.xml" "$TMP/xml/MyMusicNav.xml"
   [ -f "$SOURCE_DIR/skin/xml/MusicVisualisation.xml" ] || fail 'Matching now-playing XML missing'
-  VISUALISATION_SHA=19eb31d51b091a01d737efdebd46b995a211c0f19e44e1fea17b0ba6a10cfabb
+  VISUALISATION_SHA=1ae3cf154c8c67e8471cb84ec3f656918e33be811f95298df877844d889c0b47
   printf '%s  %s\n' "$VISUALISATION_SHA" "$SOURCE_DIR/skin/xml/MusicVisualisation.xml" | sha256sum -c - >/dev/null || fail 'MusicVisualisation.xml integrity check failed'
   cp "$SOURCE_DIR/skin/xml/MusicVisualisation.xml" "$TMP/xml/MusicVisualisation.xml"
   cp -R "$SOURCE_DIR/skin/media/." "$TMP/media/"

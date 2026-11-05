@@ -16,6 +16,19 @@ spec.loader.exec_module(driver)
 
 
 class DriverTest(unittest.TestCase):
+    def test_stopped_track_returns_to_real_parent_without_reopening_window(self):
+        current = {"window":10502, "dialog":9999,
+                   "folder":"plugin://plugin.audio.aperture.format/?action=album&album_id=fixture"}
+        def press(key):
+            self.assertEqual(key, 'BackSpace')
+            current['folder'] = 'plugin://plugin.audio.aperture.format/?action=albums'
+            return 10
+        def wait(description, predicate, after=0):
+            self.assertTrue(predicate(current), description)
+        settle = Mock()
+        driver.return_to_album_shelf(press, wait, settle, 'fixture')
+        self.assertEqual(settle.call_count, 2)
+
     def test_direct_track_navigation_waits_for_actual_playback_and_gui(self):
         actual = {"window":10502, "dialog":9999, "nowplaying_button_visible":True,
                   "format_view":"tracks", "list_visible":True, "shelf_visible":False,

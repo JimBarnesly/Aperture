@@ -20,7 +20,7 @@ class TurntableTests(unittest.TestCase):
         self.assertEqual(tree.findtext('.//control[@type="progress"]/visible'),
                          '!Window.IsVisible(seekbar)')
         tilt = tree.find('.//animation[@effect="rotatex"]')
-        self.assertEqual(tilt.get('center'), '460,0')  # Kodi's rotatex pivot is Y,Z.
+        self.assertEqual(tilt.get('center'), '450,0')  # Kodi's rotatex pivot is Y,Z.
         self.assertEqual(tree.find('.//animation[@effect="zoom"]').get('center'), 'auto')
 
     def test_native_player_state_and_controls(self):
