@@ -229,6 +229,123 @@ class FreshFixtureTest(unittest.TestCase):
 
 
 class DriverSafetyTest(unittest.TestCase):
+    def native_exit_subject(self, directory):
+        subject = driver.Driver.__new__(driver.Driver)
+        subject.target = Path(directory)
+        subject.out = Path(directory) / 'out'
+        subject.session = 2
+        subject.kodi_pid = 123
+        subject.process = Mock(pid=123)
+        subject.process.poll.return_value = None
+        subject.process.wait.return_value = 0
+        subject.checks = []
+        menu = subject.target / 'data/addons/skin.aperture/xml'
+        menu.mkdir(parents=True)
+        shutil.copy2(ROOT / 'skin/xml/DialogButtonMenu.xml', menu / 'DialogButtonMenu.xml')
+        state = dict(pid=123, skin='skin.aperture', window=10000, dialog=10111,
+                     focus=9000, list_item='Exit', time=time.time(), sequence=42)
+        subject.wait = Mock()
+        subject.key = Mock(return_value=41)
+        subject.find = Mock()
+        subject.capture = Mock()
+        subject.settle_focus = Mock(return_value=state)
+        subject.archive_session = Mock()
+        return subject
+
+    def test_native_exit_reaps_original_child_and_records_clean_evidence(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            subject = self.native_exit_subject(tmp)
+            with patch.object(driver.subprocess, 'run') as run, patch.object(driver.os, 'kill') as kill:
+                subject.exit_native()
+            subject.key.assert_called_once_with('s')
+            subject.find.assert_called_once_with('Exit')
+            run.assert_called_once_with(['xdotool', 'key', '--clearmodifiers', 'Return'], check=True, timeout=10)
+            subject.process.wait.assert_called_once_with(timeout=30)
+            kill.assert_not_called()
+            subject.process.terminate.assert_not_called()
+            evidence = subject.checks[-1]
+            self.assertEqual((evidence['status'], evidence['returncode'], evidence['pid']), ('passed', 0, 123))
+            self.assertEqual(evidence['method'], 'power-menu Exit')
+            self.assertEqual(evidence['profile'], str(subject.target / 'data'))
+            self.assertEqual(evidence['state']['list_item'], 'Exit')
+            subject.archive_session.assert_called_once()
+
+    def test_native_exit_refuses_wrong_stale_or_neighboring_focus(self):
+        changes = ({'list_item': 'Power off system'}, {'list_item': 'Exit extra'},
+                   {'list_item': 'Reboot', 'control_label': 'Exit'}, {'dialog': 10100},
+                   {'focus': 1}, {'pid': 456}, {'skin': 'skin.estuary'},
+                   {'time': time.time() - 5}, {'time': time.time() + 10})
+        for change in changes:
+            with self.subTest(change=change), tempfile.TemporaryDirectory() as tmp:
+                subject = self.native_exit_subject(tmp)
+                subject.settle_focus.return_value.update(change)
+                with patch.object(driver.subprocess, 'run') as run:
+                    with self.assertRaisesRegex(AssertionError, 'focus changed'):
+                        subject.exit_native()
+                run.assert_not_called()
+                subject.process.wait.assert_not_called()
+                self.assertFalse(subject.checks)
+
+    def test_native_exit_refuses_untrusted_action_mapping(self):
+        for replacement in ('Powerdown()', 'Reset()', 'Quit()</onclick><onclick>Powerdown()'):
+            with self.subTest(replacement=replacement), tempfile.TemporaryDirectory() as tmp:
+                subject = self.native_exit_subject(tmp)
+                menu = subject.target / 'data/addons/skin.aperture/xml/DialogButtonMenu.xml'
+                menu.write_text(menu.read_text().replace('Quit()', replacement))
+                with self.assertRaisesRegex(AssertionError, 'uniquely mapped'):
+                    subject.exit_native()
+                subject.key.assert_not_called()
+
+    def test_relaunch_refuses_a_still_live_previous_child(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            subject = self.native_exit_subject(tmp)
+            with patch.object(driver.subprocess, 'Popen') as popen:
+                with self.assertRaisesRegex(AssertionError, 'previous Kodi child is alive'):
+                    subject.start('skin.aperture')
+            popen.assert_not_called()
+            self.assertEqual(subject.session, 2)
+
+    def test_native_exit_refuses_dead_or_different_child(self):
+        for wrong_pid, code in ((456, None), (123, 0), (123, -15)):
+            with self.subTest(pid=wrong_pid, code=code), tempfile.TemporaryDirectory() as tmp:
+                subject = self.native_exit_subject(tmp)
+                subject.process.pid = wrong_pid
+                subject.process.poll.return_value = code
+                with self.assertRaisesRegex(AssertionError, 'original live Kodi child'):
+                    subject.exit_native()
+                subject.key.assert_not_called()
+
+    def test_native_exit_crash_or_timeout_never_passes_or_signals(self):
+        for outcome in (-11, -15, 1, 'timeout'):
+            with self.subTest(outcome=outcome), tempfile.TemporaryDirectory() as tmp:
+                subject = self.native_exit_subject(tmp)
+                if outcome == 'timeout':
+                    subject.process.wait.side_effect = driver.subprocess.TimeoutExpired('kodi', 30)
+                else:
+                    subject.process.wait.return_value = outcome
+                with patch.object(driver.subprocess, 'run'), patch.object(driver.os, 'kill') as kill:
+                    with self.assertRaises(AssertionError):
+                        subject.exit_native()
+                kill.assert_not_called()
+                subject.process.terminate.assert_not_called()
+                subject.process.kill.assert_not_called()
+                evidence = subject.checks[-1]
+                self.assertEqual(evidence['status'], 'timed-out' if outcome == 'timeout' else 'failed')
+                self.assertEqual(evidence['returncode'], None if outcome == 'timeout' else outcome)
+
+    def test_acceptance_stops_are_native_and_cleanup_is_separate(self):
+        tree = ast.parse((ROOT / 'tools/zip_smoke_driver.py').read_text())
+        cls = next(node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == 'Driver')
+        run = next(node for node in cls.body if isinstance(node, ast.FunctionDef) and node.name == 'run')
+        calls = [node.func.attr for node in ast.walk(run) if isinstance(node, ast.Call)
+                 and isinstance(node.func, ast.Attribute)]
+        self.assertEqual(calls.count('exit_native'), 3)
+        self.assertNotIn('emergency_cleanup', calls)
+        self.assertNotIn('stop', calls)
+        exit_method = next(node for node in cls.body if isinstance(node, ast.FunctionDef) and node.name == 'exit_native')
+        self.assertFalse(any(isinstance(node, ast.Attribute) and node.attr in
+                             ('kill', 'terminate', 'emergency_cleanup') for node in ast.walk(exit_method)))
+
     def test_home_navigation_waits_for_reveal_and_routes_from_settled_focus(self):
         home = ET.parse(ROOT / 'skin/xml/Home.xml').getroot()
         reveal_ms = max(int(node.get('time', '0')) + int(node.get('delay', '0'))

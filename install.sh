@@ -109,9 +109,13 @@ if [ "$BASELINE" -eq 0 ]; then
   printf '%s  %s\n' "$MOVIES_SHA" "$SOURCE_DIR/skin/xml/MyVideoNav.xml" | sha256sum -c - >/dev/null || fail 'MyVideoNav.xml integrity check failed'
   cp "$SOURCE_DIR/skin/xml/MyVideoNav.xml" "$TMP/xml/MyVideoNav.xml"
   [ -f "$SOURCE_DIR/skin/xml/MyMusicNav.xml" ] || fail 'Matching music browser XML missing'
-  MUSIC_SHA=97ee5dfd944cadf31c0a8a6b0d27e53cdd818c1e52766d5e22655ada1b2d6865
+  MUSIC_SHA=7d7b6dd92b7f2bc92112ad2c58ee279d1abeadd76e244ab629476e78fcf645cd
   printf '%s  %s\n' "$MUSIC_SHA" "$SOURCE_DIR/skin/xml/MyMusicNav.xml" | sha256sum -c - >/dev/null || fail 'MyMusicNav.xml integrity check failed'
   cp "$SOURCE_DIR/skin/xml/MyMusicNav.xml" "$TMP/xml/MyMusicNav.xml"
+  [ -f "$SOURCE_DIR/skin/xml/MusicVisualisation.xml" ] || fail 'Matching now-playing XML missing'
+  VISUALISATION_SHA=1ae3cf154c8c67e8471cb84ec3f656918e33be811f95298df877844d889c0b47
+  printf '%s  %s\n' "$VISUALISATION_SHA" "$SOURCE_DIR/skin/xml/MusicVisualisation.xml" | sha256sum -c - >/dev/null || fail 'MusicVisualisation.xml integrity check failed'
+  cp "$SOURCE_DIR/skin/xml/MusicVisualisation.xml" "$TMP/xml/MusicVisualisation.xml"
   cp -R "$SOURCE_DIR/skin/media/." "$TMP/media/"
   mkdir -p "$TMP/licenses"
   cp -R "$SOURCE_DIR/skin/licenses/." "$TMP/licenses/"

@@ -162,7 +162,7 @@
           <visible>String.IsEqual(Container.PluginName,plugin.audio.aperture.format) + !String.IsEqual(Container.Property(Aperture.FormatView),albums)</visible>
           <scrolltime>160</scrolltime>
           <onleft>63</onleft>
-          <onright>63</onright>
+          <onright condition="!Player.HasAudio">63</onright>
           <onup>63</onup>
           <ondown>63</ondown>
           <itemlayout width="1010" height="86">
@@ -196,6 +196,7 @@
               <scroll>true</scroll>
             </control>
           </focusedlayout>
+          <onright condition="Player.HasAudio">65</onright>
         </control>
         <control type="image">
           <left>1220</left>
@@ -236,7 +237,7 @@
         <onleft>64</onleft>
         <onright>64</onright>
         <onup>64</onup>
-        <ondown>64</ondown>
+        <ondown condition="!Player.HasAudio">64</ondown>
         <itemlayout width="440" height="600">
           <control type="image">
             <left>8</left>
@@ -331,20 +332,21 @@
             <visible>String.IsEmpty(ListItem.Title)</visible>
           </control>
         </focusedlayout>
+        <ondown condition="Player.HasAudio">65</ondown>
       </control>
       <control type="label">
         <left>90</left>
         <top>980</top>
-        <width>1450</width>
+        <width>1300</width>
         <height>45</height>
         <font>font27</font>
-        <label>D-pad  Browse     •     Select  Open / Play     •     Back  Return     •     Menu  Options</label>
+        <label>D-pad  Browse     ·     Select  Open / Play     ·     Back  Return</label>
         <textcolor>FFAACBD0</textcolor>
         <scroll>true</scroll>
       </control>
       <control type="label">
         <left>1630</left>
-        <top>980</top>
+        <top>928</top>
         <width>210</width>
         <height>45</height>
         <font>font27</font>
@@ -352,6 +354,29 @@
         <textcolor>FFAACBD0</textcolor>
         <scroll>true</scroll>
         <align>right</align>
+      </control>
+      <control type="button" id="65">
+        <left>1450</left>
+        <top>980</top>
+        <width>390</width>
+        <height>56</height>
+        <label>Now playing</label>
+        <font>font27</font>
+        <align>center</align>
+        <textcolor>FF9CCCD1</textcolor>
+        <focusedcolor>FF080D13</focusedcolor>
+        <onclick>ActivateWindow(visualisation)</onclick>
+        <visible>Player.HasAudio</visible>
+        <texturefocus colordiffuse="FF9CCCD1">colors/white.png</texturefocus>
+        <texturenofocus colordiffuse="442F424C">colors/white.png</texturenofocus>
+        <onleft condition="Control.IsVisible(64)">64</onleft>
+        <onleft condition="Control.IsVisible(63)">63</onleft>
+        <onright condition="Control.IsVisible(64)">64</onright>
+        <onright condition="Control.IsVisible(63)">63</onright>
+        <onup condition="Control.IsVisible(64)">64</onup>
+        <onup condition="Control.IsVisible(63)">63</onup>
+        <ondown condition="Control.IsVisible(64)">64</ondown>
+        <ondown condition="Control.IsVisible(63)">63</ondown>
       </control>
     </control>
   </controls>
