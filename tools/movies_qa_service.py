@@ -51,7 +51,36 @@ def settled():
 
 
 def cinematic():
-    return settled() and xbmc.getCondVisibility('Control.IsVisible(61)')
+    return (settled() and xbmc.getCondVisibility('Control.IsVisible(61)')
+            and not xbmc.getCondVisibility('Container.IsUpdating')
+            and not xbmc.getCondVisibility('Window.IsActive(busydialog)')
+            and not xbmc.getCondVisibility('Window.IsActive(busydialognocancel)'))
+
+
+def wait_for_movie_idle(description, folder_path, stable_for=1.0):
+    # Closing a context menu/picker does not mean its RunPlugin action and
+    # queued Container.Refresh have completed. Require a continuous quiet
+    # interval before sending more native input; restart it on refresh, focus
+    # changes or a changed listing. This is a UI settling guard, not a plugin
+    # completion signal. Keep the normal timeout and never retry Select.
+    stable_since = None
+    previous = None
+
+    def ready():
+        nonlocal stable_since, previous
+        state = tuple(xbmc.getInfoLabel(label) for label in (
+            'Container.FolderPath', 'ListItem.Label', 'Container.NumItems'))
+        if not cinematic() or state[0] != folder_path:
+            stable_since = None
+            previous = None
+            return False
+        now = time.monotonic()
+        if stable_since is None or state != previous:
+            stable_since = now
+            previous = state
+        return now - stable_since >= stable_for
+
+    until(description, ready)
 
 
 def focus(label):
@@ -151,13 +180,13 @@ try:
             if attempt == 0:
                 capture('movies-local-poster-picker')
             rpc('Input.Back')
-            until('poster picker cancelled', cinematic)
+            wait_for_movie_idle('poster picker cancelled', root_path)
             focus('Amber Horizon')
             assert_art('Amber Horizon')
             if choices.exists() and list(choices.iterdir()):
                 raise RuntimeError('Cancelled picker wrote a poster preference')
         poster_context_action('Use automatic poster')
-        until('poster reset returns to movies', cinematic)
+        wait_for_movie_idle('poster reset returns to movies', root_path)
         focus('Amber Horizon'); assert_art('Amber Horizon')
         checks.append({'check':'native-poster-picker-cancel-repeat-and-reset','profile_writes':False})
         # Root entry must already show movie content in sole/default cases.

@@ -19,8 +19,11 @@ fix for the unresolved physical Pi blackout.
 - PR15 `c9a723f`: conservative source identity/removal guard and adversarial
   saved-list confirmation tests. No game files are deleted by clearing a list.
 
-PR16 Home now-playing is still under active author verification and is not yet
-included. Main must remain unchanged until the final combined candidate passes.
+- PR16 `136b385`: playback-aware Home shortcut with remote focus, exact Music/TV/
+  Movies destinations and escape after playback stops. Author native menu CI
+  passed before integration.
+
+Main remains unchanged until this final combined candidate passes.
 
 ## Retained alternatives
 
@@ -28,7 +31,9 @@ PR1–4 (`cc224e7`, `84e3951`, `4e95d00`, `922c1ce`) represent the historical
 `skin.apeture` foundation/scenic/local-music/release line. They are not additive
 features for the newer `skin.aperture` architecture. Blind merging would restore
 obsolete entrypoints, duplicate music ownership and conflicting build recipes.
-Their branches remain intact for reference; no historical branch is deleted.
+Their standalone Kodi album shelf (without a Format server), alternative scenic
+Home and Windows ZIP preparation aid remain available on their historical line,
+not in this candidate. Their branches remain intact; no branch is deleted.
 
 ## Gates and boundaries
 

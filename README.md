@@ -19,14 +19,16 @@ The actual Kodi 21.3 CI job tests activation, repeated navigation and skin recov
 in an isolated software-rendered desktop. Its result is distinct from the unit
 tests and is not proof of Pi hardware, controller, HDMI-CEC or audible output.
 Until the final test report is recorded, treat this branch as work in progress.
+See [integration scope and gates](docs/main-integration.md) for the consolidated
+features, retained alternatives and exact-source verification requirements.
 
 ## Install the complete ZIPs
 
 Use the complete, tested ZIPs from the candidate kit or matching CI artifact:
 
 1. Keep Estuary installed and back up your Kodi profile.
-2. Install `plugin.audio.aperture.format-0.3.0.zip` through Kodi's ZIP installer.
-3. Install `skin.aperture-4.0.1~rc1.zip` through Kodi's ZIP installer.
+2. Install `plugin.audio.aperture.format-0.4.0.zip` through Kodi's ZIP installer.
+3. Install `plugin.video.aperture.movies-0.1.1.zip`, then `skin.aperture-4.0.1~rc1.zip` through Kodi's ZIP installer.
 4. If Kodi presents an unknown-sources warning, review it yourself. The software
    does not silently enable that setting. Disable it again after installation.
 5. Choose Aperture in Settings > Interface > Skin. Select Keep only when the

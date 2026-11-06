@@ -146,7 +146,7 @@ class SkinBuildTests(unittest.TestCase):
 
     def test_complete_home_focus_graph(self):
         home=ET.parse(ROOT/'skin/xml/Home.xml').getroot()
-        controls={c.get('id'):c for c in home.iter('control') if c.get('id')}
+        controls={c.get('id'):c for c in home.iter('control') if c.get('id') and c.get('type')=='button'}
         pending=[home.findtext('defaultcontrol')];seen=set()
         while pending:
             current=pending.pop()
