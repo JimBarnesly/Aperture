@@ -1,0 +1,46 @@
+name: Kodi gaming core acceptance
+on:
+  push:
+    branches: [main, integration/comprehensive-main, fix/kodi21-startup, fix/games-persistent-selector, feat/integrated-games-turntable, fix/games-source-removal-guard]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  gaming:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-latest, ubuntu-24.04-arm]
+        experience: [aperture, classic]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 25
+    container:
+      image: debian:forky-slim
+    defaults:
+      run:
+        shell: bash
+    env:
+      DEBIAN_FRONTEND: noninteractive
+      APERTURE_GAMING_SKIN: ${{ matrix.experience }}
+    steps:
+      - name: Install signed distribution runtime and build tools
+        run: |
+          apt-get update
+          apt-get install --yes --no-install-recommends ca-certificates git python3 imagemagick build-essential binutils gdb kodi kodi-bin kodi-data kodi-game-libretro kodi-peripheral-joystick libretro-nestopia xvfb xauth x11-utils libgl1-mesa-dri fonts-noto-core fonts-noto-mono fonts-roboto-unhinted pulseaudio pulseaudio-utils
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Run as disposable unprivileged test user
+        run: |
+          useradd --create-home --shell /bin/bash gamingqa
+          chown -R gamingqa:gamingqa "$GITHUB_WORKSPACE"
+          runuser -u gamingqa -- python3 -m unittest discover -s tests -v
+          runuser -u gamingqa -- bash tools/ci_gaming_smoke.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: aperture-gaming-${{ matrix.runner }}-${{ matrix.experience }}-${{ github.sha }}
+          path: build/gaming-smoke/
+          if-no-files-found: warn
+          retention-days: 14
+

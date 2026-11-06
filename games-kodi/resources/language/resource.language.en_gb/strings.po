@@ -1,0 +1,108 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: plugin.games.aperture\n"
+"Language: en_GB\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgctxt "#32000"
+msgid "Aperture Game Library"
+msgstr ""
+
+msgctxt "#32001"
+msgid "Library"
+msgstr ""
+
+msgctxt "#32002"
+msgid "ROM root folder"
+msgstr ""
+
+msgctxt "#32003"
+msgid "Choose the folder containing system folders such as nes, snes, gba and psx. Only systems with detected games appear. No games or BIOS are downloaded."
+msgstr ""
+
+msgctxt "#32004"
+msgid "Choose your ROM folder to get started…"
+msgstr ""
+
+msgctxt "#32005"
+msgid "No games found — check your ROM folder…"
+msgstr ""
+
+msgctxt "#32006"
+msgid "Configure library…"
+msgstr ""
+
+msgctxt "#32007"
+msgid "About native game playback"
+msgstr ""
+
+msgctxt "#32008"
+msgid "Aperture browses your files; Kodi RetroPlayer runs games with compatible Kodi game add-ons, not standalone RetroArch. Kodi chooses an emulator or reports when none is available; any installation prompt belongs to Kodi. Core, BIOS, file-format and network-path support vary by device. Put legally obtained games under the documented system folders; keep BIOS elsewhere. Multi-disc M3U entries ask which disc to launch, not seamless disc swapping. Nothing is downloaded by Aperture."
+msgstr ""
+
+msgctxt "#32010"
+msgid "Looking for games in your configured folders…"
+msgstr ""
+
+msgctxt "#32011"
+msgid "The library could not be read. Check the ROM root, folder permissions and share connection. Use a local, special://, SMB or NFS folder. Very large or deeply nested collections must be split into a smaller root. You can change the folder in Configure library."
+msgstr ""
+
+msgctxt "#32012"
+msgid "Some folders or disc descriptors could not be read safely. Check permissions and relative CUE/M3U references."
+msgstr ""
+
+msgctxt "#32013"
+msgid "This game is no longer in the configured library. Refresh the system list and check the ROM folder."
+msgstr ""
+
+msgctxt "#32014"
+msgid "Choose a disc to launch"
+msgstr ""
+
+msgctxt "#32015"
+msgid "This library link is not valid. Returning to your systems."
+msgstr ""
+
+msgctxt "#32016"
+msgid "Refresh library in background"
+msgstr ""
+
+msgctxt "#32017"
+msgid "Preparing your library in the background…"
+msgstr ""
+
+msgctxt "#32018"
+msgid "Library unavailable. Check your ROM folder and try Refresh."
+msgstr ""
+
+msgctxt "#32019"
+msgid "Background refresh requested. Your saved library stays available."
+msgstr ""
+
+
+msgctxt "#32020"
+msgid "Refresh found no games. Saved library retained — review…"
+msgstr ""
+
+msgctxt "#32021"
+msgid "The scan found no games. The drive or share may be unavailable. Keep the saved library unless you know this source is intentionally empty. Clear only the saved game list? No game files will be deleted."
+msgstr ""
+
+msgctxt "#32022"
+msgid "Keep saved library"
+msgstr ""
+
+msgctxt "#32023"
+msgid "Clear saved list"
+msgstr ""
+
+msgctxt "#32024"
+msgid "The library changed or is being refreshed. Nothing was cleared. Review it and try again."
+msgstr ""
+
+msgctxt "#32025"
+msgid "Source identity could not be verified. Saved games retained; check the drive or share."
+msgstr ""

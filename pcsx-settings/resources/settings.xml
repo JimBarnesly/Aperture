@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<settings version="1">
+  <section id="game.libretro.aperture.pcsxrearmed">
+    <category id="video" label="32000" help="32001">
+      <group id="1">
+        <setting id="pcsx_rearmed_neon_enhancement_enable" type="string" label="32002" help="32003">
+          <level>0</level>
+          <default>disabled</default>
+          <constraints>
+            <options>
+              <option label="32004">disabled</option>
+              <option label="32005">enabled</option>
+            </options>
+          </constraints>
+          <control type="spinner" format="string"/>
+        </setting>
+      </group>
+    </category>
+  </section>
+</settings>

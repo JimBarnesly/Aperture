@@ -1,0 +1,414 @@
+<?xml version='1.0' encoding='utf-8'?>
+<window>
+  <defaultcontrol always="true">50</defaultcontrol>
+  <backgroundcolor>background</backgroundcolor>
+  <views>61,50,51,52,53,54,55,500,501,502</views>
+  <menucontrol>9000</menucontrol>
+  <controls>
+    <control type="group">
+      <visible>!Control.IsVisible(61)</visible>
+      <include>DefaultBackground</include>
+      <control type="group">
+        <animation effect="fade" start="100" end="0" time="200" tween="sine" condition="$EXP[infodialog_active]">Conditional</animation>
+        <include>View_50_List</include>
+        <include>View_51_Poster</include>
+        <include>View_52_IconWall</include>
+        <include>View_53_Shift</include>
+        <include>View_54_InfoWall</include>
+        <include>View_55_WideList</include>
+        <include>View_500_Wall</include>
+        <include>View_501_Banner</include>
+        <include>View_502_FanArt</include>
+        <control type="group">
+          <depth>DepthContentPanel</depth>
+          <include>OpenClose_Left</include>
+          <visible>Control.IsVisible(55)</visible>
+          <include>Visible_Left</include>
+          <include>ListThumbInfoPanel</include>
+        </control>
+        <control type="group">
+          <depth>DepthContentPanel</depth>
+          <include>OpenClose_Left</include>
+          <visible>Control.IsVisible(50) | Control.Isvisible(54) | [Control.IsVisible(501) + String.IsEqual(Skin.AspectRatio,21:9)]</visible>
+          <include>Visible_Left</include>
+          <include content="ContentPanel">
+            <param name="width" value="656" />
+          </include>
+          <control type="group">
+            <width>550</width>
+            <control type="textbox">
+              <top>120</top>
+              <left>30</left>
+              <width>550</width>
+              <aligny>center</aligny>
+              <height>110</height>
+              <font>font36_title</font>
+              <label>$INFO[ListItem.Title]</label>
+            </control>
+            <control type="textbox">
+              <left>30</left>
+              <top>240</top>
+              <width>525</width>
+              <bottom>100</bottom>
+              <visible>![ListItem.IsCollection + String.IsEmpty(ListItem.Plot)]</visible>
+              <label>$INFO[ListItem.Tagline,[I],[/I][CR][CR]]$INFO[ListItem.Plot][CR][CR]</label>
+              <autoscroll delay="10000" time="3000" repeat="10000">Skin.HasSetting(autoscroll)</autoscroll>
+            </control>
+            <control type="textbox">
+              <left>30</left>
+              <top>360</top>
+              <width>530</width>
+              <height>413</height>
+              <align>center</align>
+              <aligny>center</aligny>
+              <font>font27</font>
+              <textcolor>80FFFFFF</textcolor>
+              <label>$LOCALIZE[19055]</label>
+              <visible>String.IsEmpty(Listitem.Plot) + String.IsEmpty(Listitem.Tagline) + !ListItem.IsCollection + !ListItem.IsParentFolder</visible>
+            </control>
+            <control type="group">
+              <left>20</left>
+              <top>245</top>
+              <visible>ListItem.IsCollection + String.IsEmpty(ListItem.Plot)</visible>
+              <include content="InfoList">
+                <param name="bottom" value="108" />
+                <param name="width" value="540" />
+                <param name="sortby" value="year" />
+                <param name="sortorder" value="ascending" />
+                <param name="font" value="font13" />
+              </include>
+            </control>
+          </control>
+        </control>
+        <include content="TopBar">
+          <param name="breadcrumbs_label" value="$VAR[BreadcrumbsVideoVar]" />
+        </include>
+        <include content="BottomBar">
+          <param name="info_visible" value="true" />
+        </include>
+        <control type="group">
+          <depth>DepthBars</depth>
+          <bottom>0</bottom>
+          <height>70</height>
+          <animation effect="fade" start="0" end="100" time="300" delay="300">WindowOpen</animation>
+          <animation effect="fade" start="100" end="0" time="200">WindowClose</animation>
+          <include condition="!Skin.HasSetting(hide_mediaflags)">MediaFlags</include>
+        </control>
+        <include>CommonScrollbars</include>
+        <include>MediaMenuMouseOverlay</include>
+        <control type="group">
+          <include>MediaMenuCommon</include>
+          <control type="grouplist" id="9000">
+            <top>50</top>
+            <include>MediaMenuListCommon</include>
+            <control type="button" id="10">
+              <description>Watched Toggle</description>
+              <include>MediaMenuItemsCommon</include>
+              <label>$LOCALIZE[20367]</label>
+              <label2>[B]$INFO[Container.NumItems][/B]</label2>
+              <visible>Container.Content(movies) | Container.Content(sets) | Container.Content(tvshows) | Container.content(seasons) | Container.Content(episodes) | Container.Content(MusicVideos)</visible>
+            </control>
+            <control type="label" id="203">
+              <include>MediaMenuLabelCommon</include>
+              <label>$LOCALIZE[31020]</label>
+            </control>
+            <control type="radiobutton" id="16">
+              <description>PartyMode</description>
+              <label>$LOCALIZE[589]</label>
+              <include>MediaMenuItemsCommon</include>
+              <visible>Container.Content(MusicVideos)</visible>
+            </control>
+            <control type="radiobutton" id="11">
+              <description>Unlock Shares</description>
+              <include>MediaMenuItemsCommon</include>
+              <label>$LOCALIZE[20336]</label>
+              <onclick>mastermode</onclick>
+              <selected>system.ismaster</selected>
+              <visible>system.haslocks</visible>
+            </control>
+            <control type="togglebutton" id="619">
+              <description>Update library</description>
+              <include>MediaMenuItemsCommon</include>
+              <label>$LOCALIZE[653]</label>
+              <onclick>UpdateLibrary(video)</onclick>
+              <visible>!Container.Content(addons)+ String.IsEmpty(Container.PluginName)</visible>
+              <altlabel>$LOCALIZE[13353]</altlabel>
+              <usealttexture>library.isscanningvideo</usealttexture>
+            </control>
+            <control type="button" id="612">
+              <description>Go to playlist</description>
+              <include>MediaMenuItemsCommon</include>
+              <label>$LOCALIZE[31056]</label>
+              <onclick>ActivateWindow(videoplaylist)</onclick>
+              <visible>Integer.IsGreater(Playlist.Length(video),0)</visible>
+            </control>
+            <control type="button" id="621">
+              <description>Get more</description>
+              <include>MediaMenuItemsCommon</include>
+              <label>$LOCALIZE[21452]</label>
+              <onclick>ActivateWindow(addonbrowser,addons://more/video/,return)</onclick>
+              <visible>Container.Content(addons)</visible>
+            </control>
+            <control type="button" id="622">
+              <include>MediaMenuItemsCommon</include>
+              <label>$LOCALIZE[31117]</label>
+              <onclick condition="System.AddonIsEnabled(plugin.library.node.editor)">ActivateWindow(programs,plugin://plugin.library.node.editor/?ltype=video,return)</onclick>
+              <onclick condition="System.HasAddon(plugin.library.node.editor) + !System.AddonIsEnabled(plugin.library.node.editor)">EnableAddon(plugin.library.node.editor)</onclick>
+              <onclick condition="!System.HasAddon(plugin.library.node.editor)">InstallAddon(plugin.library.node.editor)</onclick>
+              <visible>Container.Content() + String.IsEmpty(Container.PluginName)</visible>
+            </control>
+            <control type="button" id="623">
+              <include>MediaMenuItemsCommon</include>
+              <label>$LOCALIZE[31009]</label>
+              <onclick>InstallAddon(resource.images.studios.white)</onclick>
+              <visible>Container.Content(studios) + !System.AddonIsEnabled(resource.images.studios.white)</visible>
+            </control>
+            <control type="button" id="624">
+              <include>MediaMenuItemsCommon</include>
+              <label>$LOCALIZE[10140]</label>
+              <onclick>Addon.OpenSettings($INFO[Container.PluginName])</onclick>
+              <visible>!String.IsEmpty(Container.PluginName)</visible>
+            </control>
+            <include>MediaMenuNowPlaying</include>
+          </control>
+        </control>
+      </control>
+    </control>
+    <control type="group">
+      <visible>Control.IsVisible(61)</visible>
+      <control type="image">
+        <left>0</left>
+        <top>0</top>
+        <width>1920</width>
+        <height>1080</height>
+        <texture>aperture/movies/horizon.jpg</texture>
+      </control>
+      <control type="image">
+        <left>0</left>
+        <top>0</top>
+        <width>1920</width>
+        <height>1080</height>
+        <texture fallback="aperture/movies/horizon.jpg">$INFO[ListItem.Art(fanart)]</texture>
+        <aspectratio>scale</aspectratio>
+        <fadetime>350</fadetime>
+      </control>
+      <control type="image">
+        <left>0</left>
+        <top>0</top>
+        <width>1920</width>
+        <height>1080</height>
+        <texture>aperture/movies/scrim.png</texture>
+      </control>
+      <control type="image">
+        <left>82</left>
+        <top>62</top>
+        <width>6</width>
+        <height>42</height>
+        <texture>aperture/movies/accent.png</texture>
+      </control>
+      <control type="label">
+        <left>110</left>
+        <top>60</top>
+        <width>850</width>
+        <height>46</height>
+        <font>font27</font>
+        <label>A P E R T U R E   /   C I N E M A</label>
+        <textcolor>FFA8E5DD</textcolor>
+      </control>
+      <control type="label">
+        <left>1600</left>
+        <top>60</top>
+        <width>238</width>
+        <height>46</height>
+        <font>font27</font>
+        <label>$INFO[System.Time]</label>
+        <textcolor>FFB8CBCE</textcolor>
+        <align>right</align>
+      </control>
+      <control type="label">
+        <left>84</left>
+        <top>167</top>
+        <width>1000</width>
+        <height>34</height>
+        <font>font20_title</font>
+        <label>T H E   B I G   S C R E E N .   A T   H O M E .</label>
+        <textcolor>FFB7C9CA</textcolor>
+      </control>
+      <control type="textbox">
+        <left>78</left>
+        <top>216</top>
+        <width>1160</width>
+        <height>145</height>
+        <font>font60</font>
+        <label>$INFO[ListItem.Label]</label>
+        <textcolor>FFE8F2F3</textcolor>
+        <autoscroll>false</autoscroll>
+      </control>
+      <control type="label">
+        <left>84</left>
+        <top>364</top>
+        <width>1100</width>
+        <height>40</height>
+        <font>font27</font>
+        <label>$INFO[ListItem.Year]$INFO[ListItem.Genre,   •   ]$INFO[ListItem.Duration,   •   ]</label>
+        <textcolor>FF9BD5D0</textcolor>
+      </control>
+      <control type="textbox">
+        <left>84</left>
+        <top>422</top>
+        <width>1030</width>
+        <height>118</height>
+        <font>font27</font>
+        <label>$INFO[ListItem.Plot]</label>
+        <textcolor>FFD1DCDF</textcolor>
+        <visible>!String.IsEmpty(ListItem.Plot)</visible>
+      </control>
+      <control type="label">
+        <left>84</left>
+        <top>567</top>
+        <width>1350</width>
+        <height>40</height>
+        <font>font27</font>
+        <label>$INFO[Container.FolderName]</label>
+        <textcolor>FFF0E2C9</textcolor>
+      </control>
+      <control type="label">
+        <left>1530</left>
+        <top>567</top>
+        <width>305</width>
+        <height>40</height>
+        <font>font27</font>
+        <label>$INFO[Container(61).CurrentItem] / $INFO[Container(61).NumItems]</label>
+        <textcolor>FFB4C8CD</textcolor>
+        <align>right</align>
+      </control>
+      <control type="image">
+        <left>84</left>
+        <top>1000</top>
+        <width>1750</width>
+        <height>1</height>
+        <texture>aperture/movies/accent.png</texture>
+      </control>
+      <control type="label">
+        <left>84</left>
+        <top>1018</top>
+        <width>1450</width>
+        <height>35</height>
+        <font>font20_title</font>
+        <label>Left / Right  Browse       •       Select  Play / Open       •       Back  Return       •       Menu  Options</label>
+        <textcolor>FF99B0B8</textcolor>
+      </control>
+      <control type="label">
+        <left>1560</left>
+        <top>1018</top>
+        <width>275</width>
+        <height>35</height>
+        <font>font20_title</font>
+        <label>LOCAL COLLECTION</label>
+        <textcolor>FF9BD5D0</textcolor>
+      </control>
+    </control>
+    <control type="panel" id="61">
+      <left>72</left>
+      <top>621</top>
+      <width>1780</width>
+      <height>350</height>
+      <orientation>horizontal</orientation>
+      <viewtype label="Cinema">icon</viewtype>
+      <visible>String.IsEqual(Container.PluginName,plugin.video.aperture.movies)</visible>
+      <scrolltime>240</scrolltime>
+      <onleft>61</onleft>
+      <onright>61</onright>
+      <onup>61</onup>
+      <ondown>61</ondown>
+      <itemlayout width="254" height="350">
+        <control type="image">
+          <left>9</left>
+          <top>5</top>
+          <width>230</width>
+          <height>334</height>
+          <texture>aperture/movies/plate.png</texture>
+        </control>
+        <control type="image">
+          <left>13</left>
+          <top>7</top>
+          <width>222</width>
+          <height>286</height>
+          <texture fallback="aperture/movies/poster.jpg">$INFO[ListItem.Art(poster)]</texture>
+          <aspectratio>scale</aspectratio>
+        </control>
+        <control type="image">
+          <left>13</left>
+          <top>236</top>
+          <width>222</width>
+          <height>57</height>
+          <texture>aperture/movies/plate.png</texture>
+        </control>
+        <control type="label">
+          <left>25</left>
+          <top>246</top>
+          <width>196</width>
+          <height>36</height>
+          <font>font20_title</font>
+          <label>FOLDER</label>
+          <textcolor>FFC6E8E3</textcolor>
+          <visible>ListItem.IsFolder</visible>
+        </control>
+        <control type="label">
+          <left>20</left>
+          <top>299</top>
+          <width>209</width>
+          <height>36</height>
+          <font>font20_title</font>
+          <label>$INFO[ListItem.Label]</label>
+          <textcolor>FFD6E4E7</textcolor>
+          <scroll>false</scroll>
+        </control>
+      </itemlayout>
+      <focusedlayout width="254" height="350">
+        <control type="image">
+          <left>6</left>
+          <top>0</top>
+          <width>236</width>
+          <height>344</height>
+          <texture>aperture/movies/accent.png</texture>
+        </control>
+        <control type="image">
+          <left>13</left>
+          <top>7</top>
+          <width>222</width>
+          <height>286</height>
+          <texture fallback="aperture/movies/poster.jpg">$INFO[ListItem.Art(poster)]</texture>
+          <aspectratio>scale</aspectratio>
+        </control>
+        <control type="image">
+          <left>13</left>
+          <top>236</top>
+          <width>222</width>
+          <height>57</height>
+          <texture>aperture/movies/plate.png</texture>
+        </control>
+        <control type="label">
+          <left>25</left>
+          <top>246</top>
+          <width>196</width>
+          <height>36</height>
+          <font>font20_title</font>
+          <label>FOLDER</label>
+          <textcolor>FFC6E8E3</textcolor>
+          <visible>ListItem.IsFolder</visible>
+        </control>
+        <control type="label">
+          <left>20</left>
+          <top>299</top>
+          <width>209</width>
+          <height>36</height>
+          <font>font20_title</font>
+          <label>$INFO[ListItem.Label]</label>
+          <textcolor>FF102C35</textcolor>
+          <scroll>true</scroll>
+        </control>
+      </focusedlayout>
+    </control>
+  </controls>
+</window>

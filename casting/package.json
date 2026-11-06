@@ -1,0 +1,25 @@
+{
+  "name": "aperture-youtube-cast",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "start": "node receiver.mjs"
+  },
+  "dependencies": {
+    "yt-cast-receiver": "https://raw.githubusercontent.com/patrickkfkan/volumio-ytcr/7a315b3f9ae077efeedacbfc99ec3020aa14f132/dep/yt-cast-receiver-2.1.1-volumio-ytcr.tgz",
+    "volumio-yt-support": "https://raw.githubusercontent.com/patrickkfkan/volumio-ytcr/7a315b3f9ae077efeedacbfc99ec3020aa14f132/dep/volumio-yt-support-2.1.1.tgz"
+  },
+  "overrides": {
+    "happy-dom": "21.0.4",
+    "decode-uri-component": "0.5.1",
+    "ejs": "7.0.2",
+    "minimatch": "11.0.4",
+    "uuid": "11.1.1",
+    "volumio-youtubei.js": "git+https://github.com/patrickkfkan/Volumio-YouTube.js.git#f6191eb9262214bc02bb6c8ec84b299ee5b66e4c"
+  }
+}

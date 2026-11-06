@@ -1,0 +1,383 @@
+<?xml version='1.0' encoding='utf-8'?>
+<window>
+  <defaultcontrol always="true">50</defaultcontrol>
+  <backgroundcolor>background</backgroundcolor>
+  <menucontrol>9000</menucontrol>
+  <views>63,64,50,52,53,54,55,500</views>
+  <controls>
+    <include>DefaultBackground</include>
+    <control type="group">
+      <animation effect="fade" start="100" end="0" time="200" tween="sine" condition="$EXP[infodialog_active]">Conditional</animation>
+      <include>View_50_List</include>
+      <include>View_52_IconWall</include>
+      <include>View_53_Shift</include>
+      <include>View_54_InfoWall</include>
+      <include>View_55_WideList</include>
+      <include>View_500_Wall</include>
+      <include>CommonScrollbars</include>
+      <control type="group">
+        <include>OpenClose_Left</include>
+        <visible>Control.Isvisible(54) | Control.IsVisible(55)</visible>
+        <include>Visible_Left</include>
+        <include>ListThumbInfoPanel</include>
+      </control>
+      <include content="TopBar">
+        <param name="breadcrumbs_label" value="$LOCALIZE[2]" />
+      </include>
+      <include content="BottomBar">
+        <param name="info_visible" value="true" />
+      </include>
+      <control type="group">
+        <depth>DepthBars</depth>
+        <bottom>0</bottom>
+        <height>70</height>
+        <animation effect="fade" start="0" end="100" time="300" delay="300">WindowOpen</animation>
+        <animation effect="fade" start="100" end="0" time="200">WindowClose</animation>
+        <include condition="!Skin.HasSetting(hide_mediaflags) + ![Window.IsVisible(songinformation) | Window.IsVisible(musicinformation)]">MediaFlags</include>
+      </control>
+      <include>MediaMenuMouseOverlay</include>
+      <control type="group">
+        <include>MediaMenuCommon</include>
+        <control type="grouplist" id="9000">
+          <top>50</top>
+          <include>MediaMenuListCommon</include>
+          <control type="label" id="203">
+            <description>Actions</description>
+            <include>MediaMenuLabelCommon</include>
+            <label>$LOCALIZE[31020]</label>
+          </control>
+          <control type="togglebutton" id="619">
+            <include>MediaMenuItemsCommon</include>
+            <label>$LOCALIZE[653]</label>
+            <onclick>UpdateLibrary(music)</onclick>
+            <visible>!Container.Content(addons)+ String.IsEmpty(Container.PluginName)</visible>
+            <altlabel>$LOCALIZE[13353]</altlabel>
+            <usealttexture>library.isscanningmusic</usealttexture>
+          </control>
+          <control type="radiobutton" id="16">
+            <label>$LOCALIZE[589]</label>
+            <include>MediaMenuItemsCommon</include>
+          </control>
+          <control type="button" id="612">
+            <include>MediaMenuItemsCommon</include>
+            <label>$LOCALIZE[31056]</label>
+            <onclick>ActivateWindow(musicplaylist)</onclick>
+            <visible>Integer.IsGreater(Playlist.Length(music),0)</visible>
+          </control>
+          <control type="button" id="621">
+            <include>MediaMenuItemsCommon</include>
+            <label>$LOCALIZE[21452]</label>
+            <onclick>ActivateWindow(addonbrowser,addons://more/audio/,return)</onclick>
+            <visible>Container.Content(addons)</visible>
+          </control>
+          <control type="button" id="624">
+            <include>MediaMenuItemsCommon</include>
+            <label>$LOCALIZE[10140]</label>
+            <onclick>Addon.OpenSettings($INFO[Container.PluginName])</onclick>
+            <visible>!String.IsEmpty(Container.PluginName)</visible>
+          </control>
+          <control type="button" id="622">
+            <include>MediaMenuItemsCommon</include>
+            <label>$LOCALIZE[31117]</label>
+            <onclick condition="System.AddonIsEnabled(plugin.library.node.editor)">ActivateWindow(programs,plugin://plugin.library.node.editor/?ltype=music,return)</onclick>
+            <onclick condition="System.HasAddon(plugin.library.node.editor) + !System.AddonIsEnabled(plugin.library.node.editor)">EnableAddon(plugin.library.node.editor)</onclick>
+            <onclick condition="!System.HasAddon(plugin.library.node.editor)">InstallAddon(plugin.library.node.editor)</onclick>
+            <visible>String.IsEmpty(Container.FolderPath) + String.IsEmpty(Container.PluginName)</visible>
+          </control>
+          <include>MediaMenuNowPlaying</include>
+        </control>
+      </control>
+      <visible>!Control.IsVisible(63) + !Control.IsVisible(64)</visible>
+    </control>
+    <control type="group">
+      <visible>Control.IsVisible(63) | Control.IsVisible(64)</visible>
+      <control type="image">
+        <left>0</left>
+        <top>0</top>
+        <width>1920</width>
+        <height>1080</height>
+        <texture>aperture/bridge.png</texture>
+      </control>
+      <control type="image">
+        <left>0</left>
+        <top>0</top>
+        <width>1920</width>
+        <height>1080</height>
+        <texture border="30">aperture/games/panel.png</texture>
+      </control>
+      <control type="label">
+        <left>90</left>
+        <top>58</top>
+        <width>1320</width>
+        <height>48</height>
+        <font>font27</font>
+        <label>APERTURE  /  MUSIC</label>
+        <textcolor>FF76E9DC</textcolor>
+        <scroll>true</scroll>
+      </control>
+      <control type="label">
+        <left>1490</left>
+        <top>58</top>
+        <width>340</width>
+        <height>48</height>
+        <font>font27</font>
+        <label>$INFO[System.Time]</label>
+        <textcolor>FFAACBD0</textcolor>
+        <scroll>true</scroll>
+      </control>
+      <control type="label">
+        <left>90</left>
+        <top>128</top>
+        <width>1740</width>
+        <height>88</height>
+        <font>font60</font>
+        <label>$INFO[Container.Property(Aperture.FormatTitle)]</label>
+        <textcolor>FFE4F5F5</textcolor>
+        <scroll>true</scroll>
+      </control>
+      <control type="textbox">
+        <left>90</left>
+        <top>232</top>
+        <width>1740</width>
+        <height>70</height>
+        <font>font27</font>
+        <label>$INFO[Container.Property(Aperture.FormatNotice)]</label>
+        <textcolor>FFAACBD0</textcolor>
+      </control>
+      <control type="group">
+        <visible>Control.IsVisible(63)</visible>
+        <control type="image">
+          <left>80</left>
+          <top>325</top>
+          <width>1050</width>
+          <height>600</height>
+          <texture border="35">aperture/games/panel.png</texture>
+        </control>
+        <control type="list" id="63">
+          <left>100</left>
+          <top>345</top>
+          <width>1010</width>
+          <height>560</height>
+          <viewtype label="Music list">list</viewtype>
+          <visible>String.IsEqual(Container.PluginName,plugin.audio.aperture.format) + !String.IsEqual(Container.Property(Aperture.FormatView),albums)</visible>
+          <scrolltime>160</scrolltime>
+          <onleft>63</onleft>
+          <onright condition="!Player.HasAudio">63</onright>
+          <onup>63</onup>
+          <ondown>63</ondown>
+          <itemlayout width="1010" height="86">
+            <control type="label">
+              <left>26</left>
+              <top>8</top>
+              <width>950</width>
+              <height>66</height>
+              <font>font32</font>
+              <label>$INFO[ListItem.Label]</label>
+              <textcolor>FFE4F5F5</textcolor>
+              <scroll>true</scroll>
+            </control>
+          </itemlayout>
+          <focusedlayout width="1010" height="86">
+            <control type="image">
+              <left>0</left>
+              <top>1</top>
+              <width>1010</width>
+              <height>82</height>
+              <texture border="25">aperture/games/card-focus.png</texture>
+            </control>
+            <control type="label">
+              <left>26</left>
+              <top>8</top>
+              <width>950</width>
+              <height>66</height>
+              <font>font32</font>
+              <label>$INFO[ListItem.Label]</label>
+              <textcolor>FF173D47</textcolor>
+              <scroll>true</scroll>
+            </control>
+          </focusedlayout>
+          <onright condition="Player.HasAudio">65</onright>
+        </control>
+        <control type="image">
+          <left>1220</left>
+          <top>325</top>
+          <width>530</width>
+          <height>430</height>
+          <texture fallback="DefaultAlbumCover.png">$INFO[ListItem.Art(thumb)]</texture>
+          <aspectratio>keep</aspectratio>
+        </control>
+        <control type="textbox">
+          <left>1170</left>
+          <top>785</top>
+          <width>650</width>
+          <height>80</height>
+          <font>font32</font>
+          <label>$INFO[ListItem.Label]</label>
+          <textcolor>FFE4F5F5</textcolor>
+        </control>
+        <control type="textbox">
+          <left>1170</left>
+          <top>882</top>
+          <width>650</width>
+          <height>70</height>
+          <font>font27</font>
+          <label>$INFO[ListItem.Property(Aperture.FormatDetail)]</label>
+          <textcolor>FFAACBD0</textcolor>
+        </control>
+      </control>
+      <control type="panel" id="64">
+        <left>80</left>
+        <top>325</top>
+        <width>1760</width>
+        <height>600</height>
+        <orientation>horizontal</orientation>
+        <viewtype label="Album shelf">list</viewtype>
+        <visible>String.IsEqual(Container.PluginName,plugin.audio.aperture.format) + String.IsEqual(Container.Property(Aperture.FormatView),albums)</visible>
+        <scrolltime>180</scrolltime>
+        <onleft>64</onleft>
+        <onright>64</onright>
+        <onup>64</onup>
+        <ondown condition="!Player.HasAudio">64</ondown>
+        <itemlayout width="440" height="600">
+          <control type="image">
+            <left>8</left>
+            <top>8</top>
+            <width>424</width>
+            <height>575</height>
+            <texture border="25">aperture/games/card.png</texture>
+          </control>
+          <control type="image">
+            <left>29</left>
+            <top>29</top>
+            <width>382</width>
+            <height>382</height>
+            <texture fallback="DefaultAlbumCover.png">$INFO[ListItem.Art(thumb)]</texture>
+            <aspectratio>keep</aspectratio>
+          </control>
+          <control type="textbox">
+            <left>29</left>
+            <top>433</top>
+            <width>382</width>
+            <height>95</height>
+            <font>font32</font>
+            <label>$INFO[ListItem.Title]</label>
+            <textcolor>FFE4F5F5</textcolor>
+          </control>
+          <control type="label">
+            <left>29</left>
+            <top>537</top>
+            <width>382</width>
+            <height>34</height>
+            <font>font27</font>
+            <label>$INFO[ListItem.Artist]</label>
+            <textcolor>FFAACBD0</textcolor>
+            <scroll>true</scroll>
+          </control>
+          <control type="label">
+            <left>29</left>
+            <top>433</top>
+            <width>382</width>
+            <height>70</height>
+            <font>font32</font>
+            <label>$INFO[ListItem.Label]</label>
+            <textcolor>FFE4F5F5</textcolor>
+            <scroll>true</scroll>
+            <visible>String.IsEmpty(ListItem.Title)</visible>
+          </control>
+        </itemlayout>
+        <focusedlayout width="440" height="600">
+          <control type="image">
+            <left>8</left>
+            <top>8</top>
+            <width>424</width>
+            <height>575</height>
+            <texture border="25">aperture/games/card-focus.png</texture>
+          </control>
+          <control type="image">
+            <left>29</left>
+            <top>29</top>
+            <width>382</width>
+            <height>382</height>
+            <texture fallback="DefaultAlbumCover.png">$INFO[ListItem.Art(thumb)]</texture>
+            <aspectratio>keep</aspectratio>
+          </control>
+          <control type="textbox">
+            <left>29</left>
+            <top>433</top>
+            <width>382</width>
+            <height>95</height>
+            <font>font32</font>
+            <label>$INFO[ListItem.Title]</label>
+            <textcolor>FF173D47</textcolor>
+          </control>
+          <control type="label">
+            <left>29</left>
+            <top>537</top>
+            <width>382</width>
+            <height>34</height>
+            <font>font27</font>
+            <label>$INFO[ListItem.Artist]</label>
+            <textcolor>FF32606A</textcolor>
+            <scroll>true</scroll>
+          </control>
+          <control type="label">
+            <left>29</left>
+            <top>433</top>
+            <width>382</width>
+            <height>70</height>
+            <font>font32</font>
+            <label>$INFO[ListItem.Label]</label>
+            <textcolor>FF173D47</textcolor>
+            <scroll>true</scroll>
+            <visible>String.IsEmpty(ListItem.Title)</visible>
+          </control>
+        </focusedlayout>
+        <ondown condition="Player.HasAudio">65</ondown>
+      </control>
+      <control type="label">
+        <left>90</left>
+        <top>980</top>
+        <width>1300</width>
+        <height>45</height>
+        <font>font27</font>
+        <label>D-pad  Browse     ·     Select  Open / Play     ·     Back  Return</label>
+        <textcolor>FFAACBD0</textcolor>
+        <scroll>true</scroll>
+      </control>
+      <control type="label">
+        <left>1630</left>
+        <top>928</top>
+        <width>210</width>
+        <height>45</height>
+        <font>font27</font>
+        <label>$INFO[Container.CurrentItem] / $INFO[Container.NumItems]</label>
+        <textcolor>FFAACBD0</textcolor>
+        <scroll>true</scroll>
+        <align>right</align>
+      </control>
+      <control type="button" id="65">
+        <left>1450</left>
+        <top>980</top>
+        <width>390</width>
+        <height>56</height>
+        <label>Now playing</label>
+        <font>font27</font>
+        <align>center</align>
+        <textcolor>FF9CCCD1</textcolor>
+        <focusedcolor>FF080D13</focusedcolor>
+        <onclick>ActivateWindow(visualisation)</onclick>
+        <visible>Player.HasAudio</visible>
+        <texturefocus colordiffuse="FF9CCCD1">colors/white.png</texturefocus>
+        <texturenofocus colordiffuse="442F424C">colors/white.png</texturenofocus>
+        <onleft condition="Control.IsVisible(64)">64</onleft>
+        <onleft condition="Control.IsVisible(63)">63</onleft>
+        <onright condition="Control.IsVisible(64)">64</onright>
+        <onright condition="Control.IsVisible(63)">63</onright>
+        <onup condition="Control.IsVisible(64)">64</onup>
+        <onup condition="Control.IsVisible(63)">63</onup>
+        <ondown condition="Control.IsVisible(64)">64</ondown>
+        <ondown condition="Control.IsVisible(63)">63</ondown>
+      </control>
+    </control>
+  </controls>
+</window>

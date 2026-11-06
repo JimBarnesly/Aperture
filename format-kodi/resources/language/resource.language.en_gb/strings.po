@@ -1,0 +1,17 @@
+msgid ""
+msgstr ""
+"Language: en_GB\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgctxt "#32001"
+msgid "Format server"
+msgstr ""
+
+msgctxt "#32002"
+msgid "Format server URL"
+msgstr ""
+
+msgctxt "#32003"
+msgid "Enter the address reachable from this Kodi device, for example http://format-server.local:4534. Format must already be running. Downloads follow server capabilities; protected servers may allow downloads while keeping library edits disabled. No access settings are changed."
+msgstr ""
