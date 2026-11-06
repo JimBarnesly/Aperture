@@ -67,6 +67,9 @@ try:
   destination_path=xbmc.getInfoLabel('Container.FolderPath')
   shot('home-bar-'+kind+'-destination')
   if not player.isPlaying():raise RuntimeError('Bar navigation stopped playback')
+  if kind=='video' and xbmcgui.getCurrentWindowDialogId()==10100:
+   rpc('Input.Back');until('empty Movies notice closed',lambda:not xbmc.getCondVisibility('System.HasModalDialog'))
+   monitor.waitForAbort(.5)
   rpc('Input.Back');until('Back Home',lambda:xbmcgui.getCurrentWindowId()==10000)
   shot('home-bar-'+kind+'-returned')
   home.setFocusId(103);until('Music refocus',lambda:home.getFocusId()==103)
