@@ -15,6 +15,24 @@ def until(label,pred):
   if pred():return
   if monitor.waitForAbort(.1):raise RuntimeError('Aborted '+label)
  raise RuntimeError('Timed out '+label)
+def focus_home_bar(home, bar_visible):
+ # Home's ID and controls become visible before WindowOpen/closing overlays finish.
+ # Observe source focus for a full animation interval, then send exactly one key.
+ # Never set focus directly to the bar or retry Right (which could hide a defect).
+ home.setFocusId(103)
+ stable_since=None
+ def ready():
+  nonlocal stable_since
+  if (xbmcgui.getCurrentWindowId()!=10000 or home.getFocusId()!=103
+      or not bar_visible() or xbmc.getCondVisibility('System.HasModalDialog')):
+   stable_since=None
+   return False
+  if stable_since is None:stable_since=time.monotonic()
+  return time.monotonic()-stable_since>=1.0
+ until('settled Home Music focus',ready)
+ checks.append({'check':'bar-navigation-source','window':xbmcgui.getCurrentWindowId(),'focus':home.getFocusId()})
+ rpc('Input.Right')
+ until('bar focus after one Right',lambda:xbmcgui.getCurrentWindowId()==10000 and home.getFocusId()==120)
 def shot(name):
  monitor.waitForAbort(1.2);p=OUT/(name+'.png');xbmc.executebuiltin('TakeScreenshot('+str(p)+',sync)');until(name,lambda:p.exists())
 try:
@@ -51,7 +69,7 @@ try:
   monitor.waitForAbort(.5)
   xbmc.executebuiltin('ActivateWindow(Home)');until('Home playback',lambda:xbmcgui.getCurrentWindowId()==10000 and bar_visible())
   until('player title',lambda:xbmc.getInfoLabel('Player.Title')==title)
-  home.setFocusId(103);rpc('Input.Right');until('bar focus',lambda:home.getFocusId()==120)
+  focus_home_bar(home,bar_visible)
   shot('home-bar-'+kind)
   player.pause();until('paused',lambda:xbmc.getCondVisibility('Player.Paused'))
   if not bar_visible():raise RuntimeError('Paused bar disappeared')
@@ -72,8 +90,7 @@ try:
    monitor.waitForAbort(.5)
   rpc('Input.Back');until('Back Home',lambda:xbmcgui.getCurrentWindowId()==10000)
   shot('home-bar-'+kind+'-returned')
-  home.setFocusId(103);until('Music refocus',lambda:home.getFocusId()==103)
-  rpc('Input.Right');until('bar refocus',lambda:home.getFocusId()==120)
+  focus_home_bar(home,bar_visible)
   player.stop();until('bar hidden after stop',lambda:not bar_visible())
   monitor.waitForAbort(.7)
   checks.append({'check':'stop-before-left','window':xbmcgui.getCurrentWindowId(),'focus':home.getFocusId()})
