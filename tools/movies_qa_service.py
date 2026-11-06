@@ -75,6 +75,18 @@ def assert_art(title):
     checks.append({'check':'local-art-'+title,'poster':poster,'fanart':fanart})
 
 
+def poster_context_action(label):
+    rpc('Input.ContextMenu')
+    until('movie context menu', lambda: xbmcgui.getCurrentWindowDialogId() == 10106)
+    for _ in range(30):
+        if xbmc.getInfoLabel('System.CurrentControl') == label:
+            rpc('Input.Select')
+            return
+        rpc('Input.Down')
+        monitor.waitForAbort(.1)
+    raise RuntimeError('Movie context action missing: '+label)
+
+
 try:
     until('Home',lambda:xbmcgui.getCurrentWindowId()==10000)
     version=rpc('Application.GetProperties',{'properties':['version']})['version']
@@ -129,6 +141,25 @@ try:
         root_path=xbmc.getInfoLabel('Container.FolderPath')
         capture('movies-cinematic-root')
         checks.append({'check':'source-opened-'+SCENARIO,'folder_path':root_path,'view':61,'label':xbmc.getInfoLabel('ListItem.Label')})
+        # Exercise the real native context item and image picker, including Back
+        # and repeat cancellation. No library scan or external image is used.
+        import xbmcvfs
+        choices=Path(xbmcvfs.translatePath('special://profile/addon_data/plugin.video.aperture.movies/posters'))
+        for attempt in range(2):
+            poster_context_action('Choose local poster...')
+            until('native image picker', lambda: xbmc.getCondVisibility('Window.IsActive(filebrowser)'))
+            if attempt == 0:
+                capture('movies-local-poster-picker')
+            rpc('Input.Back')
+            until('poster picker cancelled', cinematic)
+            focus('Amber Horizon')
+            assert_art('Amber Horizon')
+            if choices.exists() and list(choices.iterdir()):
+                raise RuntimeError('Cancelled picker wrote a poster preference')
+        poster_context_action('Use automatic poster')
+        until('poster reset returns to movies', cinematic)
+        focus('Amber Horizon'); assert_art('Amber Horizon')
+        checks.append({'check':'native-poster-picker-cancel-repeat-and-reset','profile_writes':False})
         # Root entry must already show movie content in sole/default cases.
         if SCENARIO in ('single','default') and root_path.rstrip('/')!=ROOT.rstrip('/'):
             raise RuntimeError('Unexpected root navigation before automatic source listing: '+root_path)

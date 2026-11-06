@@ -1,0 +1,99 @@
+name: Kodi 21.3 Labwc Exit relaunch diagnostic
+on:
+  pull_request:
+    branches: [feat/integrated-games-turntable]
+    paths: ['tools/*labwc*', 'tests/test_labwc_relaunch.py', '.github/workflows/labwc-relaunch.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  relaunch:
+    strategy:
+      fail-fast: false
+      matrix:
+        skin: [estuary, aperture]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    container:
+      image: debian:forky-slim
+    defaults:
+      run:
+        shell: bash
+    env:
+      DEBIAN_FRONTEND: noninteractive
+      APERTURE_WAYLAND_SKIN: ${{ matrix.skin }}
+    steps:
+      - name: Install official distribution software-only Wayland runtime
+        run: |
+          apt-get update
+          apt-get install --yes --no-install-recommends ca-certificates git python3 python3-pil kodi kodi-bin kodi-data labwc dbus-daemon libegl1 libegl-mesa0 libgl1-mesa-dri libgl1 libgles2 wtype grim wlr-randr wayland-utils procps tesseract-ocr tesseract-ocr-eng fonts-noto-core fonts-noto-mono fonts-roboto-unhinted
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Validate isolated diagnostic and exact source
+        run: |
+          python3 -m unittest discover -s tests -v
+          bash -n tools/ci_labwc_relaunch.sh
+      - name: Run software-only compositor and same-profile normal Exit cycles
+        env:
+          APERTURE_EXPECTED_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          useradd --create-home --shell /bin/bash waylandqa
+          chown -R waylandqa:waylandqa "$GITHUB_WORKSPACE"
+          runuser -u waylandqa -- bash tools/ci_labwc_relaunch.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: aperture-labwc-${{ matrix.skin }}-${{ github.event.pull_request.head.sha || github.sha }}
+          path: build/labwc-relaunch/
+          if-no-files-found: warn
+          retention-days: 14
+  rpt3-arm64:
+    strategy:
+      fail-fast: false
+      matrix:
+        skin: [estuary, aperture]
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 25
+    container:
+      image: debian:trixie-slim
+    defaults:
+      run:
+        shell: bash
+    env:
+      DEBIAN_FRONTEND: noninteractive
+      APERTURE_WAYLAND_SKIN: ${{ matrix.skin }}
+      APERTURE_RPT3_SETUP: /tmp/labwc-rpt3-setup
+      APERTURE_WAYLAND_OUT: /tmp/labwc-rpt3-output
+    steps:
+      - name: Bootstrap signed Debian checkout prerequisites
+        run: |
+          apt-get -o APT::Update::Error-Mode=any update
+          apt-get install --yes --no-install-recommends ca-certificates git
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Install exact signed Raspberry Pi ARM64 Kodi and pinned software graphics
+        run: bash tools/install_labwc_rpt3_ci.sh
+      - name: Validate diagnostic and exact source
+        run: |
+          python3 -m unittest discover -s tests -v
+          bash -n tools/ci_labwc_rpt3.sh tools/install_labwc_rpt3_ci.sh
+      - name: Verify native rpt3 GLES and four normal Exit launches
+        env:
+          APERTURE_EXPECTED_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          useradd --create-home --shell /bin/bash waylandqa
+          chown -R waylandqa:waylandqa "$GITHUB_WORKSPACE" "$APERTURE_RPT3_SETUP"
+          runuser -u waylandqa -- bash tools/ci_labwc_rpt3.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: aperture-labwc-rpt3-arm64-${{ matrix.skin }}-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            /tmp/labwc-rpt3-setup/
+            /tmp/labwc-rpt3-output/
+          if-no-files-found: warn
+          retention-days: 14

@@ -1,0 +1,56 @@
+name: Kodi exact Pi userspace Home-phase churn companion
+on:
+  pull_request:
+    branches: [test/labwc-pi-userspace-churn]
+    paths: ['tools/*labwc*home_phase*', 'tests/test_labwc_home_phase.py', '.github/workflows/labwc-home-phase-churn.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  rpt3-aperture-home-phase-companion:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 25
+    container:
+      image: debian:trixie-slim
+    defaults:
+      run:
+        shell: bash
+    env:
+      DEBIAN_FRONTEND: noninteractive
+      TZ: UTC
+      APERTURE_PI_USERSPACE_COMPARISON: exact-2026-11-05
+      APERTURE_WAYLAND_SKIN: aperture
+      APERTURE_WAYLAND_EXPERIMENT: home-phase-churn
+      APERTURE_RPT3_SETUP: /tmp/labwc-rpt3-setup
+      APERTURE_WAYLAND_OUT: /tmp/labwc-rpt3-output
+    steps:
+      - name: Bootstrap signed Debian checkout prerequisites
+        run: |
+          apt-get -o APT::Update::Error-Mode=any update
+          apt-get install --yes --no-install-recommends ca-certificates git
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Install signed baseline and simulate exact Pi userspace-only upgrade
+        run: bash tools/install_labwc_pi_userspace_ci.sh
+      - name: Validate isolated diagnostic
+        run: |
+          python3 -m unittest discover -s tests -v
+          bash -n tools/ci_labwc_home_phase_session.sh tools/ci_labwc_home_phase.sh tools/install_labwc_pi_userspace_ci.sh
+      - name: Verify Home-phase applied-size sequence and four native Exits
+        env:
+          APERTURE_EXPECTED_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          useradd --create-home --shell /bin/bash waylandqa
+          chown -R waylandqa:waylandqa "$GITHUB_WORKSPACE" "$APERTURE_RPT3_SETUP"
+          runuser -u waylandqa -- bash tools/ci_labwc_home_phase.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: aperture-labwc-home-phase-churn-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            /tmp/labwc-rpt3-setup/
+            /tmp/labwc-rpt3-output/
+          if-no-files-found: warn
+          retention-days: 14

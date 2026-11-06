@@ -1,15 +1,8 @@
 name: Kodi 21.3 cinematic movies acceptance
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - 'install.sh'
-      - 'tests/test_skin_installer.py'
-      - 'movies-kodi/**'
-      - 'skin/**'
-      - 'tools/build_skin.py'
-      - 'tools/movies_*'
-      - '.github/workflows/movies-smoke.yml'
+  push: {}
+
 permissions:
   contents: read
 jobs:
@@ -38,6 +31,7 @@ jobs:
           persist-credentials: false
       - name: Exercise disposable Kodi profile as unprivileged user
         run: |
+          python3 -m unittest discover -s tests -v
           useradd --create-home --shell /bin/bash moviesqa
           chown -R moviesqa:moviesqa "$GITHUB_WORKSPACE"
           runuser -u moviesqa -- bash tools/movies_smoke.sh

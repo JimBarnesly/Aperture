@@ -1,15 +1,8 @@
 name: Kodi 21.3 menu styling acceptance
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - 'install.sh'
-      - 'tests/test_skin_installer.py'
-      - 'tools/style_dialogs.py'
-      - 'skin/**'
-      - 'tools/build_skin.py'
-      - 'tools/menus_*'
-      - '.github/workflows/menus-smoke.yml'
+  push: {}
+
 permissions:
   contents: read
 jobs:

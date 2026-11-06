@@ -35,8 +35,10 @@ They survive ordinary skin/add-on updates, Kodi restarts and machine reboots.
 The last complete snapshot remains usable when a drive/share is unavailable or
 an update is cancelled. Publication uses an atomic, flushed replacement;
 concurrent workers cannot publish over one another. A missing/empty mount cannot
-automatically erase a populated snapshot. An explicit refresh can confirm a
-truly empty library. Failures are retried after 15 minutes, independently of menu
+erase a populated snapshot, even on manual refresh. An empty result retains the
+saved list and offers a separate review action. Only confirming **Clear saved
+list** there clears the index when you know the source is intentionally empty.
+No game files are deleted. Cancelling retains the list. Failures are retried after 15 minutes, independently of menu
 entry. Changing the configured ROM root selects a separate snapshot. The initial
 index appears automatically if its first-run placeholder is still on screen.
 
@@ -223,3 +225,13 @@ A Kodi shutdown cancels before publication and retains the previous snapshot.
 A blocked filesystem call can still delay shutdown; the add-on does not forcibly
 unmount disks. Real Pi/drive latency and power-cycle acceptance remain separate
 from isolated CI.
+
+
+### Drive identity before removing saved entries
+
+Removing any cached game/disc requires a verified, unchanged local source before
+and after the scan, including nested mounts. An unverified or changed source
+retains the saved index with a visible status. Legacy indexes without recorded
+identity and network/FUSE/unsupported sources remain deletion-protected; an
+empty response is never proof that a drive is connected. See
+[`docs/games-cache.md`](../docs/games-cache.md#removal-guard) for limits.

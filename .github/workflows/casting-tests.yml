@@ -1,9 +1,7 @@
 name: Experimental casting tests
 on:
-  push:
-    paths:
-      - 'casting/**'
-      - '.github/workflows/casting-tests.yml'
+  push: {}
+
   pull_request:
     paths:
       - 'casting/**'

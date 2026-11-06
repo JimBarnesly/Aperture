@@ -5,7 +5,7 @@ backed by the [Format music server](https://github.com/JimBarnesly/Format): one
 library, album playback, catalogue discovery and download management in the skin.
 Format also retains its standalone web application.
 
-## Repair candidate
+## Consolidated integration candidate
 
 This branch addresses the current `skin.aperture` prototype, **not** the older
 `skin.apeture` release-candidate branches. The reported Pi hang has not yet been
