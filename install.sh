@@ -88,7 +88,7 @@ sed -i '/<addon /s/id="skin.estuary"/id="skin.aperture"/; /<addon /s/name="Estua
 if [ "$BASELINE" -eq 0 ]; then
   # Use one complete, matching source checkout, never moving remote fragments.
   [ -f "$SOURCE_DIR/skin/xml/Home.xml" ] || fail 'Use the complete source checkout or install the complete ZIP through Kodi.'
-  HOME_SHA=1f597f1c60adef8554f3ddb28a3b23446d46f92c3e42feb8a45099879faac3e0
+  HOME_SHA=912e4302bb9ac4b5d8ca1a28b4cec1e0ca5129166f0d03510da8095d3ab30ddc
   cp "$SOURCE_DIR/skin/xml/Home.xml" "$STAGE/Home.xml"
   printf '%s  %s\n' "$HOME_SHA" "$STAGE/Home.xml" | sha256sum -c - >/dev/null || fail 'Home.xml integrity check failed'
   [ -d "$SOURCE_DIR/skin/media/aperture" ] || fail 'Matching Aperture artwork missing'

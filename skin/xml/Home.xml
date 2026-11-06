@@ -46,7 +46,8 @@
         <texturefocus />
         <texturenofocus />
         <onleft>106</onleft>
-        <onright>100</onright>
+        <onright condition="Player.HasAudio | Player.HasVideo">120</onright>
+        <onright condition="![Player.HasAudio | Player.HasVideo]">100</onright>
         <onup>106</onup>
         <ondown>101</ondown>
         <onclick condition="System.AddonIsEnabled(plugin.video.aperture.movies)">ActivateWindow(Videos,plugin://plugin.video.aperture.movies/,return)</onclick>
@@ -101,7 +102,8 @@
         <texturefocus />
         <texturenofocus />
         <onleft>106</onleft>
-        <onright>101</onright>
+        <onright condition="Player.HasAudio | Player.HasVideo">120</onright>
+        <onright condition="![Player.HasAudio | Player.HasVideo]">101</onright>
         <onup>100</onup>
         <ondown>103</ondown>
         <onclick condition="Library.HasContent(TVShows)">ActivateWindow(Videos,videodb://tvshows/titles/,return)</onclick>
@@ -155,7 +157,8 @@
         <texturefocus />
         <texturenofocus />
         <onleft>106</onleft>
-        <onright>103</onright>
+        <onright condition="Player.HasAudio | Player.HasVideo">120</onright>
+        <onright condition="![Player.HasAudio | Player.HasVideo]">103</onright>
         <onup>101</onup>
         <ondown>102</ondown>
         <onclick condition="System.AddonIsEnabled(plugin.audio.aperture.format)">ActivateWindow(Music,plugin://plugin.audio.aperture.format/,return)</onclick>
@@ -210,7 +213,8 @@
         <texturefocus />
         <texturenofocus />
         <onleft>106</onleft>
-        <onright>102</onright>
+        <onright condition="Player.HasAudio | Player.HasVideo">120</onright>
+        <onright condition="![Player.HasAudio | Player.HasVideo]">102</onright>
         <onup>103</onup>
         <ondown>104</ondown>
         <onclick condition="System.AddonIsEnabled(plugin.games.aperture)">ActivateWindow(Games,plugin://plugin.games.aperture/,return)</onclick>
@@ -264,7 +268,8 @@
         <texturefocus />
         <texturenofocus />
         <onleft>106</onleft>
-        <onright>104</onright>
+        <onright condition="Player.HasAudio | Player.HasVideo">120</onright>
+        <onright condition="![Player.HasAudio | Player.HasVideo]">104</onright>
         <onup>102</onup>
         <ondown>105</ondown>
         <onclick>ActivateWindow(Videos,sources://video/,return)</onclick>
@@ -317,7 +322,8 @@
         <texturefocus />
         <texturenofocus />
         <onleft>106</onleft>
-        <onright>105</onright>
+        <onright condition="Player.HasAudio | Player.HasVideo">120</onright>
+        <onright condition="![Player.HasAudio | Player.HasVideo]">105</onright>
         <onup>104</onup>
         <ondown>106</ondown>
         <onclick>ActivateWindow(Settings)</onclick>
@@ -372,10 +378,120 @@
         <texturefocus />
         <texturenofocus />
         <onleft>105</onleft>
-        <onright>103</onright>
+        <onright condition="Player.HasAudio | Player.HasVideo">120</onright>
+        <onright condition="![Player.HasAudio | Player.HasVideo]">103</onright>
         <onup>105</onup>
         <ondown>100</ondown>
         <onclick>ActivateWindow(ShutdownMenu)</onclick>
+      </control>
+    </control>
+    <control type="group" id="119">
+      <visible>Player.HasAudio | Player.HasVideo</visible>
+      <control type="button" id="120">
+        <left>780</left>
+        <top>872</top>
+        <width>1060</width>
+        <height>148</height>
+        <label>Now playing</label>
+        <font>font13</font>
+        <textcolor>00000000</textcolor>
+        <focusedcolor>00000000</focusedcolor>
+        <texturefocus colordiffuse="E02B5868">colors/white.png</texturefocus>
+        <texturenofocus colordiffuse="DC14252C">colors/white.png</texturenofocus>
+        <onleft>103</onleft>
+        <onright>103</onright>
+        <onup>103</onup>
+        <ondown>103</ondown>
+        <onback>SetFocus(103)</onback>
+        <onclick condition="Player.HasAudio + [System.AddonIsEnabled(plugin.audio.aperture.format)]">ActivateWindow(Music,plugin://plugin.audio.aperture.format/,return)</onclick>
+        <onclick condition="Player.HasAudio + [!System.AddonIsEnabled(plugin.audio.aperture.format)]">ActivateWindow(AddonBrowser)</onclick>
+        <onclick condition="Player.HasAudio + [!System.AddonIsEnabled(plugin.audio.aperture.format)]">Notification(Music needs Format,Install or enable Aperture Format in Add-ons.,8000)</onclick>
+        <onclick condition="Player.HasVideo + !String.IsEmpty(VideoPlayer.TVShowTitle) + [Library.HasContent(TVShows)]">ActivateWindow(Videos,videodb://tvshows/titles/,return)</onclick>
+        <onclick condition="Player.HasVideo + !String.IsEmpty(VideoPlayer.TVShowTitle) + [!Library.HasContent(TVShows)]">ActivateWindow(Videos,sources://video/,return)</onclick>
+        <onclick condition="Player.HasVideo + String.IsEmpty(VideoPlayer.TVShowTitle) + [System.AddonIsEnabled(plugin.video.aperture.movies)]">ActivateWindow(Videos,plugin://plugin.video.aperture.movies/,return)</onclick>
+        <onclick condition="Player.HasVideo + String.IsEmpty(VideoPlayer.TVShowTitle) + [!System.AddonIsEnabled(plugin.video.aperture.movies) + Library.HasContent(Movies)]">ActivateWindow(Videos,videodb://movies/titles/,return)</onclick>
+        <onclick condition="Player.HasVideo + String.IsEmpty(VideoPlayer.TVShowTitle) + [!System.AddonIsEnabled(plugin.video.aperture.movies) + !Library.HasContent(Movies)]">ActivateWindow(Videos,sources://video/,return)</onclick>
+      </control>
+      <control type="label">
+        <left>810</left>
+        <top>884</top>
+        <width>760</width>
+        <height>30</height>
+        <font>font13</font>
+        <textcolor>FF9DB2B9</textcolor>
+        <label>NOW PLAYING</label>
+        <visible>!Player.Paused</visible>
+      </control>
+      <control type="label">
+        <left>810</left>
+        <top>884</top>
+        <width>760</width>
+        <height>30</height>
+        <font>font13</font>
+        <textcolor>FF9DB2B9</textcolor>
+        <label>PAUSED</label>
+        <visible>Player.Paused</visible>
+      </control>
+      <control type="label">
+        <left>810</left>
+        <top>918</top>
+        <width>990</width>
+        <height>44</height>
+        <font>font32</font>
+        <textcolor>FFFFFFFF</textcolor>
+        <label>$INFO[Player.Title]</label>
+        <scroll>true</scroll>
+        <visible>!String.IsEmpty(Player.Title)</visible>
+      </control>
+      <control type="label">
+        <left>810</left>
+        <top>918</top>
+        <width>990</width>
+        <height>44</height>
+        <font>font32</font>
+        <textcolor>FFFFFFFF</textcolor>
+        <label>Current media</label>
+        <visible>String.IsEmpty(Player.Title)</visible>
+      </control>
+      <control type="label">
+        <left>810</left>
+        <top>972</top>
+        <width>770</width>
+        <height>30</height>
+        <font>font13</font>
+        <textcolor>FFDFFBFF</textcolor>
+        <label>$INFO[MusicPlayer.Artist,, · ]Open Music  ›</label>
+        <visible>Player.HasAudio</visible>
+      </control>
+      <control type="label">
+        <left>810</left>
+        <top>972</top>
+        <width>770</width>
+        <height>30</height>
+        <font>font13</font>
+        <textcolor>FFDFFBFF</textcolor>
+        <label>$INFO[VideoPlayer.TVShowTitle,, · ]Open TV shows  ›</label>
+        <visible>Player.HasVideo + !String.IsEmpty(VideoPlayer.TVShowTitle)</visible>
+      </control>
+      <control type="label">
+        <left>810</left>
+        <top>972</top>
+        <width>770</width>
+        <height>30</height>
+        <font>font13</font>
+        <textcolor>FFDFFBFF</textcolor>
+        <label>Open Movies  ›</label>
+        <visible>Player.HasVideo + String.IsEmpty(VideoPlayer.TVShowTitle)</visible>
+      </control>
+      <control type="label">
+        <left>1590</left>
+        <top>972</top>
+        <width>210</width>
+        <height>30</height>
+        <font>font13</font>
+        <textcolor>FF9DB2B9</textcolor>
+        <align>right</align>
+        <label>$INFO[Player.Time]</label>
       </control>
     </control>
   </controls>

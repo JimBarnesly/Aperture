@@ -37,6 +37,35 @@ try:
  thread.start();until('confirm',lambda:xbmcgui.getCurrentWindowDialogId()==10100);shot('confirmation-dialog');rpc('Input.Back');thread.join(5)
  if result!=[False]:raise RuntimeError('Confirmation cancel failed '+str(result))
  checks.append({'check':'confirmation-cancel','result':result})
+ # Native playback state and D-pad bar acceptance, including stop while focused.
+ home=xbmcgui.Window(10000)
+ def bar_visible():return xbmc.getCondVisibility('Control.IsVisible(120)')
+ if bar_visible():raise RuntimeError('Idle Home shows a playback bar')
+ player=xbmc.Player()
+ for kind,title in [('audio','Synthetic audio title'),('video','Synthetic movie title'),('episode','Synthetic episode title')]:
+  path=str(Path(os.environ['APERTURE_MOVIES_RUNTIME'])/('home-bar.wav' if kind=='audio' else 'home-bar.mp4'))
+  item=xbmcgui.ListItem(label=title,path=path)
+  item.setInfo('music' if kind=='audio' else 'video',dict(title=title,**({'artist':['Synthetic artist']} if kind=='audio' else {'tvshowtitle':'Synthetic series','mediatype':'episode'} if kind=='episode' else {'mediatype':'movie'})))
+  player.play(path,item)
+  until('playback',lambda:player.isPlaying())
+  xbmc.executebuiltin('ActivateWindow(Home)');until('Home playback',lambda:xbmcgui.getCurrentWindowId()==10000 and bar_visible())
+  until('player title',lambda:xbmc.getInfoLabel('Player.Title')==title)
+  home.setFocusId(103);rpc('Input.Right');until('bar focus',lambda:home.getFocusId()==120)
+  shot('home-bar-'+kind)
+  player.pause();until('paused',lambda:xbmc.getCondVisibility('Player.Paused'))
+  if not bar_visible():raise RuntimeError('Paused bar disappeared')
+  shot('home-bar-'+kind+'-paused')
+  rpc('Input.Select')
+  expected=10502 if kind=='audio' else 10025
+  # The fixture has no Format add-on, so audio uses the existing AddonBrowser fallback.
+  if kind=='audio' and not xbmc.getCondVisibility('System.AddonIsEnabled(plugin.audio.aperture.format)'):expected=10040
+  until('destination',lambda:xbmcgui.getCurrentWindowId()==expected)
+  if not player.isPlaying():raise RuntimeError('Bar navigation stopped playback')
+  rpc('Input.Back');until('Back Home',lambda:xbmcgui.getCurrentWindowId()==10000)
+  home.setFocusId(103);rpc('Input.Right');until('bar refocus',lambda:home.getFocusId()==120)
+  player.stop();until('bar hidden after stop',lambda:not bar_visible())
+  rpc('Input.Left');until('focus recovered',lambda:home.getFocusId() in range(100,107))
+  checks.append({'check':'home-now-playing','kind':kind,'pause':True,'remote_select_back_stop':True})
  shot('home-after-dialogs')
  (OUT/'result.json').write_text(json.dumps({'status':'passed','checks':checks,'limitations':['Software rendered Kodi 21.3, no physical Pi or controller','No power or reboot actions executed']},indent=2))
 except Exception as e:

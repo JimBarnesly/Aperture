@@ -65,4 +65,26 @@ for index,(ident,label) in enumerate(items):
     control(active,'label',left=25,top=y,width=590,height=86,font='font60',align='right',aligny='center',textcolor='FFF4FCFD',shadowcolor='60000000',label=label)
     control(active,'image',left=638,top=y+14,width=5,height=58,texture='aperture/focus-marker.png')
 control(menu,'button',106,left=365,top=942,width=250,height=70,label='Power',font='font13',align='right',aligny='center',textcolor='FF8FA9B0',focusedcolor='FFDFFBFF',texturefocus='',texturenofocus='',onleft=105,onright=103,onup=105,ondown=100,onclick='ActivateWindow(ShutdownMenu)')
+import copy
+r=win; controls=cs; active='Player.HasAudio | Player.HasVideo'
+for b in r.findall('.//control[@type="button"]'):
+ old=b.find('onright');target=old.text;old.set('condition',active);old.text='120';new=E.Element('onright',condition='!['+active+']');new.text=target;b.insert(list(b).index(old)+1,new)
+g=E.SubElement(controls,'control',type='group',id='119');E.SubElement(g,'visible').text=active
+def node(parent,typ,**vals):
+ c=E.SubElement(parent,'control',type=typ)
+ for k,v in vals.items():E.SubElement(c,k).text=str(v)
+ return c
+b=node(g,'button',left=780,top=872,width=1060,height=148,label='Now playing',font='font13',textcolor='00000000',focusedcolor='00000000',texturefocus='colors/white.png',texturenofocus='colors/white.png',onleft=103,onright=103,onup=103,ondown=103,onback='SetFocus(103)');b.set('id','120');b.find('texturefocus').set('colordiffuse','E02B5868');b.find('texturenofocus').set('colordiffuse','DC14252C')
+# Copy existing destination actions so the bar stays consistent with Home.
+for ident,pred in [('103','Player.HasAudio'),('101','Player.HasVideo + !String.IsEmpty(VideoPlayer.TVShowTitle)'),('100','Player.HasVideo + String.IsEmpty(VideoPlayer.TVShowTitle)')]:
+ for action in r.find('.//control[@id="'+ident+'"]').findall('onclick'):
+  x=copy.deepcopy(action);x.set('condition',pred+(' + ['+x.get('condition')+']' if x.get('condition') else ''));b.append(x)
+node(g,'label',left=810,top=884,width=760,height=30,font='font13',textcolor='FF9DB2B9',label='NOW PLAYING',visible='!Player.Paused')
+node(g,'label',left=810,top=884,width=760,height=30,font='font13',textcolor='FF9DB2B9',label='PAUSED',visible='Player.Paused')
+node(g,'label',left=810,top=918,width=990,height=44,font='font32',textcolor='FFFFFFFF',label='$INFO[Player.Title]',scroll='true',visible='!String.IsEmpty(Player.Title)')
+node(g,'label',left=810,top=918,width=990,height=44,font='font32',textcolor='FFFFFFFF',label='Current media',visible='String.IsEmpty(Player.Title)')
+for pred,label in [('Player.HasAudio','$INFO[MusicPlayer.Artist,, · ]Open Music  ›'),('Player.HasVideo + !String.IsEmpty(VideoPlayer.TVShowTitle)','$INFO[VideoPlayer.TVShowTitle,, · ]Open TV shows  ›'),('Player.HasVideo + String.IsEmpty(VideoPlayer.TVShowTitle)','Open Movies  ›')]:
+ node(g,'label',left=810,top=972,width=770,height=30,font='font13',textcolor='FFDFFBFF',label=label,visible=pred)
+node(g,'label',left=1590,top=972,width=210,height=30,font='font13',textcolor='FF9DB2B9',align='right',label='$INFO[Player.Time]')
+
 E.indent(win,space='  '); E.ElementTree(win).write(ROOT/'skin/xml/Home.xml',encoding='utf-8',xml_declaration=True)
