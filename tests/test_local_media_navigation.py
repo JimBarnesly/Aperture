@@ -26,7 +26,7 @@ class LocalMediaNavigationTests(unittest.TestCase):
         actions = self.buttons['103'].findall('onclick')
         self.assertEqual([node.text for node in actions if node.get('condition') == enabled],
                          ['ActivateWindow(Music,plugin://plugin.audio.aperture.format/,return)'])
-        self.assertEqual(self.buttons['103'].findtext('onright'), '103')
+        self.assertEqual(self.buttons['103'].findtext('onright'), '120')
         self.assertEqual(sum(b.findtext('label') == 'Music' for b in self.buttons.values()), 1)
         self.assertIsNone(self.buttons['103'].find('enable'))
         self.assertEqual({node.get('condition') for node in actions}, {enabled, '!' + enabled})
@@ -52,7 +52,7 @@ class LocalMediaNavigationTests(unittest.TestCase):
     def test_music_keeps_main_menu_arrows_and_visible_focus(self):
         button = self.buttons['103']
         self.assertEqual({key: button.findtext(key) for key in ('onup', 'ondown', 'onleft', 'onright')},
-                         {'onup': '101', 'ondown': '102', 'onleft': '106', 'onright': '103'})
+                         {'onup': '101', 'ondown': '102', 'onleft': '106', 'onright': '120'})
         group = next(node for node in self.home.iter('control')
                      if node.findtext('visible') == 'Control.HasFocus(103)')
         self.assertEqual(group.findtext("control[@type='label']/label"), 'Music')
@@ -87,7 +87,7 @@ class LocalMediaNavigationTests(unittest.TestCase):
                 self.assertIn(target, self.buttons)
                 pending.append(target)
         self.assertEqual(seen, set(self.buttons))
-        self.assertEqual(len(self.buttons), 7)
+        self.assertEqual(len(self.buttons), 8)
 
     def test_home_does_not_run_media_mutations_or_assume_hdd_paths(self):
         for action in self.home.iter('onclick'):

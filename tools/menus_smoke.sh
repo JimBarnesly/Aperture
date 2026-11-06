@@ -38,6 +38,9 @@ export KODI_BIN_HOME=$(dirname "$KODI_BIN") KODI_BINADDON_PATH="$(dirname "$KODI
 grep -Eq 'Center 21\.3([ .-]|$)' "$OUT/kodi-version.txt" || { echo 'Exact Kodi 21.3 required; refusing to imply version coverage' >&2; exit 2; }
 python3 "$ROOT/tools/movies_fixture.py" --root "$ROOT" --runtime "$RUNTIME" --out "$OUT" --scenario "$SCENARIO"
 cp "$ROOT/tools/menus_qa_service.py" "$RUNTIME/system/addons/service.aperture.moviesqa/service.py"
+# Original synthetic tones only; no private media or provider requests.
+ffmpeg -nostdin -loglevel error -f lavfi -i sine=frequency=440:duration=120 -c:a pcm_s16le "$RUNTIME/home-bar.wav"
+ffmpeg -nostdin -loglevel error -f lavfi -i color=c=navy:s=640x360:r=10:d=120 -an -c:v mpeg4 "$RUNTIME/home-bar.mp4"
 export PULSE_RUNTIME_PATH="$RUNTIME/pulse" PULSE_STATE_PATH="$RUNTIME/pulse-state" PULSE_SERVER="unix:$RUNTIME/pulse/native" PULSE_COOKIE="$RUNTIME/pulse/cookie"
 mkdir -m 700 "$PULSE_RUNTIME_PATH" "$PULSE_STATE_PATH"
 cat > "$RUNTIME/pulse.pa" <<PULSE
