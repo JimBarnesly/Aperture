@@ -39,7 +39,7 @@ try:
  checks.append({'check':'confirmation-cancel','result':result})
  # Native playback state and D-pad bar acceptance, including stop while focused.
  home=xbmcgui.Window(10000)
- def bar_visible():return xbmc.getCondVisibility('Control.IsVisible(120)')
+ def bar_visible():return xbmc.getCondVisibility('Control.IsVisible(119) + Control.IsVisible(120)')
  if bar_visible():raise RuntimeError('Idle Home shows a playback bar')
  player=xbmc.Player()
  for kind,title in [('audio','Synthetic audio title'),('video','Synthetic movie title'),('episode','Synthetic episode title')]:
@@ -60,12 +60,17 @@ try:
   # The fixture has no Format add-on, so audio uses the existing AddonBrowser fallback.
   if kind=='audio' and not xbmc.getCondVisibility('System.AddonIsEnabled(plugin.audio.aperture.format)'):expected=10040
   until('destination',lambda:xbmcgui.getCurrentWindowId()==expected)
+  expected_path = ('plugin://plugin.audio.aperture.format/' if kind=='audio' else 'sources://video/' if kind=='episode' else 'plugin://plugin.video.aperture.movies/')
+  if expected != 10040:
+   until('exact destination path '+expected_path,lambda:xbmc.getInfoLabel('Container.FolderPath').rstrip('/')==expected_path.rstrip('/'))
+  destination_path=xbmc.getInfoLabel('Container.FolderPath')
+  shot('home-bar-'+kind+'-destination')
   if not player.isPlaying():raise RuntimeError('Bar navigation stopped playback')
   rpc('Input.Back');until('Back Home',lambda:xbmcgui.getCurrentWindowId()==10000)
   home.setFocusId(103);rpc('Input.Right');until('bar refocus',lambda:home.getFocusId()==120)
   player.stop();until('bar hidden after stop',lambda:not bar_visible())
   rpc('Input.Left');until('focus recovered',lambda:home.getFocusId() in range(100,107))
-  checks.append({'check':'home-now-playing','kind':kind,'pause':True,'remote_select_back_stop':True})
+  checks.append({'check':'home-now-playing','kind':kind,'pause':True,'remote_select_back_stop':True,'destination_window':expected,'destination_path':destination_path})
  shot('home-after-dialogs')
  (OUT/'result.json').write_text(json.dumps({'status':'passed','checks':checks,'limitations':['Software rendered Kodi 21.3, no physical Pi or controller','No power or reboot actions executed']},indent=2))
 except Exception as e:
