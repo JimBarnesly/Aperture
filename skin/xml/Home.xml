@@ -386,7 +386,6 @@
       </control>
     </control>
     <control type="group" id="119">
-      <visible>Player.HasAudio | Player.HasVideo</visible>
       <control type="button" id="120">
         <left>780</left>
         <top>872</top>
@@ -411,6 +410,7 @@
         <onclick condition="Player.HasVideo + String.IsEmpty(VideoPlayer.TVShowTitle) + [System.AddonIsEnabled(plugin.video.aperture.movies)]">ActivateWindow(Videos,plugin://plugin.video.aperture.movies/,return)</onclick>
         <onclick condition="Player.HasVideo + String.IsEmpty(VideoPlayer.TVShowTitle) + [!System.AddonIsEnabled(plugin.video.aperture.movies) + Library.HasContent(Movies)]">ActivateWindow(Videos,videodb://movies/titles/,return)</onclick>
         <onclick condition="Player.HasVideo + String.IsEmpty(VideoPlayer.TVShowTitle) + [!System.AddonIsEnabled(plugin.video.aperture.movies) + !Library.HasContent(Movies)]">ActivateWindow(Videos,sources://video/,return)</onclick>
+        <visible allowhiddenfocus="true">Player.HasAudio | Player.HasVideo</visible>
       </control>
       <control type="label">
         <left>810</left>
@@ -420,7 +420,7 @@
         <font>font13</font>
         <textcolor>FF9DB2B9</textcolor>
         <label>NOW PLAYING</label>
-        <visible>!Player.Paused</visible>
+        <visible>[Player.HasAudio | Player.HasVideo] + [!Player.Paused]</visible>
       </control>
       <control type="label">
         <left>810</left>
@@ -430,7 +430,7 @@
         <font>font13</font>
         <textcolor>FF9DB2B9</textcolor>
         <label>PAUSED</label>
-        <visible>Player.Paused</visible>
+        <visible>[Player.HasAudio | Player.HasVideo] + [Player.Paused]</visible>
       </control>
       <control type="label">
         <left>810</left>
@@ -441,7 +441,7 @@
         <textcolor>FFFFFFFF</textcolor>
         <label>$INFO[Player.Title]</label>
         <scroll>true</scroll>
-        <visible>!String.IsEmpty(Player.Title)</visible>
+        <visible>[Player.HasAudio | Player.HasVideo] + [!String.IsEmpty(Player.Title)]</visible>
       </control>
       <control type="label">
         <left>810</left>
@@ -451,7 +451,7 @@
         <font>font32</font>
         <textcolor>FFFFFFFF</textcolor>
         <label>Current media</label>
-        <visible>String.IsEmpty(Player.Title)</visible>
+        <visible>[Player.HasAudio | Player.HasVideo] + [String.IsEmpty(Player.Title)]</visible>
       </control>
       <control type="label">
         <left>810</left>
@@ -461,7 +461,7 @@
         <font>font13</font>
         <textcolor>FFDFFBFF</textcolor>
         <label>$INFO[MusicPlayer.Artist,, · ]Open Music  ›</label>
-        <visible>Player.HasAudio</visible>
+        <visible>[Player.HasAudio | Player.HasVideo] + [Player.HasAudio]</visible>
       </control>
       <control type="label">
         <left>810</left>
@@ -471,7 +471,7 @@
         <font>font13</font>
         <textcolor>FFDFFBFF</textcolor>
         <label>$INFO[VideoPlayer.TVShowTitle,, · ]Open TV shows  ›</label>
-        <visible>Player.HasVideo + !String.IsEmpty(VideoPlayer.TVShowTitle)</visible>
+        <visible>[Player.HasAudio | Player.HasVideo] + [Player.HasVideo + !String.IsEmpty(VideoPlayer.TVShowTitle)]</visible>
       </control>
       <control type="label">
         <left>810</left>
@@ -481,7 +481,7 @@
         <font>font13</font>
         <textcolor>FFDFFBFF</textcolor>
         <label>Open Movies  ›</label>
-        <visible>Player.HasVideo + String.IsEmpty(VideoPlayer.TVShowTitle)</visible>
+        <visible>[Player.HasAudio | Player.HasVideo] + [Player.HasVideo + String.IsEmpty(VideoPlayer.TVShowTitle)]</visible>
       </control>
       <control type="label">
         <left>1590</left>
@@ -492,6 +492,7 @@
         <textcolor>FF9DB2B9</textcolor>
         <align>right</align>
         <label>$INFO[Player.Time]</label>
+        <visible>Player.HasAudio | Player.HasVideo</visible>
       </control>
     </control>
   </controls>

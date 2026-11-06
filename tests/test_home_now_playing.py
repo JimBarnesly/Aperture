@@ -8,7 +8,8 @@ class HomeNowPlaying(unittest.TestCase):
   self.root = E.parse(ROOT/'skin/xml/Home.xml')
   self.bar = self.root.find('.//control[@id="120"]')
  def test_visible_only_for_audio_or_video_including_pause(self):
-  self.assertEqual(self.root.findtext('.//control[@id="119"]/visible'),'Player.HasAudio | Player.HasVideo')
+  self.assertEqual(self.bar.findtext('visible'),'Player.HasAudio | Player.HasVideo')
+  self.assertEqual(self.bar.find('visible').get('allowhiddenfocus'),'true')
  def test_remote_routes_preserve_idle_navigation(self):
   for ident in range(100,107):
    b=self.root.find('.//control[@id="%s"]'%ident)

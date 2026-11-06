@@ -69,7 +69,7 @@ import copy
 r=win; controls=cs; active='Player.HasAudio | Player.HasVideo'
 for b in r.findall('.//control[@type="button"]'):
  old=b.find('onright');target=old.text;old.set('condition',active);old.text='120';new=E.Element('onright',condition='!['+active+']');new.text=target;b.insert(list(b).index(old)+1,new)
-g=E.SubElement(controls,'control',type='group',id='119');E.SubElement(g,'visible').text=active
+g=E.SubElement(controls,'control',type='group',id='119')
 def node(parent,typ,**vals):
  c=E.SubElement(parent,'control',type=typ)
  for k,v in vals.items():E.SubElement(c,k).text=str(v)
@@ -87,4 +87,11 @@ for pred,label in [('Player.HasAudio','$INFO[MusicPlayer.Artist,, · ]Open Music
  node(g,'label',left=810,top=972,width=770,height=30,font='font13',textcolor='FFDFFBFF',label=label,visible=pred)
 node(g,'label',left=1590,top=972,width=210,height=30,font='font13',textcolor='FF9DB2B9',align='right',label='$INFO[Player.Time]')
 
+# Keep the focused shortcut navigable when playback ends between remote presses.
+# Each visual control is hidden independently; the group itself remains focusable.
+for child in g.findall('control'):
+    visible=child.find('visible')
+    if visible is None: visible=E.SubElement(child,'visible'); visible.text=active
+    else: visible.text='['+active+'] + ['+visible.text+']'
+    if child.get('id')=='120': visible.set('allowhiddenfocus','true')
 E.indent(win,space='  '); E.ElementTree(win).write(ROOT/'skin/xml/Home.xml',encoding='utf-8',xml_declaration=True)
