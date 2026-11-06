@@ -197,6 +197,13 @@ class Plugin:
             state = "error"
             self.error(exc)
             items.append(self.action_item(self.text(32006), "settings", "top"))
+        cache, _ = self.cache()
+        refresh_state = cache.status() if cache.root else "unconfigured"
+        xbmcplugin.setProperty(self.handle, "Aperture.RefreshState", refresh_state)
+        if not system_id and refresh_state == "source_unverified":
+            items.append(self.action_item(self.text(32025), "help", "bottom"))
+        if not system_id and refresh_state == "empty_retained":
+            items.append(self.action_item(self.text(32020), "confirm_empty", "bottom"))
         if state in ("ready", "unavailable", "indexing"):
             items.append(self.action_item(self.text(32006), "settings", "bottom"))
         if self.addon.getSetting("rom_root").strip():
@@ -272,6 +279,17 @@ def run(argv):
                 xbmcgui.Dialog().notification(plugin.text(32000), plugin.text(32019))
             if handle >= 0:
                 plugin.directory(update=True)
+        elif action == "confirm_empty":
+            cache, _ = plugin.cache()
+            snapshot = cache.load()
+            if cache.root and snapshot and cache.status() == "empty_retained":
+                if xbmcgui.Dialog().yesno(plugin.text(32000), plugin.text(32021),
+                                          nolabel=plugin.text(32022), yeslabel=plugin.text(32023)):
+                    current, _ = plugin.cache()
+                    if current.root != cache.root or not cache.confirm_empty(snapshot[1]):
+                        xbmcgui.Dialog().ok(plugin.text(32000), plugin.text(32024))
+            if handle >= 0:
+                plugin.directory(update=True)
         elif action == "settings":
             plugin.addon.openSettings()
             if handle >= 0:
@@ -290,3 +308,4 @@ def run(argv):
         plugin.error(exc)
         if handle >= 0:
             xbmcplugin.endOfDirectory(handle, succeeded=False, cacheToDisc=False)
+

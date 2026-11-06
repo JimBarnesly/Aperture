@@ -12,6 +12,7 @@ from urllib.parse import parse_qs, urlsplit
 LIB = Path(__file__).resolve().parents[1] / "games-kodi/resources/lib"
 sys.path.insert(0, str(LIB))
 from apeture_library.cache import LibraryCache
+from apeture_library import cache as cache_module
 from apeture_library.scanner import scan_library  # noqa: E402
 
 
@@ -49,6 +50,9 @@ class FakeListItem:
 
 class AdapterTests(unittest.TestCase):
     def setUp(self):
+        source = patch.object(cache_module, "inspect_source", return_value={"identity": "a" * 64, "session": "fixture"})
+        source.start()
+        self.addCleanup(source.stop)
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
@@ -91,7 +95,7 @@ class AdapterTests(unittest.TestCase):
 
     def seed_cache(self):
         cache = LibraryCache(self.profile, str(self.root))
-        cache.publish(scan_library(str(self.root)))
+        cache.publish(scan_library(str(self.root)), cache_module.inspect_source(str(self.root))["identity"])
         return cache
 
     def run_plugin(self, query="", warm=True):
@@ -343,6 +347,51 @@ class AdapterTests(unittest.TestCase):
         self.dialog.ok.assert_not_called()
         self.progress.create.assert_not_called()
 
+    def test_ambiguous_empty_vfs_manual_refresh_preserves_snapshot(self):
+        from apeture_library.cache import refresh
+        from apeture_library.scanner import ScanResult
+        self.put("nes/Demo.nes")
+        cache = self.seed_cache()
+        before = cache.path.read_bytes()
+        cache.request_refresh()
+        self.vfs.exists.return_value = True
+        self.vfs.listdir.return_value = ([], [])
+        result = scan_library("smb://host/share", self.module.KodiFileSystem())
+        self.assertEqual(result, ScanResult((), ()))
+        self.assertFalse(refresh(cache, lambda: result))
+        self.assertEqual(cache.path.read_bytes(), before)
+        self.run_plugin(warm=False)
+        items = self.plugin_api.addDirectoryItems.call_args.args[1]
+        self.assertTrue(any("confirm_empty" in item[0] for item in items))
+        self.plugin_api.setProperty.assert_any_call(42, "Aperture.RefreshState", "empty_retained")
+
+    def test_clear_confirmation_cancel_and_accept_do_not_scan(self):
+        self.put("nes/Demo.nes")
+        cache = self.seed_cache()
+        cache.mark_attempt("empty_retained")
+        before = cache.path.read_bytes()
+        self.dialog.yesno.return_value = False
+        with patch.object(self.module, "scan_library", side_effect=AssertionError("foreground scan")):
+            self.run_plugin("?action=confirm_empty", warm=False)
+            self.assertEqual(cache.path.read_bytes(), before)
+            self.dialog.yesno.return_value = True
+            self.run_plugin("?action=confirm_empty", warm=False)
+        self.assertFalse(cache.load()[0].libraries)
+        self.assertTrue((self.root / "nes/Demo.nes").exists())
+
+    def test_clear_confirmation_source_change_preserves_original(self):
+        self.put("nes/Demo.nes")
+        cache = self.seed_cache()
+        cache.mark_attempt("empty_retained")
+        before = cache.path.read_bytes()
+        def answer(*args, **kwargs):
+            self.addon.getSetting.return_value = str(self.root / "other")
+            return True
+        self.dialog.yesno.side_effect = answer
+        self.run_plugin("?action=confirm_empty", warm=False)
+        self.assertEqual(cache.path.read_bytes(), before)
+        self.dialog.ok.assert_called()
+
     def test_vfs_directory_exists_check_retains_trailing_slash(self):
         fs = self.module.KodiFileSystem()
         self.vfs.listdir.return_value = (["nes"], [])
@@ -352,3 +401,4 @@ class AdapterTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
