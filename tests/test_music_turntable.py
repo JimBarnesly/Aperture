@@ -38,6 +38,20 @@ class TurntableTests(unittest.TestCase):
         self.assertFalse(list(tree.iter('onunload')))
         self.assertFalse(list(tree.iter('onclick')))  # Built-in music OSD owns controls.
 
+    def test_album_track_listing_is_secondary_bottom_left_and_read_only(self):
+        tree = ET.parse(ROOT / 'skin/xml/MusicVisualisation.xml')
+        listing = tree.find('.//control[@id="7120"]')
+        self.assertEqual(tree.findtext('.//control[@id="7102"]/label'), '$INFO[MusicPlayer.Album]')
+        self.assertEqual(listing.findtext('content'), 'playlistmusic://')
+        self.assertEqual(listing.findtext('enable'), 'false')
+        self.assertIn('MusicPlayer.Position(0).AlbumArtist', listing.findtext('visible'))
+        self.assertLessEqual(int(listing.findtext('left')) + int(listing.findtext('width')), 520)
+        self.assertGreaterEqual(int(listing.findtext('top')), 500)
+        self.assertLessEqual(int(listing.findtext('top')) + int(listing.findtext('height')), 930)
+        self.assertGreaterEqual(int(tree.findtext('.//control[@id="7102"]/left')), 580)
+        self.assertFalse(list(listing.iter('onclick')))
+        self.assertTrue(all('ListItem.Title' in label.text for label in listing.iter('label')))
+
     def test_art_is_packaged_and_deterministic(self):
         spec = importlib.util.spec_from_file_location('music_art', ROOT / 'tools/build_music_art.py')
         module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)

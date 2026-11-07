@@ -31,7 +31,8 @@ class MusicSkinTests(unittest.TestCase):
         self.assertEqual({turn.get('end') for turn in turns}, {'45', '-45'})
         for turn in turns:
             self.assertEqual(turn.get('center'), '220,0')
-            self.assertIn('Container(64).ListItem.Property(Aperture.FormatPosition)', turn.get('condition'))
+            self.assertIn('Container(64).CurrentItem', turn.get('condition'))
+            self.assertNotIn('Container(64).ListItem', turn.get('condition'))
         # Native container remains responsible for playback and navigation.
         self.assertIsNone(shelf.find('onclick'))
         self.assertEqual(shelf.findtext('orientation'), 'horizontal')

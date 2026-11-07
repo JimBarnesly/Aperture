@@ -588,6 +588,9 @@ def run(hooks):
         wait_music("Native turntable opens for explicit album playback",
                    lambda s: s.get("window") == 12006 and s.get("nowplaying_visible") is True
                    and s.get("playing_title") == config["expected_titles"][0])
+        wait_music("Secondary bottom-left album tracks match the ordered release",
+                   lambda s: s.get("album_tracks_visible") is True
+                   and [title for title in s.get("album_track_titles", []) if title] == config["expected_titles"])
         wait_music("Presentation yields to native playback overlay",
                    lambda s: s.get("native_seekbar_visible") is True
                    and s.get("presentation_header_visible") is False
@@ -757,7 +760,10 @@ def run(hooks):
             return_home()
             before = press("j")
             wait_for("Coverflow fixture shelf", lambda s: route_is(s.get("folder", ""), "albums"), after=before)
+            settled_music("Random entry chooses an actual record", lambda s: s.get("shelf_position") in [str(i) for i in range(1, 7)])
             baseline_queue = music().get("queue")
+            press("Home")  # Deterministic sweep after verifying randomized entry.
+            settle_focus()
             for i in range(1, 7):
                 actual = find_title("SYNTHETIC QA Coverflow " + str(i), "albums")
                 if actual.get("shelf_position") != str(i) or actual.get("queue") != baseline_queue or actual.get("player") is not None:

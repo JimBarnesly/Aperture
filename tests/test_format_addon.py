@@ -162,6 +162,44 @@ class FormatTest(unittest.TestCase):
                 self.xbmc.executebuiltin.assert_not_called()
                 self.xbmcgui.Dialog.return_value.ok.assert_called_once()
 
+    def test_random_shelf_focus_handles_optional_parent_without_playback(self):
+        for parent_offset in (0, 1):
+            with self.subTest(parent_offset=parent_offset):
+                self.xbmc.reset_mock()
+                self.xbmc.getSkinDir.return_value = "skin.aperture"
+                self.xbmcgui.getCurrentWindowId.return_value = 10502
+                self.xbmcgui.getCurrentWindowDialogId.return_value = 9999
+                self.xbmc.Monitor.return_value.abortRequested.return_value = False
+                self.xbmc.getCondVisibility.return_value = True
+                target_index = 2 + parent_offset
+                self.xbmc.getInfoLabel.side_effect = lambda key: {
+                    "Container.Property(Aperture.FormatEntry)":"fresh",
+                    "System.CurrentControlId":"64",
+                    "Container(64).ListItemAbsolute({}).Property(Aperture.FormatPosition)".format(target_index):"3",
+                }.get(key, "")
+                with patch.object(self.addon.random, "randint", return_value=3) as choose:
+                    self.assertTrue(self.addon.focus_random_album(6, "fresh"))
+                    choose.assert_called_once_with(1, 6)
+                self.xbmc.executebuiltin.assert_called_once_with("Control.SetFocus(64,{},absolute)".format(target_index))
+                self.xbmc.Player.assert_not_called()
+                self.xbmc.PlayList.assert_not_called()
+
+    def test_random_shelf_does_not_steal_new_navigation_or_focus(self):
+        self.xbmc.getSkinDir.return_value = "skin.aperture"
+        self.xbmcgui.getCurrentWindowId.return_value = 10502
+        self.xbmcgui.getCurrentWindowDialogId.return_value = 9999
+        self.xbmc.Monitor.return_value.abortRequested.return_value = False
+        self.xbmc.Monitor.return_value.waitForAbort.return_value = False
+        self.xbmc.getInfoLabel.side_effect = lambda key: "newer-entry"
+        self.assertFalse(self.addon.focus_random_album(6, "old-entry"))
+        self.xbmc.executebuiltin.assert_not_called()
+        self.xbmc.Monitor.return_value.waitForAbort.assert_called_with(0.1)
+        self.xbmc.getCondVisibility.return_value = True
+        self.xbmc.getInfoLabel.side_effect = lambda key: "65" if key == "System.CurrentControlId" else "fresh"
+        self.assertFalse(self.addon.focus_random_album(6, "fresh"))
+        self.xbmc.executebuiltin.assert_not_called()
+        self.assertFalse(self.addon.focus_random_album(0, "fresh"))
+
     def test_metadata_type_is_independent_of_local_database_ids(self):
         for is_album, expected in ((True, "album"), (False, "song")):
             with self.subTest(media_type=expected):

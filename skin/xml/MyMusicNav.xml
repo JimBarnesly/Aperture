@@ -240,10 +240,11 @@
           <control type="group">
             <left>0</left><top>0</top><width>440</width><height>460</height>
             <animation effect="zoom" start="82" end="82" center="220,230" time="0" condition="true">Conditional</animation>
-            <!-- Explicit Container.ListItem refers to the focused album;
-                 unqualified ListItem is this individual neighbouring item. -->
-            <animation effect="rotatey" start="45" end="45" center="220,0" time="0" condition="Integer.IsLess(ListItem.Property(Aperture.FormatPosition),Container(64).ListItem.Property(Aperture.FormatPosition))">Conditional</animation>
-            <animation effect="rotatey" start="-45" end="-45" center="220,0" time="0" condition="Integer.IsGreater(ListItem.Property(Aperture.FormatPosition),Container(64).ListItem.Property(Aperture.FormatPosition))">Conditional</animation>
+            <!-- CurrentItem is a container value, independent of the item's
+                 render context. Container.ListItem would resolve to this same
+                 neighbouring item inside an Integer comparison in Kodi. -->
+            <animation effect="rotatey" start="45" end="45" center="220,0" time="0" condition="Integer.IsLess(ListItem.Property(Aperture.FormatPosition),Container(64).CurrentItem)">Conditional</animation>
+            <animation effect="rotatey" start="-45" end="-45" center="220,0" time="0" condition="Integer.IsGreater(ListItem.Property(Aperture.FormatPosition),Container(64).CurrentItem)">Conditional</animation>
             <control type="image">
               <left>0</left><top>10</top><width>440</width><height>440</height>
               <texture fallback="DefaultAlbumCover.png">$INFO[ListItem.Art(thumb)]</texture>

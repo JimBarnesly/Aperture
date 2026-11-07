@@ -1,6 +1,8 @@
 """Native Format library, catalogue and explicitly confirmed downloads for Kodi 20/21."""
 import json
 import math
+import random
+import uuid
 import sys
 import time
 from urllib.error import HTTPError, URLError
@@ -333,6 +335,8 @@ def root(handle):
 def albums(handle, server, data, artist=None):
     set_view(handle, "albums", "albums", display(artist, "Albums"))
     count = 0
+    entry = uuid.uuid4().hex
+    xbmcplugin.setProperty(handle, "Aperture.FormatEntry", entry)
     for album in sorted(data["albums"], key=lambda item: (text(item.get("artist")).casefold(),
                                                          text(item.get("title")).casefold())):
         if artist is not None and text(album.get("artist"), "Unknown artist").casefold() != artist.casefold():
@@ -342,6 +346,39 @@ def albums(handle, server, data, artist=None):
     if not count:
         xbmcgui.Dialog().notification("Format", "No published albums yet. Check your Format server.",
                                       xbmcgui.NOTIFICATION_INFO, 6000)
+    return count, entry
+
+
+def focus_random_album(count, entry):
+    """Choose a record, not a parent-folder card; never shuffle or play it."""
+    if not count:
+        return False
+    target = random.randint(1, count)
+    monitor = xbmc.Monitor()
+    try:
+        for _ in range(20):
+            if (monitor.abortRequested() or xbmc.getSkinDir() != "skin.aperture"
+                    or xbmcgui.getCurrentWindowId() != 10502
+                    or xbmcgui.getCurrentWindowDialogId() not in (9999, 10138)):
+                return False
+            if (xbmcgui.getCurrentWindowDialogId() == 9999
+                    and xbmc.getInfoLabel("Container.Property(Aperture.FormatEntry)") == entry
+                    and xbmc.getCondVisibility("Control.IsVisible(64)")):
+                # Kodi may insert one parent-folder item. Match our per-album
+                # property instead of guessing whether the native index is +1.
+                if xbmc.getInfoLabel("System.CurrentControlId") not in ("0", "50", "63", "64", ""):
+                    return False
+                for index in (target - 1, target):
+                    if xbmc.getInfoLabel("Container(64).ListItemAbsolute({}).Property(Aperture.FormatPosition)".format(index)) == str(target):
+                        if xbmc.getInfoLabel("Container.Property(Aperture.FormatEntry)") != entry:
+                            return False
+                        xbmc.executebuiltin("Control.SetFocus(64,{},absolute)".format(index))
+                        return True
+            if monitor.waitForAbort(0.1):
+                return False
+    except Exception as error:
+        xbmc.log("Aperture Format: initial shelf focus unavailable ({})".format(type(error).__name__), xbmc.LOGERROR)
+    return False
 
 
 def tracks(handle, server, data, album):
@@ -687,6 +724,7 @@ def main(argv=None):
     changed = False
     redirect = None
     view = "menu"
+    shelf_entry = None
     try:
         if action in ("acquire", "download", "cancel_download", "prioritize_download") and handle >= 0:
             raise FormatError("Select this action from Find music or Downloads, not as a saved folder.")
@@ -718,7 +756,7 @@ def main(argv=None):
             data = library(server)
             if action in ("albums", "artist"):
                 view = "albums"
-                albums(handle, server, data, args.get("artist", [None])[0] if action == "artist" else None)
+                shelf_entry = albums(handle, server, data, args.get("artist", [None])[0] if action == "artist" else None)
             elif action == "artists":
                 artists(handle, server, data)
             else:
@@ -764,6 +802,8 @@ def main(argv=None):
             xbmcplugin.endOfDirectory(handle, succeeded=succeeded, cacheToDisc=False)
             if succeeded and not redirect and xbmc.getSkinDir() == "skin.aperture":
                 xbmc.executebuiltin("Container.SetViewMode({})".format(64 if view == "albums" else 63))
+                if shelf_entry is not None:
+                    focus_random_album(*shelf_entry)
         if redirect:
             # Non-folder actions never enter history. Do not use 'replace', which
             # clears Kodi's complete Back stack for query-only plugin routes.

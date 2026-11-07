@@ -51,15 +51,47 @@
           <texture>aperture/music/spindle.png</texture>
         </control>
       </control>
+      <!-- Secondary album liner notes. This reads Kodi's existing ordered
+           audio items; it does not expose queue editing or start another player. -->
+      <control type="label" id="7121">
+        <visible>Integer.IsGreater(Playlist.Length(music),0) + String.IsEqual(MusicPlayer.Album,MusicPlayer.Position(0).Album) + String.IsEqual(MusicPlayer.AlbumArtist,MusicPlayer.Position(0).AlbumArtist)</visible>
+        <left>90</left><top>500</top><width>430</width><height>40</height>
+        <font>font27</font><textcolor>FF9CCCD1</textcolor><label>ALBUM TRACKS</label>
+      </control>
+      <control type="list" id="7120">
+        <visible>Integer.IsGreater(Playlist.Length(music),0) + String.IsEqual(MusicPlayer.Album,MusicPlayer.Position(0).Album) + String.IsEqual(MusicPlayer.AlbumArtist,MusicPlayer.Position(0).AlbumArtist)</visible>
+        <left>90</left><top>548</top><width>430</width><height>350</height>
+        <enable>false</enable>
+        <itemlayout width="430" height="34">
+          <control type="label">
+            <left>0</left><top>0</top><width>430</width><height>34</height>
+            <font>font20_title</font><textcolor>FFBFCDD0</textcolor>
+            <label>$INFO[ListItem.TrackNumber,,.  ]$INFO[ListItem.Title]</label>
+          </control>
+        </itemlayout>
+        <focusedlayout width="430" height="34">
+          <control type="label">
+            <left>0</left><top>0</top><width>430</width><height>34</height>
+            <font>font20_title</font><textcolor>FFBFCDD0</textcolor>
+            <label>$INFO[ListItem.TrackNumber,,.  ]$INFO[ListItem.Title]</label>
+          </control>
+        </focusedlayout>
+        <content>playlistmusic://</content>
+      </control>
       <control type="label" id="7102">
-        <left>160</left><top>795</top><width>1600</width><height>65</height>
+        <left>580</left><top>795</top><width>1160</width><height>65</height>
         <font>font45</font><align>center</align><textcolor>FFF1F5F4</textcolor><scroll>true</scroll>
-        <label>$INFO[MusicPlayer.Title]</label>
+        <label>$INFO[MusicPlayer.Album]</label>
       </control>
       <control type="label">
-        <left>160</left><top>865</top><width>1600</width><height>45</height>
+        <left>580</left><top>865</top><width>1160</width><height>45</height>
         <font>font27</font><align>center</align><textcolor>FF9CCCD1</textcolor><scroll>true</scroll>
-        <label>$INFO[MusicPlayer.Artist]$INFO[MusicPlayer.Album,  ·  ,]</label>
+        <label>$INFO[MusicPlayer.AlbumArtist]</label>
+      </control>
+      <control type="label" id="7104">
+        <left>580</left><top>908</top><width>1160</width><height>30</height>
+        <font>font20_title</font><align>center</align><textcolor>FF869BA5</textcolor>
+        <label>$INFO[MusicPlayer.Title]</label>
       </control>
       <control type="progress">
         <visible>!Window.IsVisible(seekbar)</visible>

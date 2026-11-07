@@ -49,7 +49,10 @@ Format commit db10318d9171cae0e6fb0e04d8aa1f2104b2b087 (9 August 2026),
 public/app.js playSelectedLibraryAlbum and the Coverflow key handler. The old
 Kodi route opened tracks, so a track-list screenshot without a record was not
 evidence of an animation failure. Browse tracks remains an explicit context
-action. This candidate does not yet port random initial selection, the browser
-card-to-disc morph, or its 30-second idle return. Native CI adds a six-release synthetic shelf capture
+action. Fresh album shelf entries choose a random record without changing playback or
+reordering the library. The player includes a compact, read-only album track
+listing in the bottom-left corner, keeping the record and album artwork dominant.
+This candidate does not port the browser card-to-disc morph or its 30-second
+idle return. Native CI adds a six-release synthetic shelf capture
 and forward/reverse navigation checks; physical Pi and visual parity with the
 standalone Format interface require separate acceptance.
