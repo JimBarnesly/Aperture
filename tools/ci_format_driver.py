@@ -745,6 +745,7 @@ def run(hooks):
         if not any(row["path"] == "/api/library" and row["status"] == 503 for row in requests):
             raise AssertionError("Offline test did not hit the synthetic server")
         checks.append({"check":"offline-recovery-and-return", "recovered_title":album_title, "state":state()})
+        protected_health(acquire=False)  # Store must be checked against an actually disabled capability.
         opened_albums()
         before = press("Down")
         wait_for("Shelf Store button is remote reachable", lambda s: s.get("focus") == 66, after=before)
@@ -760,6 +761,7 @@ def run(hooks):
         wait_for("Store Back returns to shelf", lambda s: route_is(s.get("folder", ""), "albums"), after=before)
         checks.append({"check":"remote-store-access-and-honest-disabled-backend", "state":actual})
         return_home()
+        protected_health()
         unified_integration()
         assert_mock_mutations(read_requests(), ["/api/acquire-album", "/api/acquisitions/prioritize",
                                                 "/api/acquisitions/cancel"], config["catalog_id"])
