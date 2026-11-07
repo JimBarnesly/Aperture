@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <window>
-	<!-- Aperture already shows the record and metadata. Ignore Kodi's automatic
-	     music ShowInfo pulse; explicit controls, seek, pause and video retain
-	     the complete upstream overlay. Errors/notifications are separate dialogs. -->
-	<visible>!Window.IsActive(visualisation) | Player.Seeking | Player.HasPerformedSeek(3) | [Player.Paused + !Player.Caching] | Player.Forwarding | Player.Rewinding | Window.IsActive(fullscreeninfo) | Player.ShowTime | Window.IsActive(musicosd) | Window.IsActive(playerprocessinfo) | !String.IsEmpty(Player.SeekNumeric)</visible>
+	<!-- Aperture owns the music progress display. Never open the inherited
+	     metadata/seek overlay in fullscreen music, including seek and pause.
+	     All upstream video/PVR rules and separate dialogs remain unchanged. -->
+	<visible>!Window.IsActive(visualisation)</visible>
 	<visible>Window.IsActive(fullscreenvideo) | Window.IsActive(visualisation)</visible>
 	<visible>![Window.IsActive(sliderdialog) | Window.IsActive(pvrosdchannels) | Window.IsActive(pvrchannelguide) | Window.IsActive(pvrguideinfo) | Window.IsActive(1110)]</visible>
 	<visible>Player.Seeking | Player.HasPerformedSeek(3) | [Player.Paused + !Player.Caching] | Player.Forwarding | Player.Rewinding | Player.ShowInfo | Window.IsActive(fullscreeninfo) | Player.ShowTime | Window.IsActive(videoosd) | Window.IsActive(musicosd) | Window.IsActive(playerprocessinfo) | !String.IsEmpty(Player.SeekNumeric) | !String.IsEmpty(PVR.ChannelNumberInput)</visible>

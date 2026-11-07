@@ -197,6 +197,18 @@ def turntable_pixel_change(first, second):
         return sum(ImageStat.Stat(delta).mean) / 3
 
 
+def assert_no_music_info_overlay(samples, after, pid):
+    """Check every fullscreen-music sample, including modal playback controls."""
+    visible = [s for s in samples if s.get('pid') == pid and s.get('sequence', 0) > after
+               and s.get('window') == 12006]
+    if not visible:
+        raise AssertionError('Missing fullscreen music evidence')
+    if any(s.get('native_seekbar_visible') is not False or s.get('native_topbar_visible') is not False
+           for s in visible):
+        raise AssertionError('Music file-info overlay appeared')
+    return len(visible)
+
+
 def assert_clean_track_load(samples, after, pid):
     """Catch transient startup banners, not just a clean frame after timeout."""
     visible = [s for s in samples if s.get('pid') == pid and s.get('sequence', 0) > after
@@ -609,13 +621,16 @@ def run(hooks):
         wait_music("Native turntable opens for explicit album playback",
                    lambda s: s.get("window") == 12006 and s.get("nowplaying_visible") is True
                    and s.get("playing_title") == config["expected_titles"][0])
+        wait_music("Record captions read track, album, artist in that order",
+                   lambda s: s.get("turntable_captions") ==
+                   [config["expected_titles"][0], album_title, config["artist"]])
         wait_music("Secondary bottom-left album tracks match the ordered release",
                    lambda s: s.get("album_tracks_visible") is True
                    and [title for title in s.get("album_track_titles", []) if title] == config["expected_titles"])
         wait_music("Turntable loads without automatic file-info popup",
                    lambda s: s.get("native_seekbar_visible") is False
                    and s.get("native_topbar_visible") is False
-                   and s.get("presentation_header_visible") is True
+                   and s.get("presentation_header_visible") is False
                    and s.get("presentation_footer_visible") is True)
         samples = [json.loads(line) for line in (out / "format-states.jsonl").read_text().splitlines()]
         clean_count = assert_clean_track_load(samples, load_sequence, pid)
@@ -629,14 +644,15 @@ def run(hooks):
             raise AssertionError("Record artwork did not visibly rotate: " + str(moving))
         wait_music("Turntable remains clean while playing",
                    lambda s: s.get("native_seekbar_visible") is False
-                   and s.get("presentation_header_visible") is True
+                   and s.get("presentation_header_visible") is False
                    and s.get("presentation_footer_visible") is True)
         screenshot("format-03j-clean-turntable")
         sequence = music()["sequence"]
         press("space")
         paused = wait_music("Pause stops actual audio and shows paused status", lambda s: s.get("player")
-                            and s["player"]["properties"].get("speed") == 0 and s.get("paused_visible") is True,
-                            after=sequence)
+                            and s["player"]["properties"].get("speed") == 0 and s.get("paused_visible") is True
+                            and s.get("native_seekbar_visible") is False and s.get("native_topbar_visible") is False
+                            and s.get("presentation_progress_visible") is True, after=sequence)
         screenshot("format-03c-paused")
         time.sleep(1)
         screenshot("format-03d-paused-still")
@@ -644,13 +660,59 @@ def run(hooks):
                                       out / "screenshots/format-03d-paused-still.png")
         if still > 0.15:
             raise AssertionError("Paused record continued moving: " + str(still))
+        # Native seek keys stay untouched. Require Kodi's performed-seek flag
+        # as well as a time jump, so clock advancement cannot pass by itself.
+        seek_start = paused["sequence"]
+        sequence = music()["sequence"]
+        press("space")
+        wait_music("Resume before exercising native seek keys",
+                   lambda s: s.get("player") and s["player"]["properties"].get("speed") == 1,
+                   after=sequence)
+        for key, direction, capture in (("Right", 1, "forward"), ("Left", -1, "back")):
+            start = music()
+            sequence, start_time = start["sequence"], clock(start)
+            press(key)
+            sought = wait_music("Native " + key + " seeks without track-info popup",
+                                lambda s: s.get("player")
+                                and s["player"]["properties"].get("speed") == 1
+                                and track_id(s["player"]["item"]) == config["expected_ids"][0]
+                                and (clock(s) - start_time) * direction >= 2
+                                and s.get("player_has_performed_seek") is True
+                                and s.get("presentation_progress_visible") is True
+                                and s.get("native_seekbar_visible") is False
+                                and s.get("native_topbar_visible") is False, after=sequence)
+            screenshot("format-03-seek-" + capture)
+        sequence = music()["sequence"]
+        press("space")
+        paused = wait_music("Pause after seeking retains only the turntable progress display",
+                            lambda s: s.get("player") and s["player"]["properties"].get("speed") == 0
+                            and s.get("native_seekbar_visible") is False
+                            and s.get("native_topbar_visible") is False
+                            and s.get("presentation_progress_visible") is True, after=sequence)
+        samples = [json.loads(line) for line in (out / "format-states.jsonl").read_text().splitlines()]
+        checks.append({"check":"native-left-right-seek-with-own-progress-no-info",
+                       "observed_frames":assert_no_music_info_overlay(samples, seek_start, pid)})
         before = press("Return")
         wait_for("Native music playback controls", lambda s: s.get("dialog") == 10120, after=before)
-        wait_music("Explicit controls retain native overlay and hide duplicate labels",
-                   lambda s: s.get("native_seekbar_visible") is True
-                   and s.get("presentation_header_visible") is False
-                   and s.get("presentation_footer_visible") is False)
+        # Control.IsVisible looks in the top modal dialog, not the underlying
+        # turntable. The screenshot verifies the background progress display.
+        wait_music("Manual controls open without inherited metadata overlays",
+                   lambda s: s.get("native_seekbar_visible") is False
+                   and s.get("native_topbar_visible") is False)
         screenshot("format-03e-native-controls")
+        # Exercise the native pause/resume button, not just dialog visibility.
+        before = press("Return")
+        wait_music("Music OSD resumes audio without metadata popup",
+                   lambda s: s.get("dialog") == 10120 and s.get("player")
+                   and s["player"]["properties"].get("speed") == 1
+                   and s.get("native_seekbar_visible") is False
+                   and s.get("native_topbar_visible") is False)
+        before = press("Return")
+        paused = wait_music("Music OSD pauses audio without metadata popup",
+                            lambda s: s.get("dialog") == 10120 and s.get("player")
+                            and s["player"]["properties"].get("speed") == 0
+                            and s.get("native_seekbar_visible") is False
+                            and s.get("native_topbar_visible") is False)
         # The bindings apply to Visualisation, never navigation inside MusicOSD.
         for arrow in ("Down", "Up"):
             sequence = music()["sequence"]
@@ -734,6 +796,9 @@ def run(hooks):
                             and clock(s) < previous_time - 1 and s["queue"] == paused["queue"],
                             after=sequence)
         checks.append({"check":"turntable-skip-previous-and-missing-art", "player":actual["player"]})
+        samples = [json.loads(line) for line in (out / "format-states.jsonl").read_text().splitlines()]
+        checks.append({"check":"music-info-overlay-absent-through-playback-controls-and-seeking",
+                       "observed_frames":assert_no_music_info_overlay(samples, load_sequence, pid)})
         sequence = actual["sequence"]
         press("x")
         wait_music("Stop synthetic playback", lambda s: s.get("player") is None, after=sequence)

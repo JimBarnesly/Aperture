@@ -109,17 +109,25 @@ if [ "$BASELINE" -eq 0 ]; then
   printf '%s  %s\n' "$MOVIES_SHA" "$SOURCE_DIR/skin/xml/MyVideoNav.xml" | sha256sum -c - >/dev/null || fail 'MyVideoNav.xml integrity check failed'
   cp "$SOURCE_DIR/skin/xml/MyVideoNav.xml" "$TMP/xml/MyVideoNav.xml"
   [ -f "$SOURCE_DIR/skin/xml/MyMusicNav.xml" ] || fail 'Matching music browser XML missing'
-  MUSIC_SHA=eb77c3b201c67cfe0ea9e0db5138b3c2d967185a02d3dfb72bc887bed1a32184
+  MUSIC_SHA=10a0a8f02fbff6f8173b25f408b62749f47603697bea12e58b499fbba2c43d9f
   printf '%s  %s\n' "$MUSIC_SHA" "$SOURCE_DIR/skin/xml/MyMusicNav.xml" | sha256sum -c - >/dev/null || fail 'MyMusicNav.xml integrity check failed'
   cp "$SOURCE_DIR/skin/xml/MyMusicNav.xml" "$TMP/xml/MyMusicNav.xml"
   [ -f "$SOURCE_DIR/skin/xml/MusicVisualisation.xml" ] || fail 'Matching now-playing XML missing'
-  VISUALISATION_SHA=ed5c76966f2fea77ee9ae05e01edb558d03aa48a3ced8b865a68ba6984f00aef
+  VISUALISATION_SHA=5f37aac3e3a041c1c291092b31ab0cc484046637958e07b5e59c3acf79f74813
   printf '%s  %s\n' "$VISUALISATION_SHA" "$SOURCE_DIR/skin/xml/MusicVisualisation.xml" | sha256sum -c - >/dev/null || fail 'MusicVisualisation.xml integrity check failed'
   cp "$SOURCE_DIR/skin/xml/MusicVisualisation.xml" "$TMP/xml/MusicVisualisation.xml"
   [ -f "$SOURCE_DIR/skin/xml/DialogSeekBar.xml" ] || fail 'Matching playback overlay XML missing'
-  SEEKBAR_SHA=ef7d10d10b63dd283331555c4032fbd321e4cb37388681d6019a79619161bd87
+  SEEKBAR_SHA=5d1d1625d360d91631c671b9af92cb2db321a802f283fb5ae817184092529201
   printf '%s  %s\n' "$SEEKBAR_SHA" "$SOURCE_DIR/skin/xml/DialogSeekBar.xml" | sha256sum -c - >/dev/null || fail 'DialogSeekBar.xml integrity check failed'
   cp "$SOURCE_DIR/skin/xml/DialogSeekBar.xml" "$TMP/xml/DialogSeekBar.xml"
+  [ -f "$SOURCE_DIR/skin/xml/Custom_1109_TopBarOverlay.xml" ] || fail 'Matching Custom_1109_TopBarOverlay.xml missing'
+  TOPBAR_SHA=3657406e3104802c4dff60ba9e7bd65fc49deb670dc207090d778fc3ff48a10b
+  printf '%s  %s\n' "$TOPBAR_SHA" "$SOURCE_DIR/skin/xml/Custom_1109_TopBarOverlay.xml" | sha256sum -c - >/dev/null || fail 'Custom_1109_TopBarOverlay.xml integrity check failed'
+  cp "$SOURCE_DIR/skin/xml/Custom_1109_TopBarOverlay.xml" "$TMP/xml/Custom_1109_TopBarOverlay.xml"
+  [ -f "$SOURCE_DIR/skin/xml/MusicOSD.xml" ] || fail 'Matching MusicOSD.xml missing'
+  MUSIC_OSD_SHA=8cd76a3fe091a9a359d723cd00417d7ddaf3d2d09a87f754593fad2711d54c3c
+  printf '%s  %s\n' "$MUSIC_OSD_SHA" "$SOURCE_DIR/skin/xml/MusicOSD.xml" | sha256sum -c - >/dev/null || fail 'MusicOSD.xml integrity check failed'
+  cp "$SOURCE_DIR/skin/xml/MusicOSD.xml" "$TMP/xml/MusicOSD.xml"
   cp -R "$SOURCE_DIR/skin/media/." "$TMP/media/"
   mkdir -p "$TMP/licenses"
   cp -R "$SOURCE_DIR/skin/licenses/." "$TMP/licenses/"

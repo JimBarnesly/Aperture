@@ -29,7 +29,8 @@
   capabilities, permission revocation while confirming, missing/malformed/failed
   health, queue-only controls, ordered playback and offline recovery. Fullscreen
   music checks clean startup/track-change frames while Kodi's automatic info
-  flag is active, Up/Down navigation, and retained manual OSD. Skin switches
+  flag is active, native Left/Right seeks, pause, Up/Down navigation, retained
+  manual OSD actions, caption order and no metadata popup throughout. Skin switches
   verify the owned fullscreen-only keymap loads/removes without changing others. Exactly
   three permitted mock POSTs are required; navigation and cancelled actions
   must not replay writes.

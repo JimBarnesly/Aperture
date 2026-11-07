@@ -4,9 +4,13 @@ Aperture's music player now uses a native Kodi turntable presentation. The
 record displays actual current-track artwork, with a local fallback when art is
 missing. It rotates during playback, stops on pause, and shows current metadata
 and progress. Kodi remains the sole audio player; Select opens its existing
-music playback controls. The automatic track-load file-info banner is suppressed
-on this screen; explicit pause, seek, playback controls and process information
-remain available. Video overlays, errors and notifications are unchanged.
+music playback controls. Captions below the record read track name, album, then
+artist, with the current track largest. The redundant top-left Aperture / Now
+playing label is removed; Home's Now playing shortcut remains. The inherited track/file-info popup and
+top banner never open over fullscreen music, including loading, track changes,
+Left/Right seeking, pause and manual playback controls. The existing turntable
+progress bar and time labels remain visible, and the manual controls use that
+same bar. Video overlays, errors and unrelated dialogs are unchanged.
 
 Down goes to the next track and Up goes to the previous track in one press,
 even partway through a song. Up on the first track restarts it without wrapping.
@@ -43,7 +47,8 @@ packaging, artwork masks and deterministic generated textures. The isolated
 real-Kodi workflow checks full-resolution screenshots, changing record pixels
 while playing and stable record pixels while paused, playback controls, Back,
 reopening without changing position/queue, Up/Down next/previous, clean startup
-and track changes, keymap install/removal on skin switches, missing artwork and
+and track changes, native Left/Right seeks and pause without metadata overlays,
+caption order, keymap install/removal on skin switches, missing artwork and
 selected-track playback. The native ZIP phase selects **Exit** from the actual
 power menu, requires the original process to exit with status 0, then relaunches
 the same profile. Forced termination is only failure cleanup, never acceptance.

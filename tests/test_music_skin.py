@@ -33,10 +33,13 @@ class MusicSkinTests(unittest.TestCase):
                       if 'ListItemNoWrap' in node.findtext('visible', '')]
         self.assertEqual(len(neighbours), 14)
         for node in neighbours:
-            turn = node.find('./animation[@effect="rotatey"]')
+            turn = node.find('./control/animation[@effect="rotatey"]')
             expected = '-45' if 'ListItemNoWrap(-' in node.findtext('visible') else '45'
             self.assertEqual(turn.get('end'), expected)
-            self.assertEqual(turn.get('center'), 'auto')
+            self.assertEqual(turn.get('center'), '220,0')
+            self.assertIsNone(node.find('animation'))
+            self.assertEqual(node.findtext('./control/left'), '0')
+            self.assertEqual(node.findtext('./control/top'), '0')
             self.assertIn('Aperture.FormatPosition', node.findtext('visible'))
             self.assertIsNotNone(node.find('.//texture[@flipy="true"]'))
         # Near sleeves draw after far sleeves on each side.

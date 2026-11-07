@@ -16,6 +16,18 @@ spec.loader.exec_module(driver)
 
 
 class DriverTest(unittest.TestCase):
+    def test_no_music_info_overlay_checks_seek_pause_and_modal_control_frames(self):
+        first = dict(pid=12, sequence=9, window=12006, native_seekbar_visible=False,
+                     native_topbar_visible=False, dialog=9999, presentation_progress_visible=True)
+        modal = dict(first, sequence=10, dialog=10120, nowplaying_visible=False)
+        self.assertEqual(driver.assert_no_music_info_overlay([first, modal], 8, 12), 2)
+        for popup in ('native_seekbar_visible', 'native_topbar_visible'):
+            with self.assertRaisesRegex(AssertionError, 'appeared'):
+                driver.assert_no_music_info_overlay([first, dict(modal, **{popup:True})], 8, 12)
+        for samples in ([], [dict(first, pid=11)], [dict(first, sequence=8)]):
+            with self.assertRaisesRegex(AssertionError, 'Missing'):
+                driver.assert_no_music_info_overlay(samples, 8, 12)
+
     def test_clean_track_load_checks_transient_history_not_only_last_frame(self):
         first = dict(pid=12, sequence=9, window=12006, nowplaying_visible=True,
                      player_show_info=True, native_seekbar_visible=False, native_topbar_visible=False)

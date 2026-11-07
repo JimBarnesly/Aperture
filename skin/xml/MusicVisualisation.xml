@@ -12,14 +12,7 @@
       <texture colordiffuse="22FFFFFF">aperture/bridge.png</texture>
       <aspectratio>scale</aspectratio>
     </control>
-    <control type="label" id="7110">
-      <visible>!Window.IsVisible(seekbar)</visible>
-      <left>90</left><top>64</top><width>1400</width><height>50</height>
-      <font>font27</font><textcolor>FF9CCCD1</textcolor>
-      <label>APERTURE  /  NOW PLAYING</label>
-    </control>
     <control type="label">
-      <visible>!Window.IsVisible(seekbar)</visible>
       <left>1490</left><top>64</top><width>340</width><height>50</height>
       <font>font27</font><textcolor>FF9CCCD1</textcolor><align>right</align>
       <label>$INFO[System.Time]</label>
@@ -99,35 +92,32 @@
         <label>$INFO[Window(10000).Property(Aperture.FormatAlbumTracks)]</label>
         <autoscroll delay="6000" time="2200" repeat="6000">true</autoscroll>
       </control>
-      <control type="label" id="7102">
+      <control type="label" id="7104">
         <left>580</left><top>795</top><width>1160</width><height>65</height>
         <font>font45</font><align>center</align><textcolor>FFF1F5F4</textcolor><scroll>true</scroll>
-        <label>$INFO[MusicPlayer.Album]</label>
-      </control>
-      <control type="label">
-        <left>580</left><top>865</top><width>1160</width><height>45</height>
-        <font>font27</font><align>center</align><textcolor>FF9CCCD1</textcolor><scroll>true</scroll>
-        <label>$INFO[MusicPlayer.AlbumArtist]</label>
-      </control>
-      <control type="label" id="7104">
-        <left>580</left><top>908</top><width>1160</width><height>30</height>
-        <font>font20_title</font><align>center</align><textcolor>FF869BA5</textcolor>
         <label>$INFO[MusicPlayer.Title]</label>
       </control>
-      <control type="progress">
-        <visible>!Window.IsVisible(seekbar)</visible>
+      <control type="label" id="7102">
+        <left>580</left><top>865</top><width>1160</width><height>45</height>
+        <font>font27</font><align>center</align><textcolor>FF9CCCD1</textcolor><scroll>true</scroll>
+        <label>$INFO[MusicPlayer.Album]</label>
+      </control>
+      <control type="label" id="7105">
+        <left>580</left><top>908</top><width>1160</width><height>30</height>
+        <font>font20_title</font><align>center</align><textcolor>FF869BA5</textcolor><scroll>true</scroll>
+        <label>$INFO[MusicPlayer.AlbumArtist]</label>
+      </control>
+      <control type="progress" id="7112">
         <left>260</left><top>944</top><width>1400</width><height>6</height>
         <info>Player.Progress</info>
         <texturebg colordiffuse="FF30414A">colors/white.png</texturebg>
         <lefttexture /><midtexture colordiffuse="FF9CCCD1">colors/white.png</midtexture><righttexture /><overlaytexture />
       </control>
       <control type="label">
-        <visible>!Window.IsVisible(seekbar)</visible>
         <left>90</left><top>921</top><width>145</width><height>45</height>
         <font>font27</font><align>right</align><textcolor>FFBFCDD0</textcolor><label>$INFO[Player.Time]</label>
       </control>
       <control type="label">
-        <visible>!Window.IsVisible(seekbar)</visible>
         <left>1685</left><top>921</top><width>145</width><height>45</height>
         <font>font27</font><textcolor>FFBFCDD0</textcolor><label>$INFO[Player.Duration]</label>
       </control>
@@ -143,7 +133,7 @@
       <label>No music playing</label><visible>!Player.HasAudio</visible>
     </control>
     <control type="label" id="7111">
-      <visible>!Window.IsVisible(seekbar)</visible>
+      <visible>!Window.IsVisible(musicosd)</visible>
       <left>90</left><top>1000</top><width>1740</width><height>45</height>
       <font>font27</font><align>center</align><textcolor>FF869BA5</textcolor>
       <label>Up  Previous track     ·     Down  Next track     ·     Select  Controls     ·     Back  Library</label>
