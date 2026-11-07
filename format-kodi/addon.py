@@ -336,7 +336,7 @@ def albums(handle, server, data, artist=None):
                                                          text(item.get("title")).casefold())):
         if artist is not None and text(album.get("artist"), "Unknown artist").casefold() != artist.casefold():
             continue
-        if add_album(handle, server, album):
+        if add_album(handle, server, album, position=count + 1):
             count += 1
     if not count:
         xbmcgui.Dialog().notification("Format", "No published albums yet. Check your Format server.",
@@ -415,7 +415,7 @@ def play_album(server, data, album):
     show_now_playing(prepared[0][0], origin, player)
 
 
-def add_album(handle, server, album, prefix=""):
+def add_album(handle, server, album, prefix="", position=0):
     ids = track_ids(album)
     if album.get("id") is None or not ids:
         return False
@@ -424,6 +424,8 @@ def add_album(handle, server, album, prefix=""):
     set_metadata(item, album, album, is_album=True)
     display_properties(item, album)
     item.setArt({"thumb": media(server, "/api/cover", ids[0]), "icon": "DefaultAlbumCover.png"})
+    # One-based shelf position is presentation metadata, never a media/database ID.
+    item.setProperty("Aperture.FormatPosition", str(position))
     item.addContextMenuItems(album_context(album))
     xbmcplugin.addDirectoryItem(handle, plugin_url("album", album_id=album["id"]), item, True)
     return True

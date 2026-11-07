@@ -32,3 +32,18 @@ the same profile. Forced termination is only failure cleanup, never acceptance.
 The workflow uses X11/GLX software rendering, synthetic loopback media and a
 discard audio sink. It does not establish physical Pi Wayland/Labwc, HDMI/audio,
 controller or black-display recovery. Keep those acceptance gates separate.
+
+## Coverflow shelf candidate
+
+The album shelf now uses a native centered fixed list rather than a flat panel.
+The selected cover stays in the middle; neighbouring covers are smaller, dimmed
+and angled toward it. Left/Right, parent-folder navigation, context menus and
+Now playing remain owned by Kodi. A one-based display position is client-only
+presentation metadata and does not alter Format's library or playback queue.
+
+Album selection is deliberately unchanged pending clarification of the requested
+load/play behavior. It still opens tracks; Play album opens the existing native
+turntable. A track-list screenshot without a record is not evidence that the
+rotation animation failed. Native CI adds a six-release synthetic shelf capture
+and forward/reverse navigation checks; physical Pi and visual parity with the
+standalone Format interface require separate acceptance.

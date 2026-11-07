@@ -225,110 +225,59 @@
           <textcolor>FFAACBD0</textcolor>
         </control>
       </control>
-      <control type="panel" id="64">
-        <left>80</left>
-        <top>325</top>
-        <width>1760</width>
-        <height>600</height>
+      <!-- Native Coverflow: a centered, non-wrapping selection with angled
+           neighbours. The real Kodi container still owns focus, clicks and Back. -->
+      <control type="fixedlist" id="64">
+        <left>-140</left><top>325</top><width>2200</width><height>600</height>
         <orientation>horizontal</orientation>
-        <viewtype label="Album shelf">list</viewtype>
+        <viewtype label="Coverflow">list</viewtype>
         <visible>String.IsEqual(Container.PluginName,plugin.audio.aperture.format) + String.IsEqual(Container.Property(Aperture.FormatView),albums)</visible>
-        <scrolltime>180</scrolltime>
-        <onleft>64</onleft>
-        <onright>64</onright>
-        <onup>64</onup>
+        <scrolltime tween="cubic" easing="out">280</scrolltime>
+        <focusposition>2</focusposition><movement>0</movement><preloaditems>2</preloaditems>
+        <onleft>64</onleft><onright>64</onright><onup>64</onup>
         <ondown condition="!Player.HasAudio">64</ondown>
         <itemlayout width="440" height="600">
-          <control type="image">
-            <left>8</left>
-            <top>8</top>
-            <width>424</width>
-            <height>575</height>
-            <texture border="25">aperture/games/card.png</texture>
-          </control>
-          <control type="image">
-            <left>29</left>
-            <top>29</top>
-            <width>382</width>
-            <height>382</height>
-            <texture fallback="DefaultAlbumCover.png">$INFO[ListItem.Art(thumb)]</texture>
-            <aspectratio>keep</aspectratio>
-          </control>
-          <control type="textbox">
-            <left>29</left>
-            <top>433</top>
-            <width>382</width>
-            <height>95</height>
-            <font>font32</font>
-            <label>$INFO[ListItem.Title]</label>
-            <textcolor>FFE4F5F5</textcolor>
-          </control>
-          <control type="label">
-            <left>29</left>
-            <top>537</top>
-            <width>382</width>
-            <height>34</height>
-            <font>font27</font>
-            <label>$INFO[ListItem.Artist]</label>
-            <textcolor>FFAACBD0</textcolor>
-            <scroll>true</scroll>
-          </control>
-          <control type="label">
-            <left>29</left>
-            <top>433</top>
-            <width>382</width>
-            <height>70</height>
-            <font>font32</font>
-            <label>$INFO[ListItem.Label]</label>
-            <textcolor>FFE4F5F5</textcolor>
-            <scroll>true</scroll>
-            <visible>String.IsEmpty(ListItem.Title)</visible>
+          <control type="group">
+            <left>0</left><top>0</top><width>440</width><height>460</height>
+            <animation effect="zoom" start="82" end="82" center="220,230" time="0" condition="true">Conditional</animation>
+            <!-- Explicit Container.ListItem refers to the focused album;
+                 unqualified ListItem is this individual neighbouring item. -->
+            <animation effect="rotatey" start="45" end="45" center="220,0" time="0" condition="Integer.IsLess(ListItem.Property(Aperture.FormatPosition),Container(64).ListItem.Property(Aperture.FormatPosition))">Conditional</animation>
+            <animation effect="rotatey" start="-45" end="-45" center="220,0" time="0" condition="Integer.IsGreater(ListItem.Property(Aperture.FormatPosition),Container(64).ListItem.Property(Aperture.FormatPosition))">Conditional</animation>
+            <control type="image">
+              <left>0</left><top>10</top><width>440</width><height>440</height>
+              <texture fallback="DefaultAlbumCover.png">$INFO[ListItem.Art(thumb)]</texture>
+              <aspectratio>keep</aspectratio><colordiffuse>99FFFFFF</colordiffuse>
+            </control>
           </control>
         </itemlayout>
         <focusedlayout width="440" height="600">
-          <control type="image">
-            <left>8</left>
-            <top>8</top>
-            <width>424</width>
-            <height>575</height>
-            <texture border="25">aperture/games/card-focus.png</texture>
-          </control>
-          <control type="image">
-            <left>29</left>
-            <top>29</top>
-            <width>382</width>
-            <height>382</height>
-            <texture fallback="DefaultAlbumCover.png">$INFO[ListItem.Art(thumb)]</texture>
-            <aspectratio>keep</aspectratio>
-          </control>
-          <control type="textbox">
-            <left>29</left>
-            <top>433</top>
-            <width>382</width>
-            <height>95</height>
-            <font>font32</font>
-            <label>$INFO[ListItem.Title]</label>
-            <textcolor>FF173D47</textcolor>
+          <control type="group">
+            <animation effect="zoom" start="82" end="100" center="220,230" time="280" tween="cubic" easing="out">Focus</animation>
+            <control type="image">
+              <left>-18</left><top>-8</top><width>476</width><height>476</height>
+              <texture border="25">aperture/games/card-focus.png</texture>
+            </control>
+            <control type="image">
+              <left>0</left><top>10</top><width>440</width><height>440</height>
+              <texture fallback="DefaultAlbumCover.png">$INFO[ListItem.Art(thumb)]</texture>
+              <aspectratio>keep</aspectratio>
+            </control>
           </control>
           <control type="label">
-            <left>29</left>
-            <top>537</top>
-            <width>382</width>
-            <height>34</height>
-            <font>font27</font>
-            <label>$INFO[ListItem.Artist]</label>
-            <textcolor>FF32606A</textcolor>
-            <scroll>true</scroll>
+            <left>-170</left><top>485</top><width>780</width><height>55</height>
+            <font>font32</font><align>center</align><scroll>true</scroll>
+            <label>$INFO[ListItem.Title]</label><textcolor>FFE4F5F5</textcolor>
           </control>
           <control type="label">
-            <left>29</left>
-            <top>433</top>
-            <width>382</width>
-            <height>70</height>
-            <font>font32</font>
-            <label>$INFO[ListItem.Label]</label>
-            <textcolor>FF173D47</textcolor>
-            <scroll>true</scroll>
+            <left>-170</left><top>544</top><width>780</width><height>42</height>
+            <font>font27</font><align>center</align><scroll>true</scroll>
+            <label>$INFO[ListItem.Artist]</label><textcolor>FFAACBD0</textcolor>
+          </control>
+          <control type="label">
+            <left>-170</left><top>485</top><width>780</width><height>55</height>
+            <font>font32</font><align>center</align><scroll>true</scroll>
+            <label>$INFO[ListItem.Label]</label><textcolor>FFE4F5F5</textcolor>
             <visible>String.IsEmpty(ListItem.Title)</visible>
           </control>
         </focusedlayout>

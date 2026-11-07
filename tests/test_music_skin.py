@@ -23,7 +23,17 @@ class MusicSkinTests(unittest.TestCase):
             self.assertIsNone(view.find('content'))
             self.assertEqual(list(view.iter('onclick')), [])
         shelf = self.root.find('.//control[@id="64"]')
-        self.assertEqual(shelf.get('type'), 'panel')
+        self.assertEqual(shelf.get('type'), 'fixedlist')
+        self.assertEqual(shelf.findtext('focusposition'), '2')
+        self.assertEqual(shelf.findtext('movement'), '0')
+        self.assertEqual(shelf.find('viewtype').get('label'), 'Coverflow')
+        turns = shelf.findall('./itemlayout/control/animation[@effect="rotatey"]')
+        self.assertEqual({turn.get('end') for turn in turns}, {'45', '-45'})
+        for turn in turns:
+            self.assertEqual(turn.get('center'), '220,0')
+            self.assertIn('Container(64).ListItem.Property(Aperture.FormatPosition)', turn.get('condition'))
+        # Native container remains responsible for playback and navigation.
+        self.assertIsNone(shelf.find('onclick'))
         self.assertEqual(shelf.findtext('orientation'), 'horizontal')
         self.assertIn('String.IsEqual(Container.Property(Aperture.FormatView),albums)', shelf.findtext('visible'))
         listing = self.root.find('.//control[@id="63"]')

@@ -99,6 +99,7 @@ try:
                      "playing_cover":xbmc.getInfoLabel("MusicPlayer.Cover"),
                      "folder":xbmc.getInfoLabel("Container.FolderPath"),
                      "focused_title":xbmc.getInfoLabel("ListItem.Title"),
+                     "shelf_position":xbmc.getInfoLabel("Container(64).ListItem.Property(Aperture.FormatPosition)"),
                      "focused_label":xbmc.getInfoLabel("ListItem.Label"),
                      "labels":[xbmc.getInfoLabel("Container.ListItemAbsolute({}).Label".format(i)) for i in range(12)],
                      "format_view":xbmc.getInfoLabel("Container.Property(Aperture.FormatView)"),

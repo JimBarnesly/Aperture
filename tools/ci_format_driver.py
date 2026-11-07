@@ -740,6 +740,36 @@ def run(hooks):
         unified_integration()
         assert_mock_mutations(read_requests(), ["/api/acquire-album", "/api/acquisitions/prioritize",
                                                 "/api/acquisitions/cancel"], config["catalog_id"])
+        # Multiple synthetic releases are required to see real perspective,
+        # centering and edge navigation. The normal fixture has only one album.
+        original_library = library_path.read_bytes()
+        coverflow_library = json.loads(original_library)
+        seed = coverflow_library["albums"][0]
+        coverflow_library["albums"] = [dict(seed, id="coverflow-" + str(i),
+            title="SYNTHETIC QA Coverflow " + str(i)) for i in range(1, 7)]
+        try:
+            temporary.write_text(json.dumps(coverflow_library))
+            temporary.replace(library_path)
+            return_home()
+            before = press("j")
+            wait_for("Coverflow fixture shelf", lambda s: route_is(s.get("folder", ""), "albums"), after=before)
+            baseline_queue = music().get("queue")
+            for i in range(1, 7):
+                actual = find_title("SYNTHETIC QA Coverflow " + str(i), "albums")
+                if actual.get("shelf_position") != str(i) or actual.get("queue") != baseline_queue or actual.get("player") is not None:
+                    raise AssertionError("Coverflow navigation changed playback or lost order: " + repr(actual))
+                if i in (1, 3, 6):
+                    screenshot("format-06-coverflow-" + str(i))
+            for i in (5, 4, 3):
+                sequence = music()["sequence"]
+                press("Left")
+                actual = settled_music("Coverflow reverse focus", lambda s: s.get("focused_title") == "SYNTHETIC QA Coverflow " + str(i), after=sequence)
+            screenshot("format-06-coverflow-reversed")
+            checks.append({"check":"coverflow-six-albums-forward-backward-no-playback", "state":actual})
+            return_home()
+        finally:
+            temporary.write_bytes(original_library)
+            temporary.replace(library_path)
         result = {"status":"passed", "label":"SYNTHETIC QA", "checks":checks,
                   "scope":"Real Kodi unified Format root, artists/library search, native album shelf and track list, ordered playback, catalogue preview, cancelled prompts, protected per-action capabilities and malformed/unavailable health restrictions, explicit mock acquisition/priority/cancel, no mutation replay and HTTP-outage recovery",
                   "limitations":["Synthetic loopback server, not the user's Format server", "Mock acquisition queue only; no provider or downloaded media", "Clocked discard sink, not audible hardware output", "No physical Pi acceptance"]}

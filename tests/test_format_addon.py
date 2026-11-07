@@ -103,6 +103,18 @@ class FormatTest(unittest.TestCase):
         entry[2].tag.setMediaType.assert_called_once_with("album")
         self.assert_directory_result(True)
 
+    def test_coverflow_positions_follow_visible_sorted_albums_without_playback(self):
+        second = dict(self.data["albums"][0], id="another", artist="Aardvark")
+        self.data["albums"].append(second)
+        self.data["albums"].append(dict(second, id="empty", trackIds=[]))
+        self.run_action("albums")
+        entries = self.items()
+        self.assertEqual([item.properties["Aperture.FormatPosition"] for _, _, item, _ in entries], ["1", "2"])
+        self.assertEqual([parse_qs(urlsplit(url).query)["album_id"][0] for _, url, _, _ in entries], ["another", ALBUM_ID])
+        self.assertTrue(all(parse_qs(urlsplit(url).query)["action"] == ["album"] for _, url, _, _ in entries))
+        self.xbmc.Player.assert_not_called()
+        self.xbmc.PlayList.assert_not_called()
+
     def test_metadata_type_is_independent_of_local_database_ids(self):
         for is_album, expected in ((True, "album"), (False, "song")):
             with self.subTest(media_type=expected):
