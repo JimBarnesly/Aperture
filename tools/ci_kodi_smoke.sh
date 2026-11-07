@@ -497,7 +497,10 @@ try:
     format_result=format_driver.run(globals())
     checks.extend(format_result['checks'])
     log=(out/'logs/kodi.log').read_text(errors='replace')
-    fatal_markers=('Error loading skin', 'failed to load skin', 'EXCEPTION Thrown (PythonToCppException)', 'unable to load font')
+    # Omega's LoadTTF and ReloadTTFFonts use different messages. Reject both,
+    # including an initial load failure that subsequently falls back to Arial.
+    fatal_markers=('Error loading skin', 'failed to load skin', 'EXCEPTION Thrown (PythonToCppException)',
+                   'unable to load font', "Couldn't load font", "Couldn't re-load font file")
     errors=[line for line in log.splitlines() if any(marker.lower() in line.lower() for marker in fatal_markers)]
     if errors: raise AssertionError('Skin errors in Kodi log: '+'\n'.join(errors))
     result={'status':'passed','scope':'Kodi 21.3 actual GUI activation, repeated navigation, accepted skin switch, automatic recovery and synthetic Format HTTP playback',
