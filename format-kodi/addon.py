@@ -277,6 +277,7 @@ def track_item(server, track, album):
 
 def album_context(album):
     return [("Play album", "RunPlugin({})".format(plugin_url("play_album", album_id=album["id"]))),
+            ("Browse tracks", "Container.Update({})".format(plugin_url("album", album_id=album["id"]))),
             ("Configure Format server", "Addon.OpenSettings({})".format(ADDON_ID))]
 
 
@@ -427,7 +428,10 @@ def add_album(handle, server, album, prefix="", position=0):
     # One-based shelf position is presentation metadata, never a media/database ID.
     item.setProperty("Aperture.FormatPosition", str(position))
     item.addContextMenuItems(album_context(album))
-    xbmcplugin.addDirectoryItem(handle, plugin_url("album", album_id=album["id"]), item, True)
+    # Selecting a release is an explicit whole-album play action. Do not let
+    # Kodi resolve this plugin route as a single media stream or a directory.
+    item.setProperty("IsPlayable", "false")
+    xbmcplugin.addDirectoryItem(handle, plugin_url("play_album", album_id=album["id"]), item, False)
     return True
 
 

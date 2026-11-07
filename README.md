@@ -34,8 +34,9 @@ Use the complete, tested ZIPs from the candidate kit or matching CI artifact:
 5. Choose Aperture in Settings > Interface > Skin. Select Keep only when the
    screen and controls respond. Otherwise let the automatic rollback happen.
 6. Open Music. Configure the reachable Format server address, then open Albums.
-   Long-press an album (or press C) and choose **Play album** to play the complete
-   release in disc/track order. Music is one Format library, without a separate
+   Select an album to play the complete release in disc/track order and open
+   the native turntable. Long-press (or press C) and choose **Browse tracks**
+   when you want a particular track. Music is one Format library, without a separate
    local/streaming choice. See [Format integration](docs/format-integration.md)
    for server setup, download restrictions and Pi acceptance.
 

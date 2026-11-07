@@ -162,6 +162,18 @@ def return_to_album_shelf(press, wait_for, settle_focus, album_id):
     settle_focus()
 
 
+def open_album_tracks(press, wait_for, settle_focus, find_label, album_id):
+    """Track browsing is explicit; selecting the album itself starts playback."""
+    before = press("c")
+    wait_for("Album browse context", lambda s: s.get("dialog") == 10106, after=before)
+    settle_focus()
+    find_label("Browse tracks", "Down", 12)
+    before = press("Return")
+    wait_for("Explicit album track browsing", lambda s: s.get("window") == 10502
+             and s.get("dialog") == 9999 and route_is(s.get("folder", ""), "album", album_id=album_id), after=before)
+    settle_focus()
+
+
 def successful_recovery_request(requests, started, completed):
     return any(row["path"] == "/api/library" and row["status"] == 200
                and started <= row["time"] <= completed for row in requests)
@@ -523,9 +535,7 @@ def run(hooks):
         shelf_state = music()
         screenshot("format-01-albums")
         sequence = music()["sequence"]
-        before = press("Return")
-        wait_for("Format album tracks", lambda s: s.get("window") == 10502 and s.get("dialog") == 9999
-                 and route_is(s.get("folder", ""), "album", album_id=config["album_id"]), after=before)
+        open_album_tracks(press, wait_for, settle_focus, find_label, config["album_id"])
         actual = find_title(config["expected_titles"][0], "album", after=sequence, album_id=config["album_id"])
         track_view = settled_music("Native track list, not the horizontal album shelf",
                                    lambda s: route_is(s.get("folder", ""), "album", album_id=config["album_id"])
@@ -559,14 +569,10 @@ def run(hooks):
         checks.append({"check":"native-shelf-list-and-back", "albums":shelf_state,
                        "tracks":track_view, "restored_albums":restored_shelf})
         screenshot("format-02b-back-to-album-shelf")
-        before = press("c")
-        wait_for("Album context menu", lambda s: s.get("dialog") == 10106, after=before)
-        settle_focus()
-        find_label("Play album", "Down", 12)
+        # Normal Select/Enter, not a hidden context-menu action, must play the
+        # complete album and enter the turntable.
         sequence = music()["sequence"]
-        before = press("Return")
-        wait_for("Context menu dismissed", lambda s: s.get("dialog") == 9999, after=before)
-        settle_focus()
+        press("Return")
         actual = wait_music("ordered album playback", lambda s: s.get("player") is not None
                             and s["player"]["properties"].get("speed") == 1
                             and track_id(s["player"]["item"]) == config["expected_ids"][0], after=sequence)
@@ -578,7 +584,7 @@ def run(hooks):
         later = wait_music("native playback clock advances", lambda s: s.get("player") is not None
                            and track_id(s["player"]["item"]) == config["expected_ids"][0]
                            and clock(s) >= initial_clock + 1.5, timeout=20, after=sequence)
-        checks.append({"check":"album-playback", "queue":actual["queue"], "start_seconds":initial_clock, "later_seconds":clock(later)})
+        checks.append({"check":"album-selection-ordered-playback", "queue":actual["queue"], "start_seconds":initial_clock, "later_seconds":clock(later)})
         wait_music("Native turntable opens for explicit album playback",
                    lambda s: s.get("window") == 12006 and s.get("nowplaying_visible") is True
                    and s.get("playing_title") == config["expected_titles"][0])
@@ -672,9 +678,7 @@ def run(hooks):
         return_home()
         opened_albums()
         sequence = music()["sequence"]
-        before = press("Return")
-        wait_for("Select track from album", lambda s: s.get("window") == 10502
-                 and route_is(s.get("folder", ""), "album", album_id=config["album_id"]), after=before)
+        open_album_tracks(press, wait_for, settle_focus, find_label, config["album_id"])
         find_title(config["expected_titles"][0], "album", after=sequence, album_id=config["album_id"])
         sequence = music()["sequence"]
         press("Return")

@@ -29,6 +29,22 @@ class DriverTest(unittest.TestCase):
         driver.return_to_album_shelf(press, wait, settle, 'fixture')
         self.assertEqual(settle.call_count, 2)
 
+    def test_track_browsing_uses_explicit_context_action(self):
+        current = {"window":10502, "dialog":9999, "folder":"plugin://plugin.audio.aperture.format/?action=albums"}
+        keys = []
+        def press(key):
+            keys.append(key)
+            current["dialog"] = 10106 if key == "c" else 9999
+            if key == "Return":
+                current["folder"] = "plugin://plugin.audio.aperture.format/?action=album&album_id=fixture"
+            return 10
+        def wait(description, predicate, after):
+            self.assertTrue(predicate(current), description)
+        labels = Mock()
+        driver.open_album_tracks(press, wait, Mock(), labels, "fixture")
+        labels.assert_called_once_with("Browse tracks", "Down", 12)
+        self.assertEqual(keys, ["c", "Return"])
+
     def test_direct_track_navigation_waits_for_actual_playback_and_gui(self):
         actual = {"window":10502, "dialog":9999, "nowplaying_button_visible":True,
                   "format_view":"tracks", "list_visible":True, "shelf_visible":False,
@@ -188,14 +204,15 @@ class DriverTest(unittest.TestCase):
                 self.assertTrue(predicate(gui), description + ": " + repr(gui))
                 return gui
             hooks = {"state": lambda: gui, "wait_for": wait_for, "press": press,
-                     "screenshot": Mock(), "find_label": Mock(side_effect=RuntimeError("Album context reached")),
+                     "screenshot": lambda name: (_ for _ in ()).throw(RuntimeError("Album shelf restored")) if name == "format-02b-back-to-album-shelf" else None,
+                     "find_label": Mock(),
                      "settle_focus": settle}
             env = {"APERTURE_SMOKE_OUT": str(out), "KODI_DATA": str(runtime / "data"),
                    "APERTURE_KODI_PID": str(os.getpid())}
-            with patch.dict(os.environ, env), patch.object(driver.time, "sleep", side_effect=publish):
-                with self.assertRaisesRegex(RuntimeError, "Album context reached"):
+            with patch.dict(os.environ, env), patch.object(driver.time, "sleep", side_effect=publish), patch.object(driver, "open_album_tracks", side_effect=lambda *args: press("Return")):
+                with self.assertRaisesRegex(RuntimeError, "Album shelf restored"):
                     driver.run(hooks)
-            self.assertEqual(keys, ["j", "Return", "Down", "BackSpace", "c"])
+            self.assertEqual(keys, ["j", "Return", "Down", "BackSpace"])
             self.assertTrue(driver.route_is(gui["folder"], "albums"))
 
     def test_real_find_title_uses_right_to_leave_album_parent_card(self):

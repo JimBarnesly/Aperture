@@ -95,7 +95,8 @@ class FormatTest(unittest.TestCase):
     def test_album_urls_preserve_stable_encoded_id_and_art(self):
         self.run_action("albums")
         entry = self.items()[0]
-        self.assertTrue(entry[3])
+        self.assertFalse(entry[3])
+        self.assertEqual(entry[2].properties["IsPlayable"], "false")
         self.assertEqual(parse_qs(urlsplit(entry[1]).query)["album_id"], [ALBUM_ID])
         self.assertEqual(parse_qs(urlsplit(entry[2].art["thumb"]).query)["id"], [DATA["tracks"][0]["id"]])
         self.assertIn("RunPlugin(plugin://", entry[2].context[0][1])
@@ -111,9 +112,55 @@ class FormatTest(unittest.TestCase):
         entries = self.items()
         self.assertEqual([item.properties["Aperture.FormatPosition"] for _, _, item, _ in entries], ["1", "2"])
         self.assertEqual([parse_qs(urlsplit(url).query)["album_id"][0] for _, url, _, _ in entries], ["another", ALBUM_ID])
-        self.assertTrue(all(parse_qs(urlsplit(url).query)["action"] == ["album"] for _, url, _, _ in entries))
+        self.assertTrue(all(parse_qs(urlsplit(url).query)["action"] == ["play_album"] for _, url, _, _ in entries))
         self.xbmc.Player.assert_not_called()
         self.xbmc.PlayList.assert_not_called()
+
+    def test_selecting_album_uses_ordered_play_action_and_keeps_track_browsing_explicit(self):
+        self.run_action("albums")
+        entry = self.items()[0]
+        self.assertEqual(parse_qs(urlsplit(entry[1]).query)["action"], ["play_album"])
+        browse = dict(entry[2].context)["Browse tracks"]
+        self.assertEqual(browse, "Container.Update({})".format(self.addon.plugin_url("album", album_id=ALBUM_ID)))
+        self.xbmc.PlayList.assert_not_called()  # Merely opening the shelf is not play.
+        self.xbmcplugin.reset_mock()
+        self.set_browser_origin()
+        player = self.xbmc.Player.return_value
+        player.isPlayingAudio.return_value = True
+        player.getPlayingFile.return_value = self.addon.media("http://format.test:4534", "/api/audio", "Disc 1/01.flac")
+        self.run_action("play_album", handle=-1, album_id=ALBUM_ID)
+        self.xbmc.Player.return_value.play.assert_called_once_with(self.xbmc.PlayList.return_value, startpos=0)
+        self.xbmc.executebuiltin.assert_called_once_with("ActivateWindow(visualisation)")
+        self.xbmcplugin.addDirectoryItem.assert_not_called()
+        self.xbmcplugin.setResolvedUrl.assert_not_called()
+
+    def test_repeated_explicit_album_selection_replaces_instead_of_appending(self):
+        for _ in range(2):
+            self.run_action("play_album", handle=-1, album_id=ALBUM_ID)
+        playlist = self.xbmc.PlayList.return_value
+        self.assertEqual(playlist.clear.call_count, 2)
+        self.assertEqual(playlist.add.call_count, 6)
+        self.assertEqual(playlist.unshuffle.call_count, 2)
+        self.assertEqual(self.xbmc.Player.return_value.play.call_count, 2)
+
+    def test_failed_album_selection_never_clears_queue_or_opens_turntable(self):
+        for failure in ("missing_album", "missing_track", "offline"):
+            with self.subTest(failure=failure):
+                self.data = copy.deepcopy(DATA)
+                self.xbmc.reset_mock()
+                self.xbmcgui.reset_mock()
+                self.urlopen.side_effect = lambda *args, **kwargs: io.BytesIO(json.dumps(self.data).encode())
+                if failure == "missing_album":
+                    self.data["albums"] = []
+                elif failure == "missing_track":
+                    self.data["tracks"].pop()
+                else:
+                    self.urlopen.side_effect = URLError("unreachable")
+                self.run_action("play_album", handle=-1, album_id=ALBUM_ID)
+                self.xbmc.PlayList.assert_not_called()
+                self.xbmc.Player.assert_not_called()
+                self.xbmc.executebuiltin.assert_not_called()
+                self.xbmcgui.Dialog.return_value.ok.assert_called_once()
 
     def test_metadata_type_is_independent_of_local_database_ids(self):
         for is_album, expected in ((True, "album"), (False, "song")):
