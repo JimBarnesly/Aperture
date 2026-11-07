@@ -811,7 +811,7 @@ def run(hooks):
             press('j')
             wait_view('albums', 'albums')
             press('l')
-            find_title(config['album_title'], 'albums')
+            find_title(album['title'], 'albums')
             press('Return')
             actual = wait_music('Entire long album is available in scrolling liner notes',
                 lambda s: s.get('window') == 12006 and s.get('long_album_tracks_visible')
