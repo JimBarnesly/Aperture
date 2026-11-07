@@ -363,8 +363,8 @@ class Driver:
         for attempt in range(2):
             self.focus_home(103)
             before = self.key('Return')
-            self.wait('ZIP-installed unified Music root', lambda s: s.get('window') == 10502
-                and s.get('dialog') == 9999 and s.get('folder') == 'plugin://plugin.audio.aperture.format/', after=before)
+            self.wait('ZIP-installed direct Music shelf', lambda s: s.get('window') == 10502
+                and s.get('dialog') == 9999 and s.get('folder') == 'plugin://plugin.audio.aperture.format/?action=albums', after=before)
             if attempt == 0:
                 self.capture('zip-10-installed-format')
             self.settle_focus()

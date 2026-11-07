@@ -161,7 +161,7 @@
         <onright condition="![Player.HasAudio | Player.HasVideo]">103</onright>
         <onup>101</onup>
         <ondown>102</ondown>
-        <onclick condition="System.AddonIsEnabled(plugin.audio.aperture.format)">ActivateWindow(Music,plugin://plugin.audio.aperture.format/,return)</onclick>
+        <onclick condition="System.AddonIsEnabled(plugin.audio.aperture.format)">ActivateWindow(Music,plugin://plugin.audio.aperture.format/?action=albums,return)</onclick>
         <onclick condition="!System.AddonIsEnabled(plugin.audio.aperture.format)">ActivateWindow(AddonBrowser)</onclick>
         <onclick condition="!System.AddonIsEnabled(plugin.audio.aperture.format)">Notification(Music needs Format,Install or enable Aperture Format in Add-ons.,8000)</onclick>
       </control>
@@ -402,7 +402,7 @@
         <onup>103</onup>
         <ondown>103</ondown>
         <onback>SetFocus(103)</onback>
-        <onclick condition="Player.HasAudio + [System.AddonIsEnabled(plugin.audio.aperture.format)]">ActivateWindow(Music,plugin://plugin.audio.aperture.format/,return)</onclick>
+        <onclick condition="Player.HasAudio + [System.AddonIsEnabled(plugin.audio.aperture.format)]">ActivateWindow(Music,plugin://plugin.audio.aperture.format/?action=albums,return)</onclick>
         <onclick condition="Player.HasAudio + [!System.AddonIsEnabled(plugin.audio.aperture.format)]">ActivateWindow(AddonBrowser)</onclick>
         <onclick condition="Player.HasAudio + [!System.AddonIsEnabled(plugin.audio.aperture.format)]">Notification(Music needs Format,Install or enable Aperture Format in Add-ons.,8000)</onclick>
         <onclick condition="Player.HasVideo + !String.IsEmpty(VideoPlayer.TVShowTitle) + [Library.HasContent(TVShows)]">ActivateWindow(Videos,videodb://tvshows/titles/,return)</onclick>

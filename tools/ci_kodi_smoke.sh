@@ -455,8 +455,8 @@ try:
             focus(control); before=press('Return')
             wait_for(name+' opened',lambda s:s.get('window')==expected and s.get('skin')=='skin.aperture',after=before)
             if control == 103:
-                wait_for('Music opens the unified Format root', lambda s:s.get('window')==10502
-                    and s.get('dialog')==9999 and s.get('folder')=='plugin://plugin.audio.aperture.format/', after=before)
+                wait_for('Music opens the direct Format shelf', lambda s:s.get('window')==10502
+                    and s.get('dialog')==9999 and s.get('folder')=='plugin://plugin.audio.aperture.format/?action=albums', after=before)
             if control in (100,101,104):
                 wait_for('Unscanned video sources are reachable', lambda s:s.get('folder')=='sources://video/', after=before)
             if cycle==0: screenshot('03-'+name)

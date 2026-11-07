@@ -235,7 +235,7 @@
         <scrolltime tween="cubic" easing="out">280</scrolltime>
         <focusposition>2</focusposition><movement>0</movement><preloaditems>2</preloaditems>
         <onleft>64</onleft><onright>64</onright><onup>64</onup>
-        <ondown condition="!Player.HasAudio">64</ondown>
+        <ondown condition="!Player.HasAudio">66</ondown>
         <itemlayout width="440" height="600">
           <control type="group">
             <left>0</left><top>0</top><width>440</width><height>460</height>
@@ -287,7 +287,7 @@
       <control type="label">
         <left>90</left>
         <top>980</top>
-        <width>1300</width>
+        <width>900</width>
         <height>45</height>
         <font>font27</font>
         <label>D-pad  Browse     ·     Select  Open / Play     ·     Back  Return</label>
@@ -305,6 +305,18 @@
         <scroll>true</scroll>
         <align>right</align>
       </control>
+      <control type="button" id="66">
+        <left>1050</left><top>980</top><width>350</width><height>56</height>
+        <label>Store</label><font>font27</font><align>center</align>
+        <textcolor>FF9CCCD1</textcolor><focusedcolor>FF080D13</focusedcolor>
+        <onclick>Container.Update(plugin://plugin.audio.aperture.format/?action=store)</onclick>
+        <visible>Control.IsVisible(64)</visible>
+        <texturefocus colordiffuse="FF9CCCD1">colors/white.png</texturefocus>
+        <texturenofocus colordiffuse="442F424C">colors/white.png</texturenofocus>
+        <onleft>64</onleft><onup>64</onup><ondown>64</ondown>
+        <onright condition="Player.HasAudio">65</onright>
+        <onright condition="!Player.HasAudio">64</onright>
+      </control>
       <control type="button" id="65">
         <left>1450</left>
         <top>980</top>
@@ -319,7 +331,7 @@
         <visible>Player.HasAudio</visible>
         <texturefocus colordiffuse="FF9CCCD1">colors/white.png</texturefocus>
         <texturenofocus colordiffuse="442F424C">colors/white.png</texturenofocus>
-        <onleft condition="Control.IsVisible(64)">64</onleft>
+        <onleft condition="Control.IsVisible(64)">66</onleft>
         <onleft condition="Control.IsVisible(63)">63</onleft>
         <onright condition="Control.IsVisible(64)">64</onright>
         <onright condition="Control.IsVisible(63)">63</onright>

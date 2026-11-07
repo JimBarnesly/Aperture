@@ -23,7 +23,8 @@ def view_is(actual, mode):
     return (actual.get("format_view") == mode
             and actual.get("shelf_visible") is shelf
             and actual.get("list_visible") is (not shelf)
-            and str(actual.get("focus")) == ("64" if shelf else "63"))
+            and str(actual.get("focus")) == ("64" if shelf else "63")
+            and (not shelf or actual.get("shelf_focus_complete", True)))
 
 
 def title_direction(mode):
@@ -744,6 +745,21 @@ def run(hooks):
         if not any(row["path"] == "/api/library" and row["status"] == 503 for row in requests):
             raise AssertionError("Offline test did not hit the synthetic server")
         checks.append({"check":"offline-recovery-and-return", "recovered_title":album_title, "state":state()})
+        opened_albums()
+        before = press("Down")
+        wait_for("Shelf Store button is remote reachable", lambda s: s.get("focus") == 66, after=before)
+        before = press("Return")
+        wait_for("Store opens without category chooser", lambda s: route_is(s.get("folder", ""), "store"), after=before)
+        actual = wait_view("store", "menu")
+        if not any(word in actual.get("format_notice", "").lower() for word in ("disabled", "unavailable")):
+            raise AssertionError("Store did not disclose protected backend restrictions")
+        if actual.get("player") is not None:
+            raise AssertionError("Opening Store started playback")
+        screenshot("format-05b-store-protected")
+        before = press("BackSpace")
+        wait_for("Store Back returns to shelf", lambda s: route_is(s.get("folder", ""), "albums"), after=before)
+        checks.append({"check":"remote-store-access-and-honest-disabled-backend", "state":actual})
+        return_home()
         unified_integration()
         assert_mock_mutations(read_requests(), ["/api/acquire-album", "/api/acquisitions/prioritize",
                                                 "/api/acquisitions/cancel"], config["catalog_id"])
@@ -760,6 +776,7 @@ def run(hooks):
             return_home()
             before = press("j")
             wait_for("Coverflow fixture shelf", lambda s: route_is(s.get("folder", ""), "albums"), after=before)
+            press("l")  # Explicitly refresh the changed synthetic library, bypassing the shelf cache.
             settled_music("Random entry chooses an actual record", lambda s: s.get("shelf_position") in [str(i) for i in range(1, 7)])
             baseline_queue = music().get("queue")
             press("Home")  # Deterministic sweep after verifying randomized entry.

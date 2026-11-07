@@ -170,7 +170,7 @@ class FormatTest(unittest.TestCase):
                 self.xbmcgui.getCurrentWindowId.return_value = 10502
                 self.xbmcgui.getCurrentWindowDialogId.return_value = 9999
                 self.xbmc.Monitor.return_value.abortRequested.return_value = False
-                self.xbmc.getCondVisibility.return_value = True
+                self.xbmc.getCondVisibility.side_effect = lambda condition: condition == "Control.IsVisible(64)"
                 target_index = 2 + parent_offset
                 self.xbmc.getInfoLabel.side_effect = lambda key: {
                     "Container.Property(Aperture.FormatEntry)":"fresh",
@@ -180,7 +180,7 @@ class FormatTest(unittest.TestCase):
                 with patch.object(self.addon.random, "randint", return_value=3) as choose:
                     self.assertTrue(self.addon.focus_random_album(6, "fresh"))
                     choose.assert_called_once_with(1, 6)
-                self.xbmc.executebuiltin.assert_called_once_with("Control.SetFocus(64,{},absolute)".format(target_index))
+                self.xbmc.executebuiltin.assert_called_once_with("Control.SetFocus(64,{},absolute)".format(target_index), True)
                 self.xbmc.Player.assert_not_called()
                 self.xbmc.PlayList.assert_not_called()
 
@@ -190,6 +190,7 @@ class FormatTest(unittest.TestCase):
         self.xbmcgui.getCurrentWindowDialogId.return_value = 9999
         self.xbmc.Monitor.return_value.abortRequested.return_value = False
         self.xbmc.Monitor.return_value.waitForAbort.return_value = False
+        self.xbmc.getCondVisibility.side_effect = lambda condition: condition == "Control.IsVisible(64)"
         self.xbmc.getInfoLabel.side_effect = lambda key: "newer-entry"
         self.assertFalse(self.addon.focus_random_album(6, "old-entry"))
         self.xbmc.executebuiltin.assert_not_called()
@@ -199,6 +200,61 @@ class FormatTest(unittest.TestCase):
         self.assertFalse(self.addon.focus_random_album(6, "fresh"))
         self.xbmc.executebuiltin.assert_not_called()
         self.assertFalse(self.addon.focus_random_album(0, "fresh"))
+
+    def test_random_shelf_never_reclaims_focus_during_album_playback(self):
+        self.xbmc.getCondVisibility.side_effect = lambda condition: condition == "Player.HasAudio"
+        with patch.object(self.addon.random, "randint") as choose:
+            self.assertFalse(self.addon.focus_random_album(6, "fresh"))
+            choose.assert_not_called()
+        self.xbmc.executebuiltin.assert_not_called()
+        self.xbmc.Player.assert_not_called()
+        self.xbmc.PlayList.assert_not_called()
+
+    def enable_memory_cache(self):
+        values = {}
+        window = self.xbmcgui.Window.return_value
+        window.getProperty.side_effect = lambda key: values.get(key, "")
+        window.setProperty.side_effect = lambda key, value: values.__setitem__(key, value)
+        return values
+
+    def test_cached_shelf_avoids_repeat_fetch_but_playback_revalidates(self):
+        self.enable_memory_cache()
+        self.run_action("albums")
+        self.run_action("albums")
+        self.assertEqual(self.urlopen.call_count, 1)
+        self.run_action("play_album", handle=-1, album_id=ALBUM_ID)
+        self.assertEqual(self.urlopen.call_count, 2)
+
+    def test_cache_is_server_scoped_and_never_authorizes_writes(self):
+        self.enable_memory_cache()
+        self.addon.library("http://first.test", allow_cached=True)
+        self.addon.library("http://second.test", allow_cached=True)
+        self.assertEqual(self.urlopen.call_count, 2)
+        self.addon.download_access("http://first.test")
+        self.assertEqual(self.urlopen.call_count, 3)
+        self.xbmc.PlayList.assert_not_called()
+
+    def test_failed_refresh_preserves_saved_shelf_but_never_uses_it_for_playback(self):
+        values = self.enable_memory_cache()
+        self.addon.library("http://format.test:4534")
+        self.urlopen.side_effect = URLError("offline")
+        with self.assertRaises(self.addon.FormatError):
+            self.addon.library("http://format.test:4534")
+        self.assertEqual(self.addon.library("http://format.test:4534", allow_cached=True), self.data)
+        self.assertEqual(json.loads(next(iter(values.values())))["data"], self.data)
+        self.assertFalse(json.loads(next(iter(values.values())))["fresh"])
+        self.xbmcgui.Dialog.return_value.notification.assert_called_once()
+        self.run_action("play_album", handle=-1, album_id=ALBUM_ID)
+        self.xbmc.PlayList.assert_not_called()
+        self.xbmc.Player.assert_not_called()
+
+    def test_store_has_only_catalogue_downloads_and_configuration_with_disabled_notice(self):
+        with patch.object(self.addon, "download_access", return_value=({"acquire":False}, {"acquire":"Downloading unavailable: backend disabled."})):
+            self.run_action("store")
+        self.assertEqual([entry[2].label for entry in self.items()], ["Find music", "Downloads", "Configure Format server"])
+        self.assertIn(unittest.mock.call(7, "Aperture.FormatNotice", "Downloading unavailable: backend disabled."), self.xbmcplugin.setProperty.call_args_list)
+        self.xbmc.PlayList.assert_not_called()
+        self.xbmc.Player.assert_not_called()
 
     def test_metadata_type_is_independent_of_local_database_ids(self):
         for is_album, expected in ((True, "album"), (False, "song")):

@@ -105,6 +105,8 @@ try:
                      "focused_label":xbmc.getInfoLabel("ListItem.Label"),
                      "labels":[xbmc.getInfoLabel("Container.ListItemAbsolute({}).Label".format(i)) for i in range(12)],
                      "format_view":xbmc.getInfoLabel("Container.Property(Aperture.FormatView)"),
+                     "format_notice":xbmc.getInfoLabel("Container.Property(Aperture.FormatNotice)"),
+                     "shelf_focus_complete":bool(xbmc.getInfoLabel("Container.Property(Aperture.FormatEntry)")) and xbmc.getInfoLabel("Container.Property(Aperture.FormatEntry)") == xbmc.getInfoLabel("Window(10502).Property(Aperture.FormatFocusEntry)"),
                      "shelf_visible":bool(xbmc.getCondVisibility("Control.IsVisible(64)")),
                      "list_visible":bool(xbmc.getCondVisibility("Control.IsVisible(63)")),
                      "focus":xbmc.getInfoLabel("System.CurrentControlId"),
@@ -254,7 +256,7 @@ def prepare(runtime, out, root=ROOT):
     keymap.write_text('''<keymap><global><keyboard>
 <j>ActivateWindow(10502,plugin://plugin.audio.aperture.format/?action=albums,return)</j>
 <k>ActivateWindow(10502,plugin://plugin.audio.aperture.format/,return)</k>
-<l>Container.Refresh</l>
+<l>RunPlugin(plugin://plugin.audio.aperture.format/?action=refresh_library)</l>
 </keyboard></global></keymap>''')
     pulse.mkdir(mode=0o700)
     (pulse / "cookie").write_bytes(os.urandom(256))

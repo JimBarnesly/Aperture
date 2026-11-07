@@ -1,5 +1,6 @@
 """Native Format library, catalogue and explicitly confirmed downloads for Kodi 20/21."""
 import json
+import hashlib
 import math
 import random
 import uuid
@@ -123,12 +124,54 @@ def request_json(server, endpoint, params=None, post=False, maximum=None):
         raise FormatError("The server did not return a valid Format response. Check the server URL.") from error
 
 
-def library(server):
-    data = request_json(server, "/api/library", maximum=MAX_LIBRARY_BYTES)
-    if (not isinstance(data, dict)
-            or not object_list(data.get("albums"))
-            or not object_list(data.get("tracks"))):
-        raise FormatError("The server returned an unsupported Format library.")
+def valid_library(data):
+    return (isinstance(data, dict) and object_list(data.get("albums"))
+            and object_list(data.get("tracks")))
+
+
+def library(server, allow_cached=False):
+    """Short-lived in-memory shelf cache; playback validation stays fresh.
+
+    The cached snapshot never authorizes downloads or other mutations. A failed
+    refresh preserves the last good shelf, explicitly marked stale, for browsing.
+    """
+    key = "Aperture.FormatLibrary." + hashlib.sha256(server.encode()).hexdigest()
+    window = xbmcgui.Window(10000)
+    cached = None
+    try:
+        encoded = window.getProperty(key)
+        if isinstance(encoded, str) and 0 < len(encoded) <= MAX_LIBRARY_BYTES + 4096:
+            candidate = json.loads(encoded)
+            age = time.time() - candidate["saved"]
+            if 0 <= age <= 86400 and valid_library(candidate.get("data")):
+                cached = candidate
+                if allow_cached and candidate.get("fresh") is True and age <= 120:
+                    return candidate["data"]
+    except (ValueError, TypeError, KeyError):
+        pass
+    # A failed explicit refresh must not make subsequent browsing trust the old
+    # snapshot as fresh, but it must not delete the known-good library either.
+    if cached is not None:
+        cached["fresh"] = False
+        try:
+            window.setProperty(key, json.dumps(cached, separators=(",", ":")))
+        except Exception:
+            pass
+    try:
+        data = request_json(server, "/api/library", maximum=MAX_LIBRARY_BYTES)
+        if not valid_library(data):
+            raise FormatError("The server returned an unsupported Format library.")
+    except FormatError:
+        if not allow_cached or cached is None:
+            raise
+        xbmcgui.Dialog().notification("Saved album shelf", "Format is unavailable. Showing saved albums; playback may be unavailable.", xbmcgui.NOTIFICATION_INFO, 6000)
+        return cached["data"]
+    try:
+        encoded = json.dumps({"saved":time.time(), "fresh":True, "data":data}, separators=(",", ":"))
+        if len(encoded) <= MAX_LIBRARY_BYTES + 4096:
+            window.setProperty(key, encoded)
+    except Exception:
+        pass  # Optional presentation cache must never fail a valid library read.
     return data
 
 
@@ -280,6 +323,7 @@ def track_item(server, track, album):
 def album_context(album):
     return [("Play album", "RunPlugin({})".format(plugin_url("play_album", album_id=album["id"]))),
             ("Browse tracks", "Container.Update({})".format(plugin_url("album", album_id=album["id"]))),
+            ("Refresh albums", "RunPlugin({})".format(plugin_url("refresh_library"))),
             ("Configure Format server", "Addon.OpenSettings({})".format(ADDON_ID))]
 
 
@@ -332,6 +376,16 @@ def root(handle):
         menu_item(handle, title, action, action not in ("search", "find_music", "configure"))
 
 
+def store(handle, server):
+    permissions, notices = download_access(server)
+    notice = ("Search the available artist catalogue. Downloads require confirmation."
+              if permissions["acquire"] else notices["acquire"])
+    set_view(handle, "menu", category="Store", notice=notice)
+    menu_item(handle, "Find music", "find_music", origin="store")
+    menu_item(handle, "Downloads", "downloads", True)
+    menu_item(handle, "Configure Format server", "configure")
+
+
 def albums(handle, server, data, artist=None):
     set_view(handle, "albums", "albums", display(artist, "Albums"))
     count = 0
@@ -351,7 +405,9 @@ def albums(handle, server, data, artist=None):
 
 def focus_random_album(count, entry):
     """Choose a record, not a parent-folder card; never shuffle or play it."""
-    if not count:
+    # Returning from the turntable must keep the selected record and allow an
+    # immediate Down to Now playing. Never queue a late focus change over audio.
+    if not count or xbmc.getCondVisibility("Player.HasAudio"):
         return False
     target = random.randint(1, count)
     monitor = xbmc.Monitor()
@@ -359,7 +415,8 @@ def focus_random_album(count, entry):
         for _ in range(20):
             if (monitor.abortRequested() or xbmc.getSkinDir() != "skin.aperture"
                     or xbmcgui.getCurrentWindowId() != 10502
-                    or xbmcgui.getCurrentWindowDialogId() not in (9999, 10138)):
+                    or xbmcgui.getCurrentWindowDialogId() not in (9999, 10138)
+                    or xbmc.getCondVisibility("Player.HasAudio")):
                 return False
             if (xbmcgui.getCurrentWindowDialogId() == 9999
                     and xbmc.getInfoLabel("Container.Property(Aperture.FormatEntry)") == entry
@@ -372,7 +429,7 @@ def focus_random_album(count, entry):
                     if xbmc.getInfoLabel("Container(64).ListItemAbsolute({}).Property(Aperture.FormatPosition)".format(index)) == str(target):
                         if xbmc.getInfoLabel("Container.Property(Aperture.FormatEntry)") != entry:
                             return False
-                        xbmc.executebuiltin("Control.SetFocus(64,{},absolute)".format(index))
+                        xbmc.executebuiltin("Control.SetFocus(64,{},absolute)".format(index), True)
                         return True
             if monitor.waitForAbort(0.1):
                 return False
@@ -734,16 +791,24 @@ def main(argv=None):
                 xbmc.executebuiltin("Container.Refresh")
             if handle >= 0:
                 root(handle)
+        elif action == "store":
+            store(handle, server_url())
+        elif action == "refresh_library":
+            library(server_url())
+            xbmc.executebuiltin("Container.Refresh")
         elif action in ("search", "find_music"):
             query = search_query(args, "Search your Format library" if action == "search" else "Find music by artist (at least 2 characters)",
                                  minimum=1 if action == "search" else 2)
             if query is None:
                 if handle >= 0:
-                    root(handle)
+                    if args.get("origin") == ["store"]:
+                        store(handle, server_url())
+                    else:
+                        root(handle)
             elif "q" not in args or handle < 0:
                 # Store the query in the directory URL, not a transient prompt,
                 # so Back and refresh never repeat the keyboard dialog.
-                redirect = plugin_url(action, q=query)
+                redirect = plugin_url(action, q=query, **({"origin":"store"} if args.get("origin") == ["store"] else {}))
             else:
                 server = server_url()
                 if action == "search":
@@ -753,7 +818,7 @@ def main(argv=None):
                     find_music(handle, server, query)
         elif action in ("albums", "artists", "artist", "album", "play_album"):
             server = server_url()
-            data = library(server)
+            data = library(server, allow_cached=action in ("albums", "artist", "artists"))
             if action in ("albums", "artist"):
                 view = "albums"
                 shelf_entry = albums(handle, server, data, args.get("artist", [None])[0] if action == "artist" else None)
@@ -804,6 +869,7 @@ def main(argv=None):
                 xbmc.executebuiltin("Container.SetViewMode({})".format(64 if view == "albums" else 63))
                 if shelf_entry is not None:
                     focus_random_album(*shelf_entry)
+                    xbmcgui.Window(10502).setProperty("Aperture.FormatFocusEntry", shelf_entry[1])
         if redirect:
             # Non-folder actions never enter history. Do not use 'replace', which
             # clears Kodi's complete Back stack for query-only plugin routes.

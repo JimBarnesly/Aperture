@@ -43,7 +43,7 @@ for index,(ident,label) in enumerate(items):
     if ident==103:
         # Music is one integrated Format library, not a local/streaming choice.
         enabled='System.AddonIsEnabled(plugin.audio.aperture.format)'
-        E.SubElement(b,'onclick',{'condition':enabled}).text='ActivateWindow(Music,plugin://plugin.audio.aperture.format/,return)'
+        E.SubElement(b,'onclick',{'condition':enabled}).text='ActivateWindow(Music,plugin://plugin.audio.aperture.format/?action=albums,return)'
         E.SubElement(b,'onclick',{'condition':f'!{enabled}'}).text='ActivateWindow(AddonBrowser)'
         E.SubElement(b,'onclick',{'condition':f'!{enabled}'}).text='Notification(Music needs Format,Install or enable Aperture Format in Add-ons.,8000)'
     elif ident==100:

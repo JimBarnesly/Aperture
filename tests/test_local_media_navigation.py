@@ -25,7 +25,7 @@ class LocalMediaNavigationTests(unittest.TestCase):
         enabled = 'System.AddonIsEnabled(plugin.audio.aperture.format)'
         actions = self.buttons['103'].findall('onclick')
         self.assertEqual([node.text for node in actions if node.get('condition') == enabled],
-                         ['ActivateWindow(Music,plugin://plugin.audio.aperture.format/,return)'])
+                         ['ActivateWindow(Music,plugin://plugin.audio.aperture.format/?action=albums,return)'])
         self.assertEqual(self.buttons['103'].findtext('onright'), '120')
         self.assertEqual(sum(b.findtext('label') == 'Music' for b in self.buttons.values()), 1)
         self.assertIsNone(self.buttons['103'].find('enable'))
@@ -106,11 +106,11 @@ class LocalMediaNavigationTests(unittest.TestCase):
 
     def test_real_gui_runners_cover_direct_format_back_and_reopen(self):
         smoke = (ROOT / 'tools/ci_kodi_smoke.sh').read_text()
-        self.assertIn('Music opens the unified Format root', smoke)
+        self.assertIn('Music opens the direct Format shelf', smoke)
         self.assertIn('Format Back returns to Home Music', smoke)
         self.assertIn('Unscanned video sources are reachable', smoke)
         zipper = (ROOT / 'tools/zip_smoke_driver.py').read_text()
-        self.assertIn('ZIP-installed unified Music root', zipper)
+        self.assertIn('ZIP-installed direct Music shelf', zipper)
         self.assertIn('self.check_music()', zipper)
         for source in (smoke, zipper):
             self.assertNotIn('Music choice', source)

@@ -33,7 +33,8 @@ Use the complete, tested ZIPs from the candidate kit or matching CI artifact:
    does not silently enable that setting. Disable it again after installation.
 5. Choose Aperture in Settings > Interface > Skin. Select Keep only when the
    screen and controls respond. Otherwise let the automatic rollback happen.
-6. Open Music. Configure the reachable Format server address, then open Albums.
+6. Open Music to enter the record shelf directly. If needed, use Store >
+   Configure Format server to set the reachable server address.
    Select an album to play the complete release in disc/track order and open
    the native turntable. Long-press (or press C) and choose **Browse tracks**
    when you want a particular track. Music is one Format library, without a separate

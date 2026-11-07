@@ -49,10 +49,26 @@ Format commit db10318d9171cae0e6fb0e04d8aa1f2104b2b087 (9 August 2026),
 public/app.js playSelectedLibraryAlbum and the Coverflow key handler. The old
 Kodi route opened tracks, so a track-list screenshot without a record was not
 evidence of an animation failure. Browse tracks remains an explicit context
-action. Fresh album shelf entries choose a random record without changing playback or
-reordering the library. The player includes a compact, read-only album track
+action. Fresh album shelf entries choose a random record when nothing is playing,
+without reordering the library. Returning while audio plays preserves the
+selected record and never steals navigation focus. The player includes a compact, read-only album track
 listing in the bottom-left corner, keeping the record and album artwork dominant.
 This candidate does not port the browser card-to-disc morph or its 30-second
 idle return. Native CI adds a six-release synthetic shelf capture
 and forward/reverse navigation checks; physical Pi and visual parity with the
 standalone Format interface require separate acceptance.
+
+## Direct shelf and Store
+
+Home Music opens the Coverflow shelf directly, including repeat entry and Back.
+Down reaches Store when stopped; while playing, Down reaches Now playing and
+Left reaches Store. Store exposes existing artist-catalogue search and download
+status, explicitly showing unavailable/disabled backend permission. It does not
+enable downloads or imply that a provider is configured.
+
+A server-scoped in-memory snapshot avoids repeated shelf transfers for two
+minutes. A failed refresh retains a labelled saved shelf for browsing for up to
+a day within the same Kodi session. Play album always revalidates the live
+library before changing the current album. Refresh albums in the album context
+menu bypasses the cache. Cold startup, artwork reads and audio-device startup
+remain separately measurable; this is not a claim that every load delay is fixed.

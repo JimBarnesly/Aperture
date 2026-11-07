@@ -468,9 +468,9 @@ class DriverSafetyTest(unittest.TestCase):
         self.assertEqual(subject.settle_focus.call_count, 2)
         predicates = [call.args[1] for call in subject.wait.call_args_list]
         for root, home in (predicates[:2], predicates[2:]):
-            valid = {'window': 10502, 'dialog': 9999, 'folder': 'plugin://plugin.audio.aperture.format/'}
+            valid = {'window': 10502, 'dialog': 9999, 'folder': 'plugin://plugin.audio.aperture.format/?action=albums'}
             self.assertTrue(root(valid))
-            for folder in ('library://music/', 'plugin://plugin.audio.aperture.format/?action=albums',
+            for folder in ('library://music/', 'plugin://plugin.audio.aperture.format/',
                            'plugin://plugin.audio.aperture.format.other/', ''):
                 self.assertFalse(root({**valid, 'folder': folder}))
             self.assertFalse(root({**valid, 'dialog': 12002}))
@@ -522,7 +522,7 @@ class DriverSafetyTest(unittest.TestCase):
         source = (ROOT / 'tools/zip_smoke_driver.py').read_text()
         self.assertIn('self.kodi_pid = self.process.pid', source)
         self.assertIn('self.focus_home(103)', source)
-        self.assertIn("'plugin://plugin.audio.aperture.format/'", source)
+        self.assertIn("'plugin://plugin.audio.aperture.format/?action=albums'", source)
         for forbidden in ('gdb', 'debugger_commands', 'ctrl+F', 'game_browse', 'plugin.games', 'script.aperture.music'):
             self.assertNotIn(forbidden, source)
 

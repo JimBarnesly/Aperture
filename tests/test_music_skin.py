@@ -40,6 +40,17 @@ class MusicSkinTests(unittest.TestCase):
         listing = self.root.find('.//control[@id="63"]')
         self.assertIn('!String.IsEqual(Container.Property(Aperture.FormatView),albums)', listing.findtext('visible'))
 
+    def test_store_button_is_visible_and_remote_reachable_from_shelf(self):
+        button = self.root.find('.//control[@id="66"]')
+        self.assertEqual(button.findtext('label'), 'Store')
+        self.assertEqual(button.findtext('visible'), 'Control.IsVisible(64)')
+        self.assertEqual(button.findtext('onclick'), 'Container.Update(plugin://plugin.audio.aperture.format/?action=store)')
+        shelf = self.root.find('.//control[@id="64"]')
+        self.assertIn(('!Player.HasAudio', '66'), [(n.get('condition'), n.text) for n in shelf.findall('ondown')])
+        playing = self.root.find('.//control[@id="65"]')
+        self.assertIn(('Control.IsVisible(64)', '66'), [(n.get('condition'), n.text) for n in playing.findall('onleft')])
+        self.assertEqual(button.findtext('onup'), '64')
+
     def test_native_music_fallback_and_notice_remain(self):
         views = set(self.root.findtext('views').split(','))
         self.assertTrue({'50', '52', '53', '54', '55', '500'}.issubset(views))
