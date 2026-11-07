@@ -29,7 +29,7 @@ def update_focus():
 
 def album_lines(titles, current):
     """Plain liner notes retain every track, with a current-track marker."""
-    return '\n'.join(('▶ ' if i == current else '') + str(i + 1) + '.  '
+    return '\n'.join(('> ' if i == current else '') + str(i + 1) + '.  '
                      + str(title).replace('[', '(').replace(']', ')')
                      for i, title in enumerate(titles))
 
@@ -60,7 +60,7 @@ def run():
     keymap = TurntableKeymap(
         xbmcvfs.translatePath('special://profile/keymaps/'),
         Path(__file__).parent / 'resources/keymaps/aperture-turntable.xml',
-        lambda: xbmc.executebuiltin('ReloadKeymaps'),
+        lambda: xbmc.executebuiltin('Action(reloadkeymaps)'),
         lambda message: xbmc.log(message, xbmc.LOGWARNING))
     monitor = xbmc.Monitor()
     next_liner_update = 0.0

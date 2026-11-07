@@ -53,7 +53,7 @@ class ShelfServiceTests(unittest.TestCase):
         keymap.close.assert_called_once_with()
         # Reload is the sole built-in, and is delegated to changed keymap state.
         constructor.call_args.args[2]()
-        self.xbmc.executebuiltin.assert_called_once_with('ReloadKeymaps')
+        self.xbmc.executebuiltin.assert_called_once_with('Action(reloadkeymaps)')
 
     def test_service_removes_owned_binding_if_an_unexpected_error_stops_it(self):
         keymap = Mock()
@@ -70,8 +70,8 @@ class ShelfServiceTests(unittest.TestCase):
         lines = self.service.album_lines(titles, 12).splitlines()
         self.assertEqual(len(lines), 24)
         self.assertEqual(lines[0], '1.  Track 1')
-        self.assertEqual(lines[12], '▶ 13.  Track 13')
+        self.assertEqual(lines[12], '> 13.  Track 13')
         self.assertEqual(lines[-1], '24.  Track 24')
 
     def test_liner_notes_do_not_render_title_markup(self):
-        self.assertEqual(self.service.album_lines(['[COLOR red]Title'], 0), '▶ 1.  (COLOR red)Title')
+        self.assertEqual(self.service.album_lines(['[COLOR red]Title'], 0), '> 1.  (COLOR red)Title')

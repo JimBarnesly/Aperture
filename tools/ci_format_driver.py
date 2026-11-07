@@ -867,13 +867,18 @@ def run(hooks):
             actual = wait_music('Entire long album is available in scrolling liner notes',
                 lambda s: s.get('window') == 12006 and s.get('long_album_tracks_visible')
                 and len(s.get('long_album_tracks_text', '').splitlines()) == 14
-                and '▶ 1.' in s.get('long_album_tracks_text', '')
+                and '> 1.' in s.get('long_album_tracks_text', '')
                 and '14.  SYNTHETIC QA Liner Track 14' in s.get('long_album_tracks_text', ''))
             screenshot('format-07-long-album-first')
-            time.sleep(16)
+            last_page = wait_music('Long liner notes reach the final visible page',
+                lambda s: s.get('long_album_pages') not in ('', '0', '1', None)
+                and s.get('long_album_current_page') == s.get('long_album_pages'), timeout=30)
+            time.sleep(2.3)  # Complete the 2200 ms row motion before capture.
             screenshot('format-07-long-album-scrolled')
             checks.append({'check':'full-long-album-liner-notes-with-current-marker',
-                           'text':actual['long_album_tracks_text']})
+                           'text':actual['long_album_tracks_text'],
+                           'last_page':last_page['long_album_current_page'],
+                           'pages':last_page['long_album_pages']})
             press('x')
             wait_music('Long album test stopped', lambda s: s.get('player') is None)
             return_home()

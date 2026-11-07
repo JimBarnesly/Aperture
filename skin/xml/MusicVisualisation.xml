@@ -73,7 +73,7 @@
             <visible>ListItem.IsPlaying</visible>
             <left>0</left><top>0</top><width>430</width><height>34</height>
             <font>font20_title</font><textcolor>FF9CCCD1</textcolor>
-            <label>▶ $INFO[ListItem.TrackNumber,,.  ]$INFO[ListItem.Title]</label>
+            <label>&gt; $INFO[ListItem.TrackNumber,,.  ]$INFO[ListItem.Title]</label>
           </control>
         </itemlayout>
         <focusedlayout width="430" height="34">
@@ -87,7 +87,7 @@
             <visible>ListItem.IsPlaying</visible>
             <left>0</left><top>0</top><width>430</width><height>34</height>
             <font>font20_title</font><textcolor>FF9CCCD1</textcolor>
-            <label>▶ $INFO[ListItem.TrackNumber,,.  ]$INFO[ListItem.Title]</label>
+            <label>&gt; $INFO[ListItem.TrackNumber,,.  ]$INFO[ListItem.Title]</label>
           </control>
         </focusedlayout>
         <content>playlistmusic://</content>

@@ -446,7 +446,9 @@ try:
         if final_skin == 'skin.aperture':
             source_keymap = Path(os.environ['KODI_HOME'])/'addons/plugin.audio.aperture.format/resources/keymaps/aperture-turntable.xml'
             wait_for('Aperture loads only its owned turntable keymap',
-                     lambda s:keymap.is_file() and keymap.read_bytes() == source_keymap.read_bytes())
+                     lambda s:keymap.is_file() and keymap.read_bytes() == source_keymap.read_bytes()
+                     and any('Loading ' in line and 'zz-aperture-turntable.xml' in line
+                             for line in (Path(os.environ['KODI_TEMP'])/'kodi.log').read_text(errors='replace').splitlines()))
         else:
             wait_for('Estuary restores original keys without owned override', lambda s:not keymap.exists())
         checks.append({'check':'skin-selection-'+name+('-accepted' if accept else '-auto-reverted'),'state':state()})
