@@ -195,10 +195,14 @@ def write_wav(path, frequency):
         output.writeframes(samples)
 
 
-def cover_png():
+COVERFLOW_COLORS = [(220, 45, 45), (45, 210, 65), (45, 70, 225),
+                    (220, 190, 40), (190, 45, 210), (40, 200, 210)]
+
+
+def cover_png(color=None):
     def chunk(kind, data):
         return struct.pack("!I", len(data)) + kind + data + struct.pack("!I", zlib.crc32(kind + data) & 0xffffffff)
-    pixels = b"".join(b"\x00" + b"".join(bytes((30 + x, 60 + y, 130)) for x in range(128)) for y in range(128))
+    pixels = b"".join(b"\x00" + b"".join(bytes(color or (30 + x, 60 + y, 130)) for x in range(128)) for y in range(128))
     return b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack("!2I5B", 128, 128, 8, 2, 0, 0, 0)) + chunk(b"IDAT", zlib.compress(pixels)) + chunk(b"IEND", b"")
 
 
@@ -335,6 +339,11 @@ def fixture_handler(config, fixture, out):
             # enter the same log. An unexpected mutation must never be invisible.
             with lock:
                 payload, mime, status = self.payload(url.path, query, identifier)
+            # Delay only synthetic covers, outside the mutation lock: emulate
+            # independent slow HTTP artwork without serializing library reads.
+            delay_file = fixture / "cover-delay.json"
+            if url.path == "/api/cover" and identifier.startswith("coverflow-track-") and delay_file.exists():
+                time.sleep(min(2.0, max(0.0, float(json.loads(delay_file.read_text())))))
             total = len(payload)
             start, end, ranged = 0, total - 1, False
             if status == 200 and url.path == "/api/audio":
@@ -417,6 +426,8 @@ def fixture_handler(config, fixture, out):
             if path == "/api/library":
                 payload, mime = (fixture / "library.json").read_bytes(), "application/json"
             elif path in ("/api/audio", "/api/cover"):
+                if path == "/api/cover" and identifier in ["coverflow-track-" + str(i) for i in range(1, 7)]:
+                    return cover_png(COVERFLOW_COLORS[int(identifier.rsplit("-", 1)[1]) - 1]), "image/png", 200
                 if identifier not in config["files"]:
                     return b"Not a fixture track", "text/plain", 404
                 elif path == "/api/cover":

@@ -180,6 +180,18 @@ def successful_recovery_request(requests, started, completed):
                and started <= row["time"] <= completed for row in requests)
 
 
+def assert_coverflow_identity(path, position):
+    """Pixel evidence, not labels: every selected sleeve has its own RGB art."""
+    colors = [(220, 45, 45), (45, 210, 65), (45, 70, 225),
+              (220, 190, 40), (190, 45, 210), (40, 200, 210)]
+    with Image.open(path) as image:
+        pixels = list(image.convert("RGB").crop((900, 450, 1020, 570)).getdata())
+    expected = colors[position - 1]
+    matching = sum(max(abs(a - b) for a, b in zip(pixel, expected)) < 30 for pixel in pixels)
+    if matching / max(1, len(pixels)) < 0.9:
+        raise AssertionError("Selected Coverflow artwork does not match album " + str(position))
+
+
 def coverflow_color_fraction(path, box, chroma=40, brightness=60):
     from PIL import Image
     pixels = list(Image.open(path).convert('RGB').crop(box).getdata())
@@ -894,7 +906,8 @@ def run(hooks):
         coverflow_library = json.loads(original_library)
         seed = coverflow_library["albums"][0]
         coverflow_library["albums"] = [dict(seed, id="coverflow-" + str(i),
-            title="SYNTHETIC QA Coverflow " + str(i)) for i in range(1, 7)]
+            title="SYNTHETIC QA Coverflow " + str(i), trackIds=["coverflow-track-" + str(i)]) for i in range(1, 7)]
+        coverflow_library["tracks"] = [dict(coverflow_library["tracks"][0], id="coverflow-track-" + str(i)) for i in range(1, 7)]
         try:
             temporary.write_text(json.dumps(coverflow_library))
             temporary.replace(library_path)
@@ -912,12 +925,14 @@ def run(hooks):
                     raise AssertionError("Coverflow navigation changed playback or lost order: " + repr(actual))
                 if i in (1, 3, 6):
                     screenshot("format-06-coverflow-" + str(i))
+                    assert_coverflow_identity(out / ('screenshots/format-06-coverflow-' + str(i) + '.png'), i)
             for i in (5, 4, 3):
                 sequence = music()["sequence"]
                 press("Left")
                 actual = settled_music("Coverflow reverse focus", lambda s: s.get("focused_title") == "SYNTHETIC QA Coverflow " + str(i), after=sequence)
             screenshot("format-06-coverflow-reversed")
             coverflow_image = out / 'screenshots/format-06-coverflow-reversed.png'
+            assert_coverflow_identity(coverflow_image, 3)
             for side, box in [('left', (240, 370, 690, 700)), ('right', (1230, 370, 1680, 700))]:
                 if coverflow_color_fraction(coverflow_image, box) < 0.10:
                     raise AssertionError('Synthetic Coverflow ' + side + ' row is missing/offscreen')

@@ -137,6 +137,16 @@ class FixtureHTTPTest(unittest.TestCase):
         self.assertEqual({row["method"] for row in self.requests()}, {"GET"})
         self.assertEqual(json.loads((self.files / "acquisitions.json").read_text()), [])
 
+    def test_coverflow_artwork_has_distinct_per_album_identity(self):
+        payloads = []
+        for i, color in enumerate(fixture.COVERFLOW_COLORS, 1):
+            status, payload = self.request("/api/cover", id="coverflow-track-" + str(i))
+            self.assertEqual(status, 200)
+            self.assertEqual(payload, fixture.cover_png(color))
+            payloads.append(payload)
+        self.assertEqual(len(set(payloads)), 6)
+        self.assertEqual(self.request("/api/cover", id="coverflow-track-7")[0], 404)
+
     def test_explicit_mock_acquisition_priority_and_cancel(self):
         status, item = self.request("/api/acquire-album", "POST", id=fixture.CATALOG_ID)
         self.assertEqual((status, item["status"], item["id"]), (202, "queued", fixture.CATALOG_ID))
