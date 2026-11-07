@@ -52,6 +52,21 @@ class MusicSkinTests(unittest.TestCase):
         listing = self.root.find('.//control[@id="63"]')
         self.assertIn('!String.IsEqual(Container.Property(Aperture.FormatView),albums)', listing.findtext('visible'))
 
+    def test_coverflow_never_crossfades_unrelated_album_identity(self):
+        art = [node for node in self.root.findall('.//control[@type="image"]')
+               if 'ListItemNoWrap' in node.findtext('texture', '')]
+        self.assertEqual(len(art), 28)
+        for node in art:
+            self.assertEqual(node.findtext('fadetime'), '0')
+            # Kodi coerces lazy+fallback into a hold-old crossfade even at zero.
+            self.assertNotEqual(node.find('texture').get('background'), 'true')
+        textures = list(self.root.iter('texture'))
+        selected = next(t for t in textures if t.text == '$INFO[Container(64).ListItem.Art(thumb)]')
+        first_wing = next(t for t in textures if 'ListItemNoWrap' in (t.text or ''))
+        self.assertLess(textures.index(selected), textures.index(first_wing))
+        self.assertEqual(selected.get('background'), 'true')
+        self.assertIsNone(selected.get('fallback'))
+
     def test_store_button_is_visible_and_remote_reachable_from_shelf(self):
         button = self.root.find('.//control[@id="66"]')
         self.assertEqual(button.findtext('label'), 'Store')

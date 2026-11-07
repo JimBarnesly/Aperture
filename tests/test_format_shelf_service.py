@@ -47,7 +47,8 @@ class ShelfServiceTests(unittest.TestCase):
         self.xbmc.getSkinDir.side_effect = ['skin.aperture', 'skin.estuary']
         with patch.dict(sys.modules, xbmcvfs=Mock(),
                         turntable_keymap=types.SimpleNamespace(TurntableKeymap=constructor)), \
-                patch.object(self.service.time, 'monotonic', side_effect=[0, 0, 2, 2]):
+                patch.object(self.service.time, 'monotonic', side_effect=[0, 2]), \
+                patch.object(self.service.IdleShelfReturn, 'update'):
             self.service.run()
         self.assertEqual([call.args for call in keymap.sync.call_args_list], [(True,), (False,)])
         keymap.close.assert_called_once_with()
@@ -75,3 +76,74 @@ class ShelfServiceTests(unittest.TestCase):
 
     def test_liner_notes_do_not_render_title_markup(self):
         self.assertEqual(self.service.album_lines(['[COLOR red]Title'], 0), '> 1.  (COLOR red)Title')
+
+    def setup_idle(self):
+        self.gui.getCurrentWindowDialogId = lambda: 9999
+        self.xbmc.getSkinDir.return_value = 'skin.aperture'
+        self.eligible = True
+        self.idle = False
+        self.xbmc.getCondVisibility.side_effect = lambda condition: (
+            self.idle if condition == 'System.IdleTime(60)' else self.eligible)
+        return self.service.IdleShelfReturn()
+
+    def test_idle_shelf_returns_at_sixty_seconds_without_touching_playback(self):
+        timer = self.setup_idle()
+        self.idle = True
+        for now in (100, 159.99):
+            timer.update(now)
+        self.xbmc.executebuiltin.assert_not_called()
+        timer.update(160)
+        self.xbmc.executebuiltin.assert_called_once_with('ActivateWindow(visualisation)')
+        timer.update(161)
+        self.xbmc.executebuiltin.assert_called_once()
+        self.xbmc.Player.assert_not_called()
+        self.xbmc.PlayList.assert_not_called()
+
+    def test_browsing_input_resets_native_idle_clock(self):
+        timer = self.setup_idle()
+        timer.update(0)
+        timer.update(65)
+        self.xbmc.executebuiltin.assert_not_called()
+        self.idle = True
+        timer.update(120)
+        self.xbmc.executebuiltin.assert_called_once_with('ActivateWindow(visualisation)')
+
+    def test_leaving_shelf_or_opening_dialog_requires_fresh_minute(self):
+        for blocked in ('window', 'dialog', 'skin', 'playback_or_view'):
+            with self.subTest(blocked=blocked):
+                self.xbmc.reset_mock()
+                timer = self.setup_idle()
+                self.gui.getCurrentWindowId = lambda: 10502
+                self.idle = True
+                timer.update(0)
+                if blocked == 'window': self.gui.getCurrentWindowId = lambda: 10000
+                if blocked == 'dialog': self.gui.getCurrentWindowDialogId = lambda: 10120
+                if blocked == 'skin': self.xbmc.getSkinDir.return_value = 'skin.estuary'
+                if blocked == 'playback_or_view': self.eligible = False
+                timer.update(61)
+                self.xbmc.executebuiltin.assert_not_called()
+                self.gui.getCurrentWindowId = lambda: 10502
+                self.gui.getCurrentWindowDialogId = lambda: 9999
+                self.xbmc.getSkinDir.return_value = 'skin.aperture'
+                self.eligible = True
+                timer.update(62)
+                timer.update(121)
+                self.xbmc.executebuiltin.assert_not_called()
+                timer.update(122)
+                self.xbmc.executebuiltin.assert_called_once()
+
+    def test_idle_gate_requires_playing_audio_only_and_format_shelf(self):
+        timer = self.setup_idle()
+        timer.update(0)
+        condition = self.xbmc.getCondVisibility.call_args.args[0]
+        for guard in ('Player.HasAudio', '!Player.HasVideo', 'Player.Playing',
+                      'Control.IsVisible(64)', 'plugin.audio.aperture.format',
+                      'Aperture.FormatView),albums'):
+            self.assertIn(guard, condition)
+
+    def test_idle_api_failure_is_safe(self):
+        timer = self.setup_idle()
+        self.xbmc.getCondVisibility.side_effect = RuntimeError('window closing')
+        timer.update(100)
+        self.assertIsNone(timer.entered_at)
+        self.xbmc.executebuiltin.assert_not_called()

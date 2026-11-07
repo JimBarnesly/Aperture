@@ -2,7 +2,8 @@
 
 Container integer infos can resolve against a neighbour while item layouts are
 being rendered. A window property gives both sides one stable selected index.
-This service never performs network requests or changes navigation/playback.
+This service never performs network requests or changes playback.
+It returns an idle album shelf to the active turntable after sixty seconds.
 It also manages one dedicated turntable-only keymap while Aperture is selected.
 """
 import time
@@ -52,6 +53,34 @@ def update_liner_notes():
         pass
 
 
+class IdleShelfReturn:
+    """Return only an unattended, playing Format shelf to its turntable."""
+    def __init__(self):
+        self.entered_at = None
+
+    def update(self, now):
+        try:
+            eligible = (xbmc.getSkinDir() == 'skin.aperture'
+                        and xbmcgui.getCurrentWindowId() == 10502
+                        and xbmcgui.getCurrentWindowDialogId() == 9999
+                        and xbmc.getCondVisibility(
+                            'Control.IsVisible(64) + '
+                            'String.IsEqual(Container.PluginName,plugin.audio.aperture.format) + '
+                            'String.IsEqual(Container.Property(Aperture.FormatView),albums) + '
+                            'Player.HasAudio + !Player.HasVideo + Player.Playing'))
+            if not eligible:
+                self.entered_at = None
+                return
+            if self.entered_at is None:
+                self.entered_at = now
+            if now - self.entered_at >= 60.0 and xbmc.getCondVisibility('System.IdleTime(60)'):
+                xbmc.executebuiltin('ActivateWindow(visualisation)')
+                # Guard against repeated requests while Kodi changes windows.
+                self.entered_at = now
+        except (RuntimeError, AttributeError):
+            self.entered_at = None
+
+
 def run():
     # Import here so the shelf helpers remain independently testable.
     from pathlib import Path
@@ -64,13 +93,16 @@ def run():
         lambda message: xbmc.log(message, xbmc.LOGWARNING))
     monitor = xbmc.Monitor()
     next_liner_update = 0.0
+    idle_return = IdleShelfReturn()
     try:
         while not monitor.abortRequested():
             update_focus()
             keymap.sync(xbmc.getSkinDir() == 'skin.aperture')
-            if time.monotonic() >= next_liner_update:
+            now = time.monotonic()
+            if now >= next_liner_update:
                 update_liner_notes()
-                next_liner_update = time.monotonic() + 1.0
+                idle_return.update(now)
+                next_liner_update = now + 1.0
             if monitor.waitForAbort(0.05):
                 break
     finally:

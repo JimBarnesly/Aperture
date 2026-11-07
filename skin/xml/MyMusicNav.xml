@@ -232,6 +232,14 @@
       </control>
       <!-- Perspective neighbours render far-to-near on both sides; the native
            fixedlist below still owns focus, playback, history and selected art. -->
+      <!-- Request the selected sleeve before the wings. Native HTTP texture
+           loading is asynchronous; do not queue fourteen neighbours first. -->
+      <control type="image">
+        <left>0</left><top>0</top><width>1</width><height>1</height>
+        <visible>Control.IsVisible(64)</visible>
+        <texture background="true">$INFO[Container(64).ListItem.Art(thumb)]</texture>
+        <colordiffuse>00FFFFFF</colordiffuse><fadetime>0</fadetime>
+      </control>
       <control type="group">
         <visible>Control.IsVisible(64) + !String.IsEmpty(Container(64).ListItemNoWrap(-7).Property(Aperture.FormatPosition))</visible>
         <left>40</left><top>325</top><width>440</width><height>460</height>
@@ -243,12 +251,12 @@
         <control type="image">
           <left>0</left><top>10</top><width>440</width><height>440</height>
           <texture fallback="DefaultAlbumCover.png">$INFO[Container(64).ListItemNoWrap(-7).Art(thumb)]</texture>
-          <aspectratio>keep</aspectratio><fadetime>180</fadetime><colordiffuse>82FFFFFF</colordiffuse>
+          <aspectratio>keep</aspectratio><fadetime>0</fadetime><colordiffuse>82FFFFFF</colordiffuse>
         </control>
         <control type="image">
           <left>0</left><top>450</top><width>440</width><height>440</height>
           <texture fallback="DefaultAlbumCover.png" flipy="true" diffuse="aperture/music/reflection-fade.png">$INFO[Container(64).ListItemNoWrap(-7).Art(thumb)]</texture>
-          <aspectratio>keep</aspectratio><fadetime>180</fadetime><colordiffuse>66FFFFFF</colordiffuse>
+          <aspectratio>keep</aspectratio><fadetime>0</fadetime><colordiffuse>66FFFFFF</colordiffuse>
         </control>
         </control>
       </control>
@@ -263,12 +271,12 @@
         <control type="image">
           <left>0</left><top>10</top><width>440</width><height>440</height>
           <texture fallback="DefaultAlbumCover.png">$INFO[Container(64).ListItemNoWrap(7).Art(thumb)]</texture>
-          <aspectratio>keep</aspectratio><fadetime>180</fadetime><colordiffuse>82FFFFFF</colordiffuse>
+          <aspectratio>keep</aspectratio><fadetime>0</fadetime><colordiffuse>82FFFFFF</colordiffuse>
         </control>
         <control type="image">
           <left>0</left><top>450</top><width>440</width><height>440</height>
           <texture fallback="DefaultAlbumCover.png" flipy="true" diffuse="aperture/music/reflection-fade.png">$INFO[Container(64).ListItemNoWrap(7).Art(thumb)]</texture>
-          <aspectratio>keep</aspectratio><fadetime>180</fadetime><colordiffuse>66FFFFFF</colordiffuse>
+          <aspectratio>keep</aspectratio><fadetime>0</fadetime><colordiffuse>66FFFFFF</colordiffuse>
         </control>
         </control>
       </control>
@@ -283,12 +291,12 @@
         <control type="image">
           <left>0</left><top>10</top><width>440</width><height>440</height>
           <texture fallback="DefaultAlbumCover.png">$INFO[Container(64).ListItemNoWrap(-6).Art(thumb)]</texture>
-          <aspectratio>keep</aspectratio><fadetime>180</fadetime><colordiffuse>91FFFFFF</colordiffuse>
+          <aspectratio>keep</aspectratio><fadetime>0</fadetime><colordiffuse>91FFFFFF</colordiffuse>
         </control>
         <control type="image">
           <left>0</left><top>450</top><width>440</width><height>440</height>
           <texture fallback="DefaultAlbumCover.png" flipy="true" diffuse="aperture/music/reflection-fade.png">$INFO[Container(64).ListItemNoWrap(-6).Art(thumb)]</texture>
-          <aspectratio>keep</aspectratio><fadetime>180</fadetime><colordiffuse>66FFFFFF</colordiffuse>
+          <aspectratio>keep</aspectratio><fadetime>0</fadetime><colordiffuse>66FFFFFF</colordiffuse>
         </control>
         </control>
       </control>
@@ -303,12 +311,12 @@
         <control type="image">
           <left>0</left><top>10</top><width>440</width><height>440</height>
           <texture fallback="DefaultAlbumCover.png">$INFO[Container(64).ListItemNoWrap(6).Art(thumb)]</texture>
-          <aspectratio>keep</aspectratio><fadetime>180</fadetime><colordiffuse>91FFFFFF</colordiffuse>
+          <aspectratio>keep</aspectratio><fadetime>0</fadetime><colordiffuse>91FFFFFF</colordiffuse>
         </control>
         <control type="image">
           <left>0</left><top>450</top><width>440</width><height>440</height>
           <texture fallback="DefaultAlbumCover.png" flipy="true" diffuse="aperture/music/reflection-fade.png">$INFO[Container(64).ListItemNoWrap(6).Art(thumb)]</texture>
-          <aspectratio>keep</aspectratio><fadetime>180</fadetime><colordiffuse>66FFFFFF</colordiffuse>
+          <aspectratio>keep</aspectratio><fadetime>0</fadetime><colordiffuse>66FFFFFF</colordiffuse>
         </control>
         </control>
       </control>
@@ -323,12 +331,12 @@
         <control type="image">
           <left>0</left><top>10</top><width>440</width><height>440</height>
           <texture fallback="DefaultAlbumCover.png">$INFO[Container(64).ListItemNoWrap(-5).Art(thumb)]</texture>
-          <aspectratio>keep</aspectratio><fadetime>180</fadetime><colordiffuse>A0FFFFFF</colordiffuse>
+          <aspectratio>keep</aspectratio><fadetime>0</fadetime><colordiffuse>A0FFFFFF</colordiffuse>
         </control>
         <control type="image">
           <left>0</left><top>450</top><width>440</width><height>440</height>
           <texture fallback="DefaultAlbumCover.png" flipy="true" diffuse="aperture/music/reflection-fade.png">$INFO[Container(64).ListItemNoWrap(-5).Art(thumb)]</texture>
-          <aspectratio>keep</aspectratio><fadetime>180</fadetime><colordiffuse>66FFFFFF</colordiffuse>
+          <aspectratio>keep</aspectratio><fadetime>0</fadetime><colordiffuse>66FFFFFF</colordiffuse>
         </control>
         </control>
       </control>
@@ -343,12 +351,12 @@
         <control type="image">
           <left>0</left><top>10</top><width>440</width><height>440</height>
           <texture fallback="DefaultAlbumCover.png">$INFO[Container(64).ListItemNoWrap(5).Art(thumb)]</texture>
-          <aspectratio>keep</aspectratio><fadetime>180</fadetime><colordiffuse>A0FFFFFF</colordiffuse>
+          <aspectratio>keep</aspectratio><fadetime>0</fadetime><colordiffuse>A0FFFFFF</colordiffuse>
         </control>
         <control type="image">
           <left>0</left><top>450</top><width>440</width><height>440</height>
           <texture fallback="DefaultAlbumCover.png" flipy="true" diffuse="aperture/music/reflection-fade.png">$INFO[Container(64).ListItemNoWrap(5).Art(thumb)]</texture>
-          <aspectratio>keep</aspectratio><fadetime>180</fadetime><colordiffuse>66FFFFFF</colordiffuse>
+          <aspectratio>keep</aspectratio><fadetime>0</fadetime><colordiffuse>66FFFFFF</colordiffuse>
         </control>
         </control>
       </control>
@@ -363,12 +371,12 @@
         <control type="image">
           <left>0</left><top>10</top><width>440</width><height>440</height>
           <texture fallback="DefaultAlbumCover.png">$INFO[Container(64).ListItemNoWrap(-4).Art(thumb)]</texture>
-          <aspectratio>keep</aspectratio><fadetime>180</fadetime><colordiffuse>AFFFFFFF</colordiffuse>
+          <aspectratio>keep</aspectratio><fadetime>0</fadetime><colordiffuse>AFFFFFFF</colordiffuse>
         </control>
         <control type="image">
           <left>0</left><top>450</top><width>440</width><height>440</height>
           <texture fallback="DefaultAlbumCover.png" flipy="true" diffuse="aperture/music/reflection-fade.png">$INFO[Container(64).ListItemNoWrap(-4).Art(thumb)]</texture>
-          <aspectratio>keep</aspectratio><fadetime>180</fadetime><colordiffuse>66FFFFFF</colordiffuse>
+          <aspectratio>keep</aspectratio><fadetime>0</fadetime><colordiffuse>66FFFFFF</colordiffuse>
         </control>
         </control>
       </control>
@@ -383,12 +391,12 @@
         <control type="image">
           <left>0</left><top>10</top><width>440</width><height>440</height>
           <texture fallback="DefaultAlbumCover.png">$INFO[Container(64).ListItemNoWrap(4).Art(thumb)]</texture>
-          <aspectratio>keep</aspectratio><fadetime>180</fadetime><colordiffuse>AFFFFFFF</colordiffuse>
+          <aspectratio>keep</aspectratio><fadetime>0</fadetime><colordiffuse>AFFFFFFF</colordiffuse>
         </control>
         <control type="image">
           <left>0</left><top>450</top><width>440</width><height>440</height>
           <texture fallback="DefaultAlbumCover.png" flipy="true" diffuse="aperture/music/reflection-fade.png">$INFO[Container(64).ListItemNoWrap(4).Art(thumb)]</texture>
-          <aspectratio>keep</aspectratio><fadetime>180</fadetime><colordiffuse>66FFFFFF</colordiffuse>
+          <aspectratio>keep</aspectratio><fadetime>0</fadetime><colordiffuse>66FFFFFF</colordiffuse>
         </control>
         </control>
       </control>
@@ -403,12 +411,12 @@
         <control type="image">
           <left>0</left><top>10</top><width>440</width><height>440</height>
           <texture fallback="DefaultAlbumCover.png">$INFO[Container(64).ListItemNoWrap(-3).Art(thumb)]</texture>
-          <aspectratio>keep</aspectratio><fadetime>180</fadetime><colordiffuse>BEFFFFFF</colordiffuse>
+          <aspectratio>keep</aspectratio><fadetime>0</fadetime><colordiffuse>BEFFFFFF</colordiffuse>
         </control>
         <control type="image">
           <left>0</left><top>450</top><width>440</width><height>440</height>
           <texture fallback="DefaultAlbumCover.png" flipy="true" diffuse="aperture/music/reflection-fade.png">$INFO[Container(64).ListItemNoWrap(-3).Art(thumb)]</texture>
-          <aspectratio>keep</aspectratio><fadetime>180</fadetime><colordiffuse>66FFFFFF</colordiffuse>
+          <aspectratio>keep</aspectratio><fadetime>0</fadetime><colordiffuse>66FFFFFF</colordiffuse>
         </control>
         </control>
       </control>
@@ -423,12 +431,12 @@
         <control type="image">
           <left>0</left><top>10</top><width>440</width><height>440</height>
           <texture fallback="DefaultAlbumCover.png">$INFO[Container(64).ListItemNoWrap(3).Art(thumb)]</texture>
-          <aspectratio>keep</aspectratio><fadetime>180</fadetime><colordiffuse>BEFFFFFF</colordiffuse>
+          <aspectratio>keep</aspectratio><fadetime>0</fadetime><colordiffuse>BEFFFFFF</colordiffuse>
         </control>
         <control type="image">
           <left>0</left><top>450</top><width>440</width><height>440</height>
           <texture fallback="DefaultAlbumCover.png" flipy="true" diffuse="aperture/music/reflection-fade.png">$INFO[Container(64).ListItemNoWrap(3).Art(thumb)]</texture>
-          <aspectratio>keep</aspectratio><fadetime>180</fadetime><colordiffuse>66FFFFFF</colordiffuse>
+          <aspectratio>keep</aspectratio><fadetime>0</fadetime><colordiffuse>66FFFFFF</colordiffuse>
         </control>
         </control>
       </control>
@@ -443,12 +451,12 @@
         <control type="image">
           <left>0</left><top>10</top><width>440</width><height>440</height>
           <texture fallback="DefaultAlbumCover.png">$INFO[Container(64).ListItemNoWrap(-2).Art(thumb)]</texture>
-          <aspectratio>keep</aspectratio><fadetime>180</fadetime><colordiffuse>CDFFFFFF</colordiffuse>
+          <aspectratio>keep</aspectratio><fadetime>0</fadetime><colordiffuse>CDFFFFFF</colordiffuse>
         </control>
         <control type="image">
           <left>0</left><top>450</top><width>440</width><height>440</height>
           <texture fallback="DefaultAlbumCover.png" flipy="true" diffuse="aperture/music/reflection-fade.png">$INFO[Container(64).ListItemNoWrap(-2).Art(thumb)]</texture>
-          <aspectratio>keep</aspectratio><fadetime>180</fadetime><colordiffuse>66FFFFFF</colordiffuse>
+          <aspectratio>keep</aspectratio><fadetime>0</fadetime><colordiffuse>66FFFFFF</colordiffuse>
         </control>
         </control>
       </control>
@@ -463,12 +471,12 @@
         <control type="image">
           <left>0</left><top>10</top><width>440</width><height>440</height>
           <texture fallback="DefaultAlbumCover.png">$INFO[Container(64).ListItemNoWrap(2).Art(thumb)]</texture>
-          <aspectratio>keep</aspectratio><fadetime>180</fadetime><colordiffuse>CDFFFFFF</colordiffuse>
+          <aspectratio>keep</aspectratio><fadetime>0</fadetime><colordiffuse>CDFFFFFF</colordiffuse>
         </control>
         <control type="image">
           <left>0</left><top>450</top><width>440</width><height>440</height>
           <texture fallback="DefaultAlbumCover.png" flipy="true" diffuse="aperture/music/reflection-fade.png">$INFO[Container(64).ListItemNoWrap(2).Art(thumb)]</texture>
-          <aspectratio>keep</aspectratio><fadetime>180</fadetime><colordiffuse>66FFFFFF</colordiffuse>
+          <aspectratio>keep</aspectratio><fadetime>0</fadetime><colordiffuse>66FFFFFF</colordiffuse>
         </control>
         </control>
       </control>
@@ -483,12 +491,12 @@
         <control type="image">
           <left>0</left><top>10</top><width>440</width><height>440</height>
           <texture fallback="DefaultAlbumCover.png">$INFO[Container(64).ListItemNoWrap(-1).Art(thumb)]</texture>
-          <aspectratio>keep</aspectratio><fadetime>180</fadetime><colordiffuse>DCFFFFFF</colordiffuse>
+          <aspectratio>keep</aspectratio><fadetime>0</fadetime><colordiffuse>DCFFFFFF</colordiffuse>
         </control>
         <control type="image">
           <left>0</left><top>450</top><width>440</width><height>440</height>
           <texture fallback="DefaultAlbumCover.png" flipy="true" diffuse="aperture/music/reflection-fade.png">$INFO[Container(64).ListItemNoWrap(-1).Art(thumb)]</texture>
-          <aspectratio>keep</aspectratio><fadetime>180</fadetime><colordiffuse>66FFFFFF</colordiffuse>
+          <aspectratio>keep</aspectratio><fadetime>0</fadetime><colordiffuse>66FFFFFF</colordiffuse>
         </control>
         </control>
       </control>
@@ -503,12 +511,12 @@
         <control type="image">
           <left>0</left><top>10</top><width>440</width><height>440</height>
           <texture fallback="DefaultAlbumCover.png">$INFO[Container(64).ListItemNoWrap(1).Art(thumb)]</texture>
-          <aspectratio>keep</aspectratio><fadetime>180</fadetime><colordiffuse>DCFFFFFF</colordiffuse>
+          <aspectratio>keep</aspectratio><fadetime>0</fadetime><colordiffuse>DCFFFFFF</colordiffuse>
         </control>
         <control type="image">
           <left>0</left><top>450</top><width>440</width><height>440</height>
           <texture fallback="DefaultAlbumCover.png" flipy="true" diffuse="aperture/music/reflection-fade.png">$INFO[Container(64).ListItemNoWrap(1).Art(thumb)]</texture>
-          <aspectratio>keep</aspectratio><fadetime>180</fadetime><colordiffuse>66FFFFFF</colordiffuse>
+          <aspectratio>keep</aspectratio><fadetime>0</fadetime><colordiffuse>66FFFFFF</colordiffuse>
         </control>
         </control>
       </control>

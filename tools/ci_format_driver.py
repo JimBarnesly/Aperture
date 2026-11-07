@@ -811,6 +811,11 @@ def run(hooks):
         samples = [json.loads(line) for line in (out / "format-states.jsonl").read_text().splitlines()]
         checks.append({"check":"music-info-overlay-absent-through-playback-controls-and-seeking",
                        "observed_frames":assert_no_music_info_overlay(samples, load_sequence, pid)})
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('ci_shelf_idle', Path(__file__).with_name('ci_shelf_idle.py'))
+        idle_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(idle_module)
+        actual = idle_module.exercise_idle_return(press, wait_music, music, screenshot, checks)
         sequence = actual["sequence"]
         press("x")
         wait_music("Stop synthetic playback", lambda s: s.get("player") is None, after=sequence)
@@ -908,6 +913,8 @@ def run(hooks):
         coverflow_library["albums"] = [dict(seed, id="coverflow-" + str(i),
             title="SYNTHETIC QA Coverflow " + str(i), trackIds=["coverflow-track-" + str(i)]) for i in range(1, 7)]
         coverflow_library["tracks"] = [dict(coverflow_library["tracks"][0], id="coverflow-track-" + str(i)) for i in range(1, 7)]
+        delay_path = runtime / "format-fixture/cover-delay.json"
+        delay_path.write_text("0.6")
         try:
             temporary.write_text(json.dumps(coverflow_library))
             temporary.replace(library_path)
@@ -939,6 +946,17 @@ def run(hooks):
             if coverflow_color_fraction(coverflow_image, (800, 800, 1100, 815), 20, 35) < 0.20:
                 raise AssertionError('Selected sleeve floor reflection is missing or inverted')
             checks.append({"check":"coverflow-six-albums-forward-backward-no-playback", "state":actual})
+            # Burst across already warmed artwork, reversing before the normal
+            # animation finishes. Assert actual final sleeve pixels and queue.
+            for key in ("Right", "Right", "Left", "Right", "Left", "Left"):
+                press(key)
+            actual = settled_music("Rapid Coverflow reversal settles on album three",
+                lambda s: s.get("focused_title") == "SYNTHETIC QA Coverflow 3")
+            screenshot("format-06-coverflow-rapid-reversal")
+            assert_coverflow_identity(out / 'screenshots/format-06-coverflow-rapid-reversal.png', 3)
+            if actual.get("queue") != baseline_queue or actual.get("player") is not None:
+                raise AssertionError("Rapid Coverflow browse changed playback")
+            checks.append({"check":"distinct-art-delayed-load-and-rapid-reversal", "cover_delay_seconds":0.6})
             return_home()
             # A long release must retain every liner-note row and scroll without
             # exposing playlist editing or interrupting the playing album.
@@ -976,6 +994,7 @@ def run(hooks):
             wait_music('Long album test stopped', lambda s: s.get('player') is None)
             return_home()
         finally:
+            delay_path.unlink(missing_ok=True)
             temporary.write_bytes(original_library)
             temporary.replace(library_path)
         result = {"status":"passed", "label":"SYNTHETIC QA", "checks":checks,

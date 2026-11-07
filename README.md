@@ -37,7 +37,8 @@ Use the complete, tested ZIPs from the candidate kit or matching CI artifact:
    Configure Format server to set the reachable server address.
    Select an album to play the complete release in disc/track order and open
    the native turntable without the file-info popup, including during seek/pause.
-   Captions read track name, album, then artist. Down/Up on the
+   Captions read track name, album, then artist. While music is playing, the album
+   shelf returns to the turntable after one minute without input. Down/Up on the
    keyboard or remote use next/previous track while in fullscreen music. Long-press (or press C) and choose **Browse tracks**
    when you want a particular track. Music is one Format library, without a separate
    local/streaming choice. See [Format integration](docs/format-integration.md)
