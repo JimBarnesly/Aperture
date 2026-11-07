@@ -15,9 +15,8 @@ def update_focus():
     try:
         if xbmcgui.getCurrentWindowId() != 10502:
             return
-        shelf = xbmcgui.Window(10502).getControl(64)
-        item = shelf.getSelectedItem()
-        position = item.getProperty('Aperture.FormatPosition') if item else ''
+        position = xbmc.getInfoLabel(
+            'Container(64).ListItem.Property(Aperture.FormatPosition)')
         if position.isdigit() and home.getProperty(PROPERTY) != position:
             home.setProperty(PROPERTY, position)
     except (RuntimeError, AttributeError):
