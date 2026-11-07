@@ -31,7 +31,7 @@ class MusicSkinTests(unittest.TestCase):
         self.assertEqual({turn.get('end') for turn in turns}, {'45', '-45'})
         for turn in turns:
             self.assertEqual(turn.get('center'), '220,0')
-            self.assertIn('Container(64).CurrentItem', turn.get('condition'))
+            self.assertIn('Window(10000).Property(Aperture.FormatSelectedPosition)', turn.get('condition'))
             self.assertNotIn('Container(64).ListItem', turn.get('condition'))
         # Native container remains responsible for playback and navigation.
         self.assertIsNone(shelf.find('onclick'))
@@ -50,6 +50,13 @@ class MusicSkinTests(unittest.TestCase):
         playing = self.root.find('.//control[@id="65"]')
         self.assertIn(('Control.IsVisible(64)', '66'), [(n.get('condition'), n.text) for n in playing.findall('onleft')])
         self.assertEqual(button.findtext('onup'), '64')
+
+    def test_main_shelf_back_explicitly_returns_home_even_in_fresh_profile(self):
+        for identifier in ('64', '65', '66'):
+            action = self.root.find('.//control[@id="' + identifier + '"]/onback')
+            self.assertEqual(action.text, 'ActivateWindow(Home)')
+            self.assertEqual(action.get('condition'), 'String.IsEqual(Container.FolderPath,plugin://plugin.audio.aperture.format/?action=albums)')
+        self.assertIsNone(self.root.find('.//control[@id="63"]/onback'))
 
     def test_native_music_fallback_and_notice_remain(self):
         views = set(self.root.findtext('views').split(','))

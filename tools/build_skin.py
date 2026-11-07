@@ -155,7 +155,8 @@ def package_format(source: Path, output: Path):
     addon_id = manifest.get('id')
     if addon_id != 'plugin.audio.aperture.format':
         raise ValueError('Wrong Format add-on ID')
-    ast.parse((source / 'addon.py').read_text(encoding='utf-8'))
+    for script in source.rglob('*.py'):
+        ast.parse(script.read_text(encoding='utf-8'))
     ET.parse(source / 'resources/settings.xml')
     output.parent.mkdir(parents=True, exist_ok=True)
     files = {p.relative_to(source).as_posix(): p.read_bytes() for p in source.rglob('*')

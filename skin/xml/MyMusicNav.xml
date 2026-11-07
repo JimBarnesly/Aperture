@@ -228,6 +228,7 @@
       <!-- Native Coverflow: a centered, non-wrapping selection with angled
            neighbours. The real Kodi container still owns focus, clicks and Back. -->
       <control type="fixedlist" id="64">
+        <onback condition="String.IsEqual(Container.FolderPath,plugin://plugin.audio.aperture.format/?action=albums)">ActivateWindow(Home)</onback>
         <left>-140</left><top>325</top><width>2200</width><height>600</height>
         <orientation>horizontal</orientation>
         <viewtype label="Coverflow">list</viewtype>
@@ -240,11 +241,9 @@
           <control type="group">
             <left>0</left><top>0</top><width>440</width><height>460</height>
             <animation effect="zoom" start="82" end="82" center="220,230" time="0" condition="true">Conditional</animation>
-            <!-- CurrentItem is a container value, independent of the item's
-                 render context. Container.ListItem would resolve to this same
-                 neighbouring item inside an Integer comparison in Kodi. -->
-            <animation effect="rotatey" start="45" end="45" center="220,0" time="0" condition="Integer.IsLess(ListItem.Property(Aperture.FormatPosition),Container(64).CurrentItem)">Conditional</animation>
-            <animation effect="rotatey" start="-45" end="-45" center="220,0" time="0" condition="Integer.IsGreater(ListItem.Property(Aperture.FormatPosition),Container(64).CurrentItem)">Conditional</animation>
+            <!-- Global selected position is published outside item rendering. -->
+            <animation effect="rotatey" start="45" end="45" center="220,0" time="0" condition="Integer.IsLess(ListItem.Property(Aperture.FormatPosition),Window(10000).Property(Aperture.FormatSelectedPosition))">Conditional</animation>
+            <animation effect="rotatey" start="-45" end="-45" center="220,0" time="0" condition="Integer.IsGreater(ListItem.Property(Aperture.FormatPosition),Window(10000).Property(Aperture.FormatSelectedPosition))">Conditional</animation>
             <control type="image">
               <left>0</left><top>10</top><width>440</width><height>440</height>
               <texture fallback="DefaultAlbumCover.png">$INFO[ListItem.Art(thumb)]</texture>
@@ -306,6 +305,7 @@
         <align>right</align>
       </control>
       <control type="button" id="66">
+        <onback condition="String.IsEqual(Container.FolderPath,plugin://plugin.audio.aperture.format/?action=albums)">ActivateWindow(Home)</onback>
         <left>1050</left><top>980</top><width>350</width><height>56</height>
         <label>Store</label><font>font27</font><align>center</align>
         <textcolor>FF9CCCD1</textcolor><focusedcolor>FF080D13</focusedcolor>
@@ -318,6 +318,7 @@
         <onright condition="!Player.HasAudio">64</onright>
       </control>
       <control type="button" id="65">
+        <onback condition="String.IsEqual(Container.FolderPath,plugin://plugin.audio.aperture.format/?action=albums)">ActivateWindow(Home)</onback>
         <left>1450</left>
         <top>980</top>
         <width>390</width>
