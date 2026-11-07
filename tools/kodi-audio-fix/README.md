@@ -8,6 +8,7 @@ Unqualified diagnostic build, not a rollout. No skin or addon changes. Hermes ow
 - Only code delta: two failed-open cleanup calls in GameClientStreams.cpp, taken from upstream 5fa857c3c34bd758a7ad364c3f0a8bc03df1e17e. The broader commit is not applied.
 - Local package version: `3:21.3+dfsg-1+rpt3+ff9fix1`.
 - Native `ubuntu-24.04-arm` runner; official Debian 13 ARM64 container pinned by digest. Debian and security archives use the 20261107 snapshot with signed metadata verification; snapshot Valid-Until expiry is deliberately disabled, not signature checking.
+- The official `raspberrypi-archive-keyring_2025.1+rpt1_all.deb` is SHA256-pinned. Its refreshed SHA-512 self-certifications work with strict current APT/sqv policy; the obsolete standalone key URL is not used. No cryptographic policy override is applied.
 - RPi repository key pinned to CF8A1AF502A2AA2D763BAE7E82B129927FA3303E. RPi has no selected immutable snapshot, so each build retains authenticated apt indexes, dependency versions and downloaded package bytes. Re-running later against live RPi repos can resolve different dependencies. A successful run is not proof of byte-identical reproducibility; that requires another clean build using the retained dependency set.
 - Distribution build rules, RelWithDebInfo, debug-symbol generation and `kodi-test`/`dh_auto_test` are preserved. No nocheck, ignored dependencies or tests are added. Existing distro skips remain and must be reported from logs.
 

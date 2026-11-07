@@ -3,15 +3,17 @@
 import gzip
 import hashlib
 from pathlib import Path
-import re
 import subprocess
 import sys
+import tempfile
 root = Path(__file__).resolve().parent
 p = root / 'provenance'
 keyring = Path(sys.argv[1]).resolve()
-subprocess.run(['gpg', '--batch', '--no-default-keyring', '--keyring', str(keyring),
-                '--verify', str(p / 'InRelease')], check=True)
-release = (p / 'InRelease').read_text()
+with tempfile.TemporaryDirectory() as temp:
+    verified = Path(temp) / 'Release'
+    subprocess.run(['sqv', '--keyring', str(keyring), '--cleartext',
+                    '--output', str(verified), str(p / 'InRelease')], check=True)
+    release = verified.read_text()
 section = release.split('\nSHA256:\n', 1)[1].split('\nSHA512:', 1)[0]
 entries = [line.split() for line in section.splitlines() if line.strip()]
 entry = next(row for row in entries if len(row) == 3 and row[2] == 'main/source/Sources.gz')

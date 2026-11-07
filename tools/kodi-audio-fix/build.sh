@@ -29,10 +29,16 @@ rm -f /etc/apt/apt.conf.d/docker-clean
 printf 'APT::Keep-Downloaded-Packages "true";\nBinary::apt::APT::Keep-Downloaded-Packages "true";\n' > /etc/apt/apt.conf.d/keep-packages
 apt-get update
 apt-get install -y --no-install-recommends ca-certificates curl gnupg build-essential devscripts equivs python3 xz-utils
-curl --fail --location --retry 3 https://archive.raspberrypi.com/debian/raspberrypi.gpg.key -o /tmp/rpi.asc
-fingerprint=$(gpg --show-keys --with-colons /tmp/rpi.asc | awk -F: '$1=="fpr" {print $10; exit}')
+# The legacy standalone key endpoint has SHA-1 self-certifications rejected by
+# current APT. Use the official refreshed keyring with unchanged fingerprint.
+curl --fail --location --retry 3 https://archive.raspberrypi.com/debian/pool/main/r/raspberrypi-archive-keyring/raspberrypi-archive-keyring_2025.1+rpt1_all.deb -o /tmp/rpi-keyring.deb
+printf '2e727149d7acb8cc7f604e66d0049161039c8aa1eaf1175e54f9e69d963d60e4  /tmp/rpi-keyring.deb\n' | sha256sum --check
+dpkg-deb -x /tmp/rpi-keyring.deb /tmp/rpi-keyring
+KEY=/tmp/rpi-keyring/usr/share/keyrings/raspberrypi-archive-keyring.pgp
+fingerprint=$(gpg --show-keys --with-colons "$KEY" | awk -F: '$1=="fpr" {print $10; exit}')
 test "$fingerprint" = CF8A1AF502A2AA2D763BAE7E82B129927FA3303E
-gpg --dearmor --output /usr/share/keyrings/raspberrypi-archive.gpg /tmp/rpi.asc
+cp "$KEY" /usr/share/keyrings/raspberrypi-archive.gpg
+cp /tmp/rpi-keyring.deb "$OUT/raspberrypi-archive-keyring_2025.1+rpt1_all.deb"
 cat >> /etc/apt/sources.list <<'APT'
 deb [signed-by=/usr/share/keyrings/raspberrypi-archive.gpg] https://archive.raspberrypi.com/debian/ trixie main
 APT
@@ -40,7 +46,7 @@ apt-get update
 python3 "$TOOLS/verify_source_provenance.py" /usr/share/keyrings/raspberrypi-archive.gpg
 cp -a "$TOOLS/provenance" "$OUT/source-provenance"
 cp /etc/apt/sources.list "$OUT/apt-sources.list"
-cp /tmp/rpi.asc "$OUT/raspberrypi-archive-key.asc"
+cp "$KEY" "$OUT/raspberrypi-archive-keyring.pgp"
 cd "$WORK"
 while read -r hash filename; do
   curl --fail --location --retry 3 "https://archive.raspberrypi.com/debian/pool/main/k/kodi/$filename" -o "$filename"
