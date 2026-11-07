@@ -38,6 +38,33 @@ class ShelfServiceTests(unittest.TestCase):
         self.service.update_focus()
         self.home.setProperty.assert_not_called()
 
+    def test_service_syncs_skin_changes_and_cleans_up_on_abort(self):
+        keymap = Mock()
+        constructor = Mock(return_value=keymap)
+        monitor = self.xbmc.Monitor.return_value
+        monitor.abortRequested.return_value = False
+        monitor.waitForAbort.side_effect = [False, True]
+        self.xbmc.getSkinDir.side_effect = ['skin.aperture', 'skin.estuary']
+        with patch.dict(sys.modules, xbmcvfs=Mock(),
+                        turntable_keymap=types.SimpleNamespace(TurntableKeymap=constructor)), \
+                patch.object(self.service.time, 'monotonic', side_effect=[0, 0, 2, 2]):
+            self.service.run()
+        self.assertEqual([call.args for call in keymap.sync.call_args_list], [(True,), (False,)])
+        keymap.close.assert_called_once_with()
+        # Reload is the sole built-in, and is delegated to changed keymap state.
+        constructor.call_args.args[2]()
+        self.xbmc.executebuiltin.assert_called_once_with('ReloadKeymaps')
+
+    def test_service_removes_owned_binding_if_an_unexpected_error_stops_it(self):
+        keymap = Mock()
+        self.xbmc.Monitor.return_value.abortRequested.return_value = False
+        with patch.dict(sys.modules, xbmcvfs=Mock(),
+                        turntable_keymap=types.SimpleNamespace(TurntableKeymap=Mock(return_value=keymap))), \
+                patch.object(self.service, 'update_focus', side_effect=ValueError('test error')):
+            with self.assertRaisesRegex(ValueError, 'test error'):
+                self.service.run()
+        keymap.close.assert_called_once_with()
+
     def test_long_album_liner_notes_keep_every_track_and_current_marker(self):
         titles = ['Track ' + str(i) for i in range(1, 25)]
         lines = self.service.album_lines(titles, 12).splitlines()

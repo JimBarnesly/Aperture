@@ -16,6 +16,18 @@ spec.loader.exec_module(driver)
 
 
 class DriverTest(unittest.TestCase):
+    def test_clean_track_load_checks_transient_history_not_only_last_frame(self):
+        first = dict(pid=12, sequence=9, window=12006, nowplaying_visible=True,
+                     player_show_info=True, native_seekbar_visible=False, native_topbar_visible=False)
+        clean = dict(first, sequence=10, player_show_info=False)
+        self.assertEqual(driver.assert_clean_track_load([first, clean], 8, 12), 2)
+        for popup in ('native_seekbar_visible', 'native_topbar_visible'):
+            with self.assertRaisesRegex(AssertionError, 'appeared'):
+                driver.assert_clean_track_load([dict(first, **{popup:True}), clean], 8, 12)
+        for missing in ([], [clean], [dict(first, pid=11)], [dict(first, sequence=8)]):
+            with self.assertRaisesRegex(AssertionError, 'Missing evidence'):
+                driver.assert_clean_track_load(missing, 8, 12)
+
     def test_stopped_track_returns_to_real_parent_without_reopening_window(self):
         current = {"window":10502, "dialog":9999,
                    "folder":"plugin://plugin.audio.aperture.format/?action=album&album_id=fixture"}

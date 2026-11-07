@@ -24,17 +24,23 @@ class MusicSkinTests(unittest.TestCase):
             self.assertEqual(list(view.iter('onclick')), [])
         shelf = self.root.find('.//control[@id="64"]')
         self.assertEqual(shelf.get('type'), 'fixedlist')
-        self.assertEqual(shelf.findtext('focusposition'), '4')
+        self.assertEqual(shelf.findtext('focusposition'), '2')
         self.assertEqual(shelf.findtext('movement'), '0')
         self.assertEqual(shelf.find('viewtype').get('label'), 'Coverflow')
-        turns = shelf.findall('./itemlayout/control/animation[@effect="rotatey"]')
-        self.assertEqual({turn.get('end') for turn in turns}, {'45', '-45'})
-        for turn in turns:
-            self.assertEqual(turn.get('center'), '220,0')
-            self.assertEqual(turn.get('start'), '0')
-            self.assertEqual(turn.get('time'), '200')
-            self.assertIn('Window(10000).Property(Aperture.FormatSelectedPosition)', turn.get('condition'))
-            self.assertNotIn('Container(64).ListItem', turn.get('condition'))
+        self.assertEqual(shelf.find('itemlayout').get('width'), '440')
+        self.assertEqual(list(shelf.find('itemlayout')), [])
+        neighbours = [node for node in self.root.findall('.//control[@type="group"]')
+                      if 'ListItemNoWrap' in node.findtext('visible', '')]
+        self.assertEqual(len(neighbours), 14)
+        for node in neighbours:
+            turn = node.find('./animation[@effect="rotatey"]')
+            expected = '-45' if 'ListItemNoWrap(-' in node.findtext('visible') else '45'
+            self.assertEqual(turn.get('end'), expected)
+            self.assertIn('Aperture.FormatPosition', node.findtext('visible'))
+            self.assertIsNotNone(node.find('.//texture[@flipy="true"]'))
+        # Near sleeves draw after far sleeves on each side.
+        self.assertIn('ListItemNoWrap(-7)', neighbours[0].findtext('visible'))
+        self.assertIn('ListItemNoWrap(1)', neighbours[-1].findtext('visible'))
         # Native container remains responsible for playback and navigation.
         self.assertIsNone(shelf.find('onclick'))
         self.assertEqual(shelf.findtext('orientation'), 'horizontal')

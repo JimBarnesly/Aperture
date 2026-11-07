@@ -4,7 +4,23 @@ Aperture's music player now uses a native Kodi turntable presentation. The
 record displays actual current-track artwork, with a local fallback when art is
 missing. It rotates during playback, stops on pause, and shows current metadata
 and progress. Kodi remains the sole audio player; Select opens its existing
-music playback controls. No browser, second player, network-facing service or
+music playback controls. The automatic track-load file-info banner is suppressed
+on this screen; explicit pause, seek, playback controls and process information
+remain available. Video overlays, errors and notifications are unchanged.
+
+Down goes to the next track and Up goes to the previous track in one press,
+even partway through a song. Up on the first track restarts it without wrapping.
+The Up action checks the active audio/music queue and asks Kodi to move within
+it; it never replaces or fetches the queue.
+Both keyboard and remote bindings apply only to fullscreen music, not the album
+shelf or the playback-control dialog. Format's existing service loads one owned
+`zz-aperture-turntable.xml` profile keymap while Aperture is selected and removes
+it on skin change or service shutdown only when its content is still unchanged.
+It does not edit other keymaps or overwrite a same-name custom file. As with any
+Kodi keymap, a later user/device mapping can take precedence. The shell installer
+only packages the binding; it does not write into the user's keymap directory.
+
+No browser, second player, network-facing service or
 background library scan is added.
 
 Selecting an album plays the complete ordered release and opens the turntable
@@ -26,7 +42,8 @@ Unit tests check native player bindings, bounded presentation/navigation guards,
 packaging, artwork masks and deterministic generated textures. The isolated
 real-Kodi workflow checks full-resolution screenshots, changing record pixels
 while playing and stable record pixels while paused, playback controls, Back,
-reopening without changing position/queue, next/previous, missing artwork and
+reopening without changing position/queue, Up/Down next/previous, clean startup
+and track changes, keymap install/removal on skin switches, missing artwork and
 selected-track playback. The native ZIP phase selects **Exit** from the actual
 power menu, requires the original process to exit with status 0, then relaunches
 the same profile. Forced termination is only failure cleanup, never acceptance.

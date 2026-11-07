@@ -3,6 +3,7 @@
 Container integer infos can resolve against a neighbour while item layouts are
 being rendered. A window property gives both sides one stable selected index.
 This service never performs network requests or changes navigation/playback.
+It also manages one dedicated turntable-only keymap while Aperture is selected.
 """
 import time
 
@@ -52,15 +53,28 @@ def update_liner_notes():
 
 
 def run():
+    # Import here so the shelf helpers remain independently testable.
+    from pathlib import Path
+    import xbmcvfs
+    from turntable_keymap import TurntableKeymap
+    keymap = TurntableKeymap(
+        xbmcvfs.translatePath('special://profile/keymaps/'),
+        Path(__file__).parent / 'resources/keymaps/aperture-turntable.xml',
+        lambda: xbmc.executebuiltin('ReloadKeymaps'),
+        lambda message: xbmc.log(message, xbmc.LOGWARNING))
     monitor = xbmc.Monitor()
     next_liner_update = 0.0
-    while not monitor.abortRequested():
-        update_focus()
-        if time.monotonic() >= next_liner_update:
-            update_liner_notes()
-            next_liner_update = time.monotonic() + 1.0
-        if monitor.waitForAbort(0.05):
-            break
+    try:
+        while not monitor.abortRequested():
+            update_focus()
+            keymap.sync(xbmc.getSkinDir() == 'skin.aperture')
+            if time.monotonic() >= next_liner_update:
+                update_liner_notes()
+                next_liner_update = time.monotonic() + 1.0
+            if monitor.waitForAbort(0.05):
+                break
+    finally:
+        keymap.close()
 
 
 if __name__ == '__main__':

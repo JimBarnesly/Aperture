@@ -79,6 +79,69 @@ class FormatTest(unittest.TestCase):
     def assert_directory_result(self, succeeded):
         self.xbmcplugin.endOfDirectory.assert_called_once_with(7, succeeded=succeeded, cacheToDisc=False)
 
+    def ready_turntable_previous(self, position=2, count=4):
+        self.xbmc.getSkinDir.return_value = 'skin.aperture'
+        self.xbmcgui.getCurrentWindowId.return_value = 12006
+        self.xbmcgui.getCurrentWindowDialogId.return_value = 9999
+        self.xbmc.Player.return_value.isPlayingAudio.return_value = True
+        self.xbmc.PlayList.return_value.size.return_value = count
+        self.xbmc.executeJSONRPC.return_value = json.dumps({'result':{'playlistid':0, 'position':position}})
+
+    def test_up_uses_guarded_native_previous_offset_without_network_or_queue_replace(self):
+        self.ready_turntable_previous()
+        self.run_action('turntable_previous', handle=-1)
+        self.xbmc.executebuiltin.assert_called_once_with('Playlist.PlayOffset(music,-1)')
+        rpc = json.loads(self.xbmc.executeJSONRPC.call_args.args[0])
+        self.assertEqual(rpc['method'], 'Player.GetProperties')
+        self.assertEqual(rpc['params'], {'playerid':0, 'properties':['playlistid', 'position']})
+        self.urlopen.assert_not_called()
+        self.xbmc.PlayList.return_value.clear.assert_not_called()
+        self.xbmc.PlayList.return_value.add.assert_not_called()
+        self.xbmc.Player.return_value.play.assert_not_called()
+        self.xbmcplugin.endOfDirectory.assert_not_called()
+        self.xbmcgui.Dialog.assert_not_called()
+
+    def test_up_at_first_track_uses_zero_offset_without_wrapping(self):
+        for count in (1, 4):
+            self.ready_turntable_previous(position=0, count=count)
+            self.assertTrue(self.addon.previous_turntable_track())
+            self.xbmc.executebuiltin.assert_called_with('Playlist.PlayOffset(music,0)')
+        self.assertEqual(self.xbmc.executebuiltin.call_count, 2)
+
+    def test_up_rechecks_skin_window_dialog_and_audio_after_key_press(self):
+        for target, value in ((self.xbmc.getSkinDir, 'skin.estuary'),
+                              (self.xbmcgui.getCurrentWindowId, 10502),
+                              (self.xbmcgui.getCurrentWindowDialogId, 10120),
+                              (self.xbmc.Player.return_value.isPlayingAudio, False)):
+            self.ready_turntable_previous()
+            target.return_value = value
+            self.assertFalse(self.addon.previous_turntable_track())
+        self.xbmc.executeJSONRPC.assert_not_called()
+        self.xbmc.executebuiltin.assert_not_called()
+        self.urlopen.assert_not_called()
+
+    def test_up_does_nothing_without_valid_active_music_queue(self):
+        for reply in ({'error':{'message':'no player'}}, {'result':{'playlistid':1, 'position':2}},
+                      {'result':{'playlistid':0, 'position':-1}}, {'result':{'playlistid':0, 'position':4}},
+                      {'result':{'playlistid':0, 'position':'2'}}, {'result':{'playlistid':False, 'position':2}},
+                      {'result':None}, {'result':[]}, {}, None):
+            with self.subTest(reply=reply):
+                self.ready_turntable_previous()
+                self.xbmc.executeJSONRPC.return_value = json.dumps(reply)
+                self.assertFalse(self.addon.previous_turntable_track())
+        self.ready_turntable_previous(count=0)
+        self.assertFalse(self.addon.previous_turntable_track())
+        self.xbmc.executebuiltin.assert_not_called()
+
+    def test_up_does_nothing_when_native_player_disappears_or_response_is_invalid(self):
+        self.ready_turntable_previous()
+        self.xbmc.executeJSONRPC.side_effect = RuntimeError('stopped')
+        self.assertFalse(self.addon.previous_turntable_track())
+        self.xbmc.executeJSONRPC.side_effect = None
+        self.xbmc.executeJSONRPC.return_value = '{broken'
+        self.assertFalse(self.addon.previous_turntable_track())
+        self.xbmc.executebuiltin.assert_not_called()
+
     def test_root_works_offline_without_touching_playback(self):
         self.run_action()
         self.assertEqual([entry[2].label for entry in self.items()], ["Albums", "Artists", "Search library", "Find music", "Downloads", "Configure Format server"])

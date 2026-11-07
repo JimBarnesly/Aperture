@@ -402,14 +402,8 @@
         <onup>103</onup>
         <ondown>103</ondown>
         <onback>SetFocus(103)</onback>
-        <onclick condition="Player.HasAudio + [System.AddonIsEnabled(plugin.audio.aperture.format)]">ActivateWindow(Music,plugin://plugin.audio.aperture.format/?action=albums,return)</onclick>
-        <onclick condition="Player.HasAudio + [!System.AddonIsEnabled(plugin.audio.aperture.format)]">ActivateWindow(AddonBrowser)</onclick>
-        <onclick condition="Player.HasAudio + [!System.AddonIsEnabled(plugin.audio.aperture.format)]">Notification(Music needs Format,Install or enable Aperture Format in Add-ons.,8000)</onclick>
-        <onclick condition="Player.HasVideo + !String.IsEmpty(VideoPlayer.TVShowTitle) + [Library.HasContent(TVShows)]">ActivateWindow(Videos,videodb://tvshows/titles/,return)</onclick>
-        <onclick condition="Player.HasVideo + !String.IsEmpty(VideoPlayer.TVShowTitle) + [!Library.HasContent(TVShows)]">ActivateWindow(Videos,sources://video/,return)</onclick>
-        <onclick condition="Player.HasVideo + String.IsEmpty(VideoPlayer.TVShowTitle) + [System.AddonIsEnabled(plugin.video.aperture.movies)]">ActivateWindow(Videos,plugin://plugin.video.aperture.movies/,return)</onclick>
-        <onclick condition="Player.HasVideo + String.IsEmpty(VideoPlayer.TVShowTitle) + [!System.AddonIsEnabled(plugin.video.aperture.movies) + Library.HasContent(Movies)]">ActivateWindow(Videos,videodb://movies/titles/,return)</onclick>
-        <onclick condition="Player.HasVideo + String.IsEmpty(VideoPlayer.TVShowTitle) + [!System.AddonIsEnabled(plugin.video.aperture.movies) + !Library.HasContent(Movies)]">ActivateWindow(Videos,sources://video/,return)</onclick>
+        <onclick condition="Player.HasVideo">ActivateWindow(fullscreenvideo)</onclick>
+        <onclick condition="Player.HasAudio + !Player.HasVideo">ActivateWindow(visualisation)</onclick>
         <visible allowhiddenfocus="true">Player.HasAudio | Player.HasVideo</visible>
       </control>
       <control type="label">
@@ -460,7 +454,7 @@
         <height>30</height>
         <font>font13</font>
         <textcolor>FFDFFBFF</textcolor>
-        <label>$INFO[MusicPlayer.Artist,, · ]Open Music  ›</label>
+        <label>$INFO[MusicPlayer.Artist,, · ]Show record  ›</label>
         <visible>[Player.HasAudio | Player.HasVideo] + [Player.HasAudio]</visible>
       </control>
       <control type="label">
@@ -470,7 +464,7 @@
         <height>30</height>
         <font>font13</font>
         <textcolor>FFDFFBFF</textcolor>
-        <label>$INFO[VideoPlayer.TVShowTitle,, · ]Open TV shows  ›</label>
+        <label>$INFO[VideoPlayer.TVShowTitle,, · ]Return to video  ›</label>
         <visible>[Player.HasAudio | Player.HasVideo] + [Player.HasVideo + !String.IsEmpty(VideoPlayer.TVShowTitle)]</visible>
       </control>
       <control type="label">
@@ -480,7 +474,7 @@
         <height>30</height>
         <font>font13</font>
         <textcolor>FFDFFBFF</textcolor>
-        <label>Open Movies  ›</label>
+        <label>Return to video  ›</label>
         <visible>[Player.HasAudio | Player.HasVideo] + [Player.HasVideo + String.IsEmpty(VideoPlayer.TVShowTitle)]</visible>
       </control>
       <control type="label">

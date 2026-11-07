@@ -43,6 +43,11 @@ class SkinBuildTests(unittest.TestCase):
         self.assertEqual(root.findtext('./extension/license'), 'Original')
         self.assertEqual(ET.parse(self.source/'addon.xml').getroot().get('id'), 'skin.estuary')
 
+    def test_music_overlay_is_complete_and_exact(self):
+        self.assemble()
+        self.assertEqual((self.out/'xml/DialogSeekBar.xml').read_bytes(),
+                         (ROOT/'skin/xml/DialogSeekBar.xml').read_bytes())
+
     def test_packaging_is_reproducible(self):
         self.assemble()
         a = build.package(self.out, self.root/'one.zip')

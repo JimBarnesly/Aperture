@@ -146,7 +146,7 @@
       <visible>!Window.IsVisible(seekbar)</visible>
       <left>90</left><top>1000</top><width>1740</width><height>45</height>
       <font>font27</font><align>center</align><textcolor>FF869BA5</textcolor>
-      <label>Select  Playback controls     ·     Back  Browse your library</label>
+      <label>↑  Previous track     ·     ↓  Next track     ·     Select  Controls     ·     Back  Library</label>
     </control>
   </controls>
 </window>

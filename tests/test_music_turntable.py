@@ -23,6 +23,25 @@ class TurntableTests(unittest.TestCase):
         self.assertEqual(tilt.get('center'), '450,0')  # Kodi's rotatex pivot is Y,Z.
         self.assertEqual(tree.find('.//animation[@effect="zoom"]').get('center'), 'auto')
 
+    def test_startup_info_cannot_open_seekbar_but_explicit_controls_can(self):
+        tree = ET.parse(ROOT / 'skin/xml/DialogSeekBar.xml')
+        gate = tree.getroot().findtext('visible')
+        self.assertNotIn('Player.ShowInfo', gate)
+        self.assertTrue(gate.startswith('!Window.IsActive(visualisation) | '))
+        for condition in ('Player.Seeking', 'Player.HasPerformedSeek(3)', 'Player.Paused',
+                          'Player.Forwarding', 'Player.Rewinding', 'Player.ShowTime',
+                          'Window.IsActive(musicosd)', 'Window.IsActive(playerprocessinfo)',
+                          'Window.IsActive(fullscreeninfo)', 'Player.SeekNumeric'):
+            self.assertIn(condition, gate)
+        # This is an added gate, not a replacement for upstream window rules or
+        # the seek sliders, process-info controls, video and PVR presentation.
+        self.assertEqual(len(tree.getroot().findall('visible')), 4)
+        self.assertIsNotNone(tree.find('.//control[@id="401"]'))
+        self.assertIsNotNone(tree.find('.//control[@id="403"]'))
+        self.assertIsNotNone(tree.find('.//control[@id="40000"]'))
+        self.assertIn('MusicPlayer.Codec', (ROOT / 'skin/xml/DialogSeekBar.xml').read_text())
+        self.assertFalse(list(tree.iter('onload')))
+
     def test_native_player_state_and_controls(self):
         tree = ET.parse(ROOT / 'skin/xml/MusicVisualisation.xml').getroot()
         self.assertEqual(tree.find('.//control[@id="7100"]/visible').text, 'Player.HasAudio')
@@ -78,6 +97,10 @@ class TurntableTests(unittest.TestCase):
         self.assertEqual(sha, hashlib.sha256((ROOT / 'skin/xml/MusicVisualisation.xml').read_bytes()).hexdigest())
         self.assertIn('cp "$SOURCE_DIR/skin/xml/MusicVisualisation.xml" "$TMP/xml/MusicVisualisation.xml"', installer)
         self.assertIn("shutil.copy2(ROOT / 'skin/xml/MusicVisualisation.xml', staged / 'xml/MusicVisualisation.xml')", (ROOT / 'tools/build_skin.py').read_text())
+        sha = re.search(r'SEEKBAR_SHA=([a-f0-9]{64})', installer).group(1)
+        self.assertEqual(sha, hashlib.sha256((ROOT / 'skin/xml/DialogSeekBar.xml').read_bytes()).hexdigest())
+        self.assertIn('cp "$SOURCE_DIR/skin/xml/DialogSeekBar.xml" "$TMP/xml/DialogSeekBar.xml"', installer)
+        self.assertIn("shutil.copy2(ROOT / 'skin/xml/DialogSeekBar.xml', staged / 'xml/DialogSeekBar.xml')", (ROOT / 'tools/build_skin.py').read_text())
 
     def test_browser_can_reopen_without_restarting_playback(self):
         tree = ET.parse(ROOT / 'skin/xml/MyMusicNav.xml')

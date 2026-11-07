@@ -33,6 +33,13 @@ def generate(output=None):
     draw.ellipse((24, 24, 72, 72), fill='#9babb3', outline='#d3dce0', width=3)
     draw.ellipse((33, 29, 54, 50), fill='#ecf2f3')
     spindle.save(output / 'spindle.png', optimize=True)
+    # Original alpha mask for a short, fading floor reflection.
+    reflection = Image.new('RGBA', (16, 440))
+    draw = ImageDraw.Draw(reflection)
+    for y in range(440):
+        alpha = round(255 * max(0, 1 - y / 160) ** 1.8)
+        draw.line((0, y, 15, y), fill=(255, 255, 255, alpha))
+    reflection.save(output / 'reflection-fade.png', optimize=True)
 
 
 if __name__ == '__main__':

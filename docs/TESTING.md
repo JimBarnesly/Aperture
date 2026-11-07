@@ -27,7 +27,10 @@
   state on loopback only. Covers native album/list views, artists/search,
   catalogue preview, declined/confirmed actions, independent protected-mode
   capabilities, permission revocation while confirming, missing/malformed/failed
-  health, queue-only controls, ordered playback and offline recovery. Exactly
+  health, queue-only controls, ordered playback and offline recovery. Fullscreen
+  music checks clean startup/track-change frames while Kodi's automatic info
+  flag is active, Up/Down navigation, and retained manual OSD. Skin switches
+  verify the owned fullscreen-only keymap loads/removes without changing others. Exactly
   three permitted mock POSTs are required; navigation and cancelled actions
   must not replay writes.
   This fixture is not a replacement for anyone's library or proof of access to

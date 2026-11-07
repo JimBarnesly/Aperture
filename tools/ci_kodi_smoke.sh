@@ -441,6 +441,14 @@ try:
             if state().get('window')==HOME: break
             next_observation('Escape'); time.sleep(.2)
         wait_for('Home after skin choice',lambda s:s.get('window')==HOME and s.get('dialog')==9999)
+        keymap = Path(os.environ['KODI_DATA'])/'userdata/keymaps/zz-aperture-turntable.xml'
+        final_skin = expected_skin if accept else previous
+        if final_skin == 'skin.aperture':
+            source_keymap = Path(os.environ['KODI_HOME'])/'addons/plugin.audio.aperture.format/resources/keymaps/aperture-turntable.xml'
+            wait_for('Aperture loads only its owned turntable keymap',
+                     lambda s:keymap.is_file() and keymap.read_bytes() == source_keymap.read_bytes())
+        else:
+            wait_for('Estuary restores original keys without owned override', lambda s:not keymap.exists())
         checks.append({'check':'skin-selection-'+name+('-accepted' if accept else '-auto-reverted'),'state':state()})
 
     choose_skin('Aperture','skin.aperture')

@@ -190,6 +190,18 @@ def turntable_pixel_change(first, second):
         return sum(ImageStat.Stat(delta).mean) / 3
 
 
+def assert_clean_track_load(samples, after, pid):
+    """Catch transient startup banners, not just a clean frame after timeout."""
+    visible = [s for s in samples if s.get('pid') == pid and s.get('sequence', 0) > after
+               and s.get('window') == 12006 and s.get('nowplaying_visible') is True]
+    if not visible or not any(s.get('player_show_info') is True for s in visible):
+        raise AssertionError('Missing evidence of Kodi music ShowInfo pulse during track load')
+    if any(s.get('native_seekbar_visible') is not False or s.get('native_topbar_visible') is not False
+           for s in visible):
+        raise AssertionError('Automatic music file-info overlay appeared during track load')
+    return len(visible)
+
+
 def track_presentation_ready(actual):
     """Audio RPC appears before Kodi's own busy dialog finishes opening."""
     return (actual.get("window") == 10502 and actual.get("dialog") == 9999
@@ -573,6 +585,7 @@ def run(hooks):
         # Normal Select/Enter, not a hidden context-menu action, must play the
         # complete album and enter the turntable.
         sequence = music()["sequence"]
+        load_sequence = sequence
         press("Return")
         actual = wait_music("ordered album playback", lambda s: s.get("player") is not None
                             and s["player"]["properties"].get("speed") == 1
@@ -592,10 +605,14 @@ def run(hooks):
         wait_music("Secondary bottom-left album tracks match the ordered release",
                    lambda s: s.get("album_tracks_visible") is True
                    and [title for title in s.get("album_track_titles", []) if title] == config["expected_titles"])
-        wait_music("Presentation yields to native playback overlay",
-                   lambda s: s.get("native_seekbar_visible") is True
-                   and s.get("presentation_header_visible") is False
-                   and s.get("presentation_footer_visible") is False)
+        wait_music("Turntable loads without automatic file-info popup",
+                   lambda s: s.get("native_seekbar_visible") is False
+                   and s.get("native_topbar_visible") is False
+                   and s.get("presentation_header_visible") is True
+                   and s.get("presentation_footer_visible") is True)
+        samples = [json.loads(line) for line in (out / "format-states.jsonl").read_text().splitlines()]
+        clean_count = assert_clean_track_load(samples, load_sequence, pid)
+        checks.append({"check":"turntable-no-startup-file-info", "observed_frames":clean_count})
         screenshot("format-03-playback")
         time.sleep(1)
         screenshot("format-03b-record-rotated")
@@ -603,7 +620,7 @@ def run(hooks):
                                         out / "screenshots/format-03b-record-rotated.png")
         if moving < 0.5:
             raise AssertionError("Record artwork did not visibly rotate: " + str(moving))
-        wait_music("Clean turntable after native playback overlay dismisses",
+        wait_music("Turntable remains clean while playing",
                    lambda s: s.get("native_seekbar_visible") is False
                    and s.get("presentation_header_visible") is True
                    and s.get("presentation_footer_visible") is True)
@@ -622,7 +639,20 @@ def run(hooks):
             raise AssertionError("Paused record continued moving: " + str(still))
         before = press("Return")
         wait_for("Native music playback controls", lambda s: s.get("dialog") == 10120, after=before)
+        wait_music("Explicit controls retain native overlay and hide duplicate labels",
+                   lambda s: s.get("native_seekbar_visible") is True
+                   and s.get("presentation_header_visible") is False
+                   and s.get("presentation_footer_visible") is False)
         screenshot("format-03e-native-controls")
+        # The bindings apply to Visualisation, never navigation inside MusicOSD.
+        for arrow in ("Down", "Up"):
+            sequence = music()["sequence"]
+            press(arrow)
+            settled_music("OSD arrow leaves current track and paused queue unchanged",
+                          lambda s: s.get("dialog") == 10120 and s.get("player")
+                          and s["player"]["properties"].get("speed") == 0
+                          and track_id(s["player"]["item"]) == config["expected_ids"][0]
+                          and s.get("queue") == paused["queue"], after=sequence)
         before = press("Escape")
         wait_for("Music controls dismiss", lambda s: s.get("dialog") == 9999, after=before)
         before = press("Escape")
@@ -653,28 +683,49 @@ def run(hooks):
                        "playing_pixel_change":moving, "paused_pixel_change":still,
                        "resumed_pixel_change":resumed})
         sequence = music()["sequence"]
-        press("period")
-        actual = wait_music("Skip reaches second track", lambda s: s.get("player") is not None
+        press("Down")
+        actual = wait_music("Down reaches second track", lambda s: s.get("player") is not None
                             and track_id(s["player"]["item"]) == config["expected_ids"][1], after=sequence)
-        checks.append({"check":"skip-next", "player":actual["player"]})
+        settled_music("Next track does not flash file information",
+                      lambda s: s.get("native_seekbar_visible") is False
+                      and s.get("native_topbar_visible") is False, after=actual["sequence"])
+        samples = [json.loads(line) for line in (out / "format-states.jsonl").read_text().splitlines()]
+        assert_clean_track_load(samples, sequence, pid)
+        checks.append({"check":"turntable-down-next", "player":actual["player"]})
         for expected_id in config["expected_ids"][2:]:
             sequence = music()["sequence"]
-            press("period")
-            actual = wait_music("Next native album track", lambda s: s.get("player") is not None
+            press("Down")
+            actual = wait_music("Down reaches next native album track", lambda s: s.get("player") is not None
                                 and track_id(s["player"]["item"]) == expected_id, after=sequence)
         screenshot("format-03f-missing-art-fallback")
-        actual = music()
-        sequence, previous_time = actual["sequence"], clock(actual)
-        press("comma")
-        actual = wait_music("Previous changes track or restarts current track", lambda s: s.get("player") is not None
-                            and (track_id(s["player"]["item"]) == config["expected_ids"][2]
-                                 or (track_id(s["player"]["item"]) == config["expected_ids"][3]
-                                     and clock(s) < previous_time - 0.1)), after=sequence)
-        if track_id(actual["player"]["item"]) == config["expected_ids"][3]:
+        # Native SkipPrevious restarts a song after three seconds. The requested
+        # Up behavior must move back once even after that threshold.
+        actual = wait_music("Final track is mid-playback before testing one-press previous",
+                            lambda s: s.get("player") and clock(s) >= 5
+                            and track_id(s["player"]["item"]) == config["expected_ids"][3])
+        sequence = actual["sequence"]
+        press("Up")
+        actual = wait_music("One Up press returns directly to the previous album track",
+                            lambda s: s.get("player") is not None
+                            and track_id(s["player"]["item"]) == config["expected_ids"][2], after=sequence)
+        if actual["queue"] != paused["queue"]:
+            raise AssertionError("Previous-track action replaced the album queue")
+        for expected_id in reversed(config["expected_ids"][:2]):
             sequence = actual["sequence"]
-            press("comma")
-            actual = wait_music("Previous from restarted track returns to third", lambda s: s.get("player") is not None
-                                and track_id(s["player"]["item"]) == config["expected_ids"][2], after=sequence)
+            press("Up")
+            actual = wait_music("Repeated Up returns toward first album track",
+                                lambda s: s.get("player") and track_id(s["player"]["item"]) == expected_id,
+                                after=sequence)
+        actual = wait_music("First track is mid-playback before checking upper boundary",
+                            lambda s: s.get("player") and clock(s) >= 5
+                            and track_id(s["player"]["item"]) == config["expected_ids"][0])
+        sequence, previous_time = actual["sequence"], clock(actual)
+        press("Up")
+        actual = wait_music("Up on first track restarts without wrapping or stopping",
+                            lambda s: s.get("player")
+                            and track_id(s["player"]["item"]) == config["expected_ids"][0]
+                            and clock(s) < previous_time - 1 and s["queue"] == paused["queue"],
+                            after=sequence)
         checks.append({"check":"turntable-skip-previous-and-missing-art", "player":actual["player"]})
         sequence = actual["sequence"]
         press("x")

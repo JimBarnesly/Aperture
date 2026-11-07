@@ -73,7 +73,7 @@ class SkinInstallerTests(unittest.TestCase):
         self.assertEqual(game_before,{str(p.relative_to(game_root)):p.read_bytes() for p in game_root.rglob('*') if p.is_file()})
         for relative,content in protected.items():
             self.assertEqual((self.profile/relative).read_bytes(),content,relative)
-        for xml in ('MyGames.xml','MyMusicNav.xml','MusicVisualisation.xml'):
+        for xml in ('MyGames.xml','MyMusicNav.xml','MusicVisualisation.xml','DialogSeekBar.xml'):
             self.assertEqual((self.target/'xml'/xml).read_bytes(),(ROOT/'skin/xml'/xml).read_bytes())
         for original in (ROOT/'skin/media/aperture/games/systems').iterdir():
             self.assertEqual((self.target/'media/aperture/games/systems'/original.name).read_bytes(),original.read_bytes())

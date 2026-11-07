@@ -95,6 +95,8 @@ try:
                      "album_tracks_visible":bool(xbmc.getCondVisibility("Control.IsVisible(7120)")),
                      "album_track_titles":[xbmc.getInfoLabel("Container(7120).ListItemAbsolute({}).Title".format(i)) for i in range(12)],
                      "nowplaying_button_visible":bool(xbmc.getCondVisibility("Control.IsVisible(65)")),
+                     "player_show_info":bool(xbmc.getCondVisibility("Player.ShowInfo")),
+                     "native_topbar_visible":bool(xbmc.getCondVisibility("Window.IsVisible(1109)")),
                      "native_seekbar_visible":bool(xbmc.getCondVisibility("Window.IsVisible(seekbar)")),
                      "presentation_header_visible":bool(xbmc.getCondVisibility("Control.IsVisible(7110)")),
                      "presentation_footer_visible":bool(xbmc.getCondVisibility("Control.IsVisible(7111)")),

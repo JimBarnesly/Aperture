@@ -510,6 +510,35 @@ def play_album(server, data, album):
     show_now_playing(prepared[0][0], origin, player)
 
 
+def previous_turntable_track():
+    """One Up press means the prior queued track, not restart-then-previous.
+
+    A RunPlugin key action may finish after navigation. Recheck the presentation
+    and native audio queue before using Kodi's relative playlist action. Never
+    fetch Format, rebuild the queue, wrap before the first track, or touch video.
+    """
+    if (xbmc.getSkinDir() != "skin.aperture" or xbmcgui.getCurrentWindowId() != 12006
+            or xbmcgui.getCurrentWindowDialogId() != 9999 or not xbmc.Player().isPlayingAudio()):
+        return False
+    try:
+        response = json.loads(xbmc.executeJSONRPC(json.dumps({
+            "jsonrpc":"2.0", "id":1, "method":"Player.GetProperties",
+            "params":{"playerid":0, "properties":["playlistid", "position"]}})))
+        properties = response.get("result", {})
+        playlist_id, position = properties.get("playlistid"), properties.get("position")
+        count = xbmc.PlayList(xbmc.PLAYLIST_MUSIC).size()
+        if (type(playlist_id) is not int or playlist_id != xbmc.PLAYLIST_MUSIC
+                or type(position) is not int or type(count) is not int
+                or not 0 <= position < count):
+            return False
+        # Offset zero preserves native first-track restart, even with repeat-all.
+        xbmc.executebuiltin("Playlist.PlayOffset(music,{})".format(-1 if position else 0))
+        return True
+    except (ValueError, TypeError, AttributeError, RuntimeError):
+        # Stop, queue replacement or profile shutdown can race a remote press.
+        return False
+
+
 def add_album(handle, server, album, prefix="", position=0):
     ids = track_ids(album)
     if album.get("id") is None or not ids:
@@ -791,6 +820,9 @@ def main(argv=None):
                 xbmc.executebuiltin("Container.Refresh")
             if handle >= 0:
                 root(handle)
+        elif action == "turntable_previous":
+            if handle < 0:
+                previous_turntable_track()
         elif action == "store":
             store(handle, server_url())
         elif action == "refresh_library":
