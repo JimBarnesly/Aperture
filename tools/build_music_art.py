@@ -38,7 +38,7 @@ def generate(output=None):
     draw = ImageDraw.Draw(reflection)
     for y in range(440):
         alpha = round(255 * max(0, 1 - y / 160) ** 1.8)
-        draw.line((0, y, 15, y), fill=(255, 255, 255, alpha))
+        draw.line((0, 439-y, 15, 439-y), fill=(255, 255, 255, alpha))
     reflection.save(output / 'reflection-fade.png', optimize=True)
 
 

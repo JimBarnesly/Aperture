@@ -234,9 +234,9 @@
            fixedlist below still owns focus, playback, history and selected art. -->
       <control type="group">
         <visible>Control.IsVisible(64) + !String.IsEmpty(Container(64).ListItemNoWrap(-7).Property(Aperture.FormatPosition))</visible>
-        <left>40</left><top>325</top><width>440</width><height>600</height>
-        <animation effect="zoom" start="82" end="82" center="220,230" time="0" condition="true">Conditional</animation>
-        <animation effect="rotatey" start="-45" end="-45" center="220,0" time="0" condition="true">Conditional</animation>
+        <left>40</left><top>325</top><width>440</width><height>460</height>
+        <animation effect="zoom" start="82" end="82" center="auto" time="0" condition="true">Conditional</animation>
+        <animation effect="rotatey" start="-45" end="-45" center="auto" time="0" condition="true">Conditional</animation>
         <control type="image">
           <left>0</left><top>10</top><width>440</width><height>440</height>
           <texture fallback="DefaultAlbumCover.png">$INFO[Container(64).ListItemNoWrap(-7).Art(thumb)]</texture>
@@ -250,9 +250,9 @@
       </control>
       <control type="group">
         <visible>Control.IsVisible(64) + !String.IsEmpty(Container(64).ListItemNoWrap(7).Property(Aperture.FormatPosition))</visible>
-        <left>1440</left><top>325</top><width>440</width><height>600</height>
-        <animation effect="zoom" start="82" end="82" center="220,230" time="0" condition="true">Conditional</animation>
-        <animation effect="rotatey" start="45" end="45" center="220,0" time="0" condition="true">Conditional</animation>
+        <left>1440</left><top>325</top><width>440</width><height>460</height>
+        <animation effect="zoom" start="82" end="82" center="auto" time="0" condition="true">Conditional</animation>
+        <animation effect="rotatey" start="45" end="45" center="auto" time="0" condition="true">Conditional</animation>
         <control type="image">
           <left>0</left><top>10</top><width>440</width><height>440</height>
           <texture fallback="DefaultAlbumCover.png">$INFO[Container(64).ListItemNoWrap(7).Art(thumb)]</texture>
@@ -266,9 +266,9 @@
       </control>
       <control type="group">
         <visible>Control.IsVisible(64) + !String.IsEmpty(Container(64).ListItemNoWrap(-6).Property(Aperture.FormatPosition))</visible>
-        <left>100</left><top>325</top><width>440</width><height>600</height>
-        <animation effect="zoom" start="82" end="82" center="220,230" time="0" condition="true">Conditional</animation>
-        <animation effect="rotatey" start="-45" end="-45" center="220,0" time="0" condition="true">Conditional</animation>
+        <left>100</left><top>325</top><width>440</width><height>460</height>
+        <animation effect="zoom" start="82" end="82" center="auto" time="0" condition="true">Conditional</animation>
+        <animation effect="rotatey" start="-45" end="-45" center="auto" time="0" condition="true">Conditional</animation>
         <control type="image">
           <left>0</left><top>10</top><width>440</width><height>440</height>
           <texture fallback="DefaultAlbumCover.png">$INFO[Container(64).ListItemNoWrap(-6).Art(thumb)]</texture>
@@ -282,9 +282,9 @@
       </control>
       <control type="group">
         <visible>Control.IsVisible(64) + !String.IsEmpty(Container(64).ListItemNoWrap(6).Property(Aperture.FormatPosition))</visible>
-        <left>1380</left><top>325</top><width>440</width><height>600</height>
-        <animation effect="zoom" start="82" end="82" center="220,230" time="0" condition="true">Conditional</animation>
-        <animation effect="rotatey" start="45" end="45" center="220,0" time="0" condition="true">Conditional</animation>
+        <left>1380</left><top>325</top><width>440</width><height>460</height>
+        <animation effect="zoom" start="82" end="82" center="auto" time="0" condition="true">Conditional</animation>
+        <animation effect="rotatey" start="45" end="45" center="auto" time="0" condition="true">Conditional</animation>
         <control type="image">
           <left>0</left><top>10</top><width>440</width><height>440</height>
           <texture fallback="DefaultAlbumCover.png">$INFO[Container(64).ListItemNoWrap(6).Art(thumb)]</texture>
@@ -298,9 +298,9 @@
       </control>
       <control type="group">
         <visible>Control.IsVisible(64) + !String.IsEmpty(Container(64).ListItemNoWrap(-5).Property(Aperture.FormatPosition))</visible>
-        <left>160</left><top>325</top><width>440</width><height>600</height>
-        <animation effect="zoom" start="82" end="82" center="220,230" time="0" condition="true">Conditional</animation>
-        <animation effect="rotatey" start="-45" end="-45" center="220,0" time="0" condition="true">Conditional</animation>
+        <left>160</left><top>325</top><width>440</width><height>460</height>
+        <animation effect="zoom" start="82" end="82" center="auto" time="0" condition="true">Conditional</animation>
+        <animation effect="rotatey" start="-45" end="-45" center="auto" time="0" condition="true">Conditional</animation>
         <control type="image">
           <left>0</left><top>10</top><width>440</width><height>440</height>
           <texture fallback="DefaultAlbumCover.png">$INFO[Container(64).ListItemNoWrap(-5).Art(thumb)]</texture>
@@ -314,9 +314,9 @@
       </control>
       <control type="group">
         <visible>Control.IsVisible(64) + !String.IsEmpty(Container(64).ListItemNoWrap(5).Property(Aperture.FormatPosition))</visible>
-        <left>1320</left><top>325</top><width>440</width><height>600</height>
-        <animation effect="zoom" start="82" end="82" center="220,230" time="0" condition="true">Conditional</animation>
-        <animation effect="rotatey" start="45" end="45" center="220,0" time="0" condition="true">Conditional</animation>
+        <left>1320</left><top>325</top><width>440</width><height>460</height>
+        <animation effect="zoom" start="82" end="82" center="auto" time="0" condition="true">Conditional</animation>
+        <animation effect="rotatey" start="45" end="45" center="auto" time="0" condition="true">Conditional</animation>
         <control type="image">
           <left>0</left><top>10</top><width>440</width><height>440</height>
           <texture fallback="DefaultAlbumCover.png">$INFO[Container(64).ListItemNoWrap(5).Art(thumb)]</texture>
@@ -330,9 +330,9 @@
       </control>
       <control type="group">
         <visible>Control.IsVisible(64) + !String.IsEmpty(Container(64).ListItemNoWrap(-4).Property(Aperture.FormatPosition))</visible>
-        <left>220</left><top>325</top><width>440</width><height>600</height>
-        <animation effect="zoom" start="82" end="82" center="220,230" time="0" condition="true">Conditional</animation>
-        <animation effect="rotatey" start="-45" end="-45" center="220,0" time="0" condition="true">Conditional</animation>
+        <left>220</left><top>325</top><width>440</width><height>460</height>
+        <animation effect="zoom" start="82" end="82" center="auto" time="0" condition="true">Conditional</animation>
+        <animation effect="rotatey" start="-45" end="-45" center="auto" time="0" condition="true">Conditional</animation>
         <control type="image">
           <left>0</left><top>10</top><width>440</width><height>440</height>
           <texture fallback="DefaultAlbumCover.png">$INFO[Container(64).ListItemNoWrap(-4).Art(thumb)]</texture>
@@ -346,9 +346,9 @@
       </control>
       <control type="group">
         <visible>Control.IsVisible(64) + !String.IsEmpty(Container(64).ListItemNoWrap(4).Property(Aperture.FormatPosition))</visible>
-        <left>1260</left><top>325</top><width>440</width><height>600</height>
-        <animation effect="zoom" start="82" end="82" center="220,230" time="0" condition="true">Conditional</animation>
-        <animation effect="rotatey" start="45" end="45" center="220,0" time="0" condition="true">Conditional</animation>
+        <left>1260</left><top>325</top><width>440</width><height>460</height>
+        <animation effect="zoom" start="82" end="82" center="auto" time="0" condition="true">Conditional</animation>
+        <animation effect="rotatey" start="45" end="45" center="auto" time="0" condition="true">Conditional</animation>
         <control type="image">
           <left>0</left><top>10</top><width>440</width><height>440</height>
           <texture fallback="DefaultAlbumCover.png">$INFO[Container(64).ListItemNoWrap(4).Art(thumb)]</texture>
@@ -362,9 +362,9 @@
       </control>
       <control type="group">
         <visible>Control.IsVisible(64) + !String.IsEmpty(Container(64).ListItemNoWrap(-3).Property(Aperture.FormatPosition))</visible>
-        <left>280</left><top>325</top><width>440</width><height>600</height>
-        <animation effect="zoom" start="82" end="82" center="220,230" time="0" condition="true">Conditional</animation>
-        <animation effect="rotatey" start="-45" end="-45" center="220,0" time="0" condition="true">Conditional</animation>
+        <left>280</left><top>325</top><width>440</width><height>460</height>
+        <animation effect="zoom" start="82" end="82" center="auto" time="0" condition="true">Conditional</animation>
+        <animation effect="rotatey" start="-45" end="-45" center="auto" time="0" condition="true">Conditional</animation>
         <control type="image">
           <left>0</left><top>10</top><width>440</width><height>440</height>
           <texture fallback="DefaultAlbumCover.png">$INFO[Container(64).ListItemNoWrap(-3).Art(thumb)]</texture>
@@ -378,9 +378,9 @@
       </control>
       <control type="group">
         <visible>Control.IsVisible(64) + !String.IsEmpty(Container(64).ListItemNoWrap(3).Property(Aperture.FormatPosition))</visible>
-        <left>1200</left><top>325</top><width>440</width><height>600</height>
-        <animation effect="zoom" start="82" end="82" center="220,230" time="0" condition="true">Conditional</animation>
-        <animation effect="rotatey" start="45" end="45" center="220,0" time="0" condition="true">Conditional</animation>
+        <left>1200</left><top>325</top><width>440</width><height>460</height>
+        <animation effect="zoom" start="82" end="82" center="auto" time="0" condition="true">Conditional</animation>
+        <animation effect="rotatey" start="45" end="45" center="auto" time="0" condition="true">Conditional</animation>
         <control type="image">
           <left>0</left><top>10</top><width>440</width><height>440</height>
           <texture fallback="DefaultAlbumCover.png">$INFO[Container(64).ListItemNoWrap(3).Art(thumb)]</texture>
@@ -394,9 +394,9 @@
       </control>
       <control type="group">
         <visible>Control.IsVisible(64) + !String.IsEmpty(Container(64).ListItemNoWrap(-2).Property(Aperture.FormatPosition))</visible>
-        <left>340</left><top>325</top><width>440</width><height>600</height>
-        <animation effect="zoom" start="82" end="82" center="220,230" time="0" condition="true">Conditional</animation>
-        <animation effect="rotatey" start="-45" end="-45" center="220,0" time="0" condition="true">Conditional</animation>
+        <left>340</left><top>325</top><width>440</width><height>460</height>
+        <animation effect="zoom" start="82" end="82" center="auto" time="0" condition="true">Conditional</animation>
+        <animation effect="rotatey" start="-45" end="-45" center="auto" time="0" condition="true">Conditional</animation>
         <control type="image">
           <left>0</left><top>10</top><width>440</width><height>440</height>
           <texture fallback="DefaultAlbumCover.png">$INFO[Container(64).ListItemNoWrap(-2).Art(thumb)]</texture>
@@ -410,9 +410,9 @@
       </control>
       <control type="group">
         <visible>Control.IsVisible(64) + !String.IsEmpty(Container(64).ListItemNoWrap(2).Property(Aperture.FormatPosition))</visible>
-        <left>1140</left><top>325</top><width>440</width><height>600</height>
-        <animation effect="zoom" start="82" end="82" center="220,230" time="0" condition="true">Conditional</animation>
-        <animation effect="rotatey" start="45" end="45" center="220,0" time="0" condition="true">Conditional</animation>
+        <left>1140</left><top>325</top><width>440</width><height>460</height>
+        <animation effect="zoom" start="82" end="82" center="auto" time="0" condition="true">Conditional</animation>
+        <animation effect="rotatey" start="45" end="45" center="auto" time="0" condition="true">Conditional</animation>
         <control type="image">
           <left>0</left><top>10</top><width>440</width><height>440</height>
           <texture fallback="DefaultAlbumCover.png">$INFO[Container(64).ListItemNoWrap(2).Art(thumb)]</texture>
@@ -426,9 +426,9 @@
       </control>
       <control type="group">
         <visible>Control.IsVisible(64) + !String.IsEmpty(Container(64).ListItemNoWrap(-1).Property(Aperture.FormatPosition))</visible>
-        <left>400</left><top>325</top><width>440</width><height>600</height>
-        <animation effect="zoom" start="82" end="82" center="220,230" time="0" condition="true">Conditional</animation>
-        <animation effect="rotatey" start="-45" end="-45" center="220,0" time="0" condition="true">Conditional</animation>
+        <left>400</left><top>325</top><width>440</width><height>460</height>
+        <animation effect="zoom" start="82" end="82" center="auto" time="0" condition="true">Conditional</animation>
+        <animation effect="rotatey" start="-45" end="-45" center="auto" time="0" condition="true">Conditional</animation>
         <control type="image">
           <left>0</left><top>10</top><width>440</width><height>440</height>
           <texture fallback="DefaultAlbumCover.png">$INFO[Container(64).ListItemNoWrap(-1).Art(thumb)]</texture>
@@ -442,9 +442,9 @@
       </control>
       <control type="group">
         <visible>Control.IsVisible(64) + !String.IsEmpty(Container(64).ListItemNoWrap(1).Property(Aperture.FormatPosition))</visible>
-        <left>1080</left><top>325</top><width>440</width><height>600</height>
-        <animation effect="zoom" start="82" end="82" center="220,230" time="0" condition="true">Conditional</animation>
-        <animation effect="rotatey" start="45" end="45" center="220,0" time="0" condition="true">Conditional</animation>
+        <left>1080</left><top>325</top><width>440</width><height>460</height>
+        <animation effect="zoom" start="82" end="82" center="auto" time="0" condition="true">Conditional</animation>
+        <animation effect="rotatey" start="45" end="45" center="auto" time="0" condition="true">Conditional</animation>
         <control type="image">
           <left>0</left><top>10</top><width>440</width><height>440</height>
           <texture fallback="DefaultAlbumCover.png">$INFO[Container(64).ListItemNoWrap(1).Art(thumb)]</texture>

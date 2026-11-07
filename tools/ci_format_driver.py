@@ -180,6 +180,13 @@ def successful_recovery_request(requests, started, completed):
                and started <= row["time"] <= completed for row in requests)
 
 
+def coverflow_color_fraction(path, box, chroma=40, brightness=60):
+    from PIL import Image
+    pixels = list(Image.open(path).convert('RGB').crop(box).getdata())
+    return sum(max(pixel) - min(pixel) > chroma and max(pixel) > brightness
+               for pixel in pixels) / max(1, len(pixels))
+
+
 def turntable_pixel_change(first, second):
     """Compare only the central record, excluding clocks/progress and OSD labels."""
     with Image.open(first) as a, Image.open(second) as b:
@@ -845,6 +852,12 @@ def run(hooks):
                 press("Left")
                 actual = settled_music("Coverflow reverse focus", lambda s: s.get("focused_title") == "SYNTHETIC QA Coverflow " + str(i), after=sequence)
             screenshot("format-06-coverflow-reversed")
+            coverflow_image = out / 'screenshots/format-06-coverflow-reversed.png'
+            for side, box in [('left', (240, 370, 690, 700)), ('right', (1230, 370, 1680, 700))]:
+                if coverflow_color_fraction(coverflow_image, box) < 0.10:
+                    raise AssertionError('Synthetic Coverflow ' + side + ' row is missing/offscreen')
+            if coverflow_color_fraction(coverflow_image, (800, 800, 1100, 815), 20, 35) < 0.20:
+                raise AssertionError('Selected sleeve floor reflection is missing or inverted')
             checks.append({"check":"coverflow-six-albums-forward-backward-no-playback", "state":actual})
             return_home()
             # A long release must retain every liner-note row and scroll without
