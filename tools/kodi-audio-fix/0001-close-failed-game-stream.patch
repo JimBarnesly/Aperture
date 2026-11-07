@@ -1,0 +1,18 @@
+Description: Release failed game streams through their stream manager
+ Clear the cached audio stream before destroying the owned stream.
+Origin: backport, https://github.com/xbmc/xbmc/commit/5fa857c3c34bd758a7ad364c3f0a8bc03df1e17e
+Bug: failed audio stream leaves a dangling manager pointer
+Forwarded: not-needed
+Last-Update: 2026-11-07
+
+--- a/xbmc/games/addons/streams/GameClientStreams.cpp
++++ b/xbmc/games/addons/streams/GameClientStreams.cpp
+@@ -68,6 +68,8 @@
+   if (!gameStream->OpenStream(retroStream.get(), properties))
+   {
+     CLog::Log(LOGERROR, "GAME: Failed to open audio stream");
++    gameStream->CloseStream();
++    m_streamManager->CloseStream(std::move(retroStream));
+     return nullptr;
+   }
+ 

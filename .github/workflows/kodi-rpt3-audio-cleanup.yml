@@ -1,0 +1,42 @@
+name: Build Kodi rpt3 audio cleanup ARM64
+on:
+  push:
+    branches: [build/kodi-rpt3-audio-cleanup]
+    paths: ['.github/workflows/kodi-rpt3-audio-cleanup.yml', 'tools/kodi-audio-fix/**']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: kodi-rpt3-audio-cleanup-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  build-arm64:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Record runner capacity
+        run: |
+          uname -a
+          test "$(uname -m)" = aarch64
+          df -h
+          free -h
+          nproc
+      - name: Build in pinned Debian 13 ARM64 container
+        run: |
+          docker run --rm --platform linux/arm64 \
+            -v "$GITHUB_WORKSPACE:/work" -w /work \
+            -e SOURCE_COMMIT="$GITHUB_SHA" \
+            debian:trixie-slim@sha256:24a01011d10eba3a023bc8585b9650b8b29021240d4217c05b905e09ef4a5232 \
+            bash tools/kodi-audio-fix/build.sh
+      - name: Upload packages and evidence even on failure
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: kodi-rpt3-ff9fix1-arm64-${{ github.sha }}
+          path: kodi-build-output/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
