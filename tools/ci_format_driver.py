@@ -796,6 +796,36 @@ def run(hooks):
             screenshot("format-06-coverflow-reversed")
             checks.append({"check":"coverflow-six-albums-forward-backward-no-playback", "state":actual})
             return_home()
+            # A long release must retain every liner-note row and scroll without
+            # exposing playlist editing or interrupting the playing album.
+            long_library = json.loads(original_library)
+            album = long_library['albums'][0]
+            seed_track = long_library['tracks'][0]
+            for i in range(10):
+                identifier = 'SYNTHETIC QA liner note ' + str(i + 5)
+                long_library['tracks'].append(dict(seed_track, id=identifier,
+                    title='SYNTHETIC QA Liner Track ' + str(i + 5), disc=3, track=i + 1))
+                album['trackIds'].append(identifier)
+            temporary.write_text(json.dumps(long_library))
+            temporary.replace(library_path)
+            press('j')
+            wait_view('albums', 'albums')
+            press('l')
+            find_title(config['album_title'], 'albums')
+            press('Return')
+            actual = wait_music('Entire long album is available in scrolling liner notes',
+                lambda s: s.get('window') == 12006 and s.get('long_album_tracks_visible')
+                and len(s.get('long_album_tracks_text', '').splitlines()) == 14
+                and '▶ 1.' in s.get('long_album_tracks_text', '')
+                and '14.  SYNTHETIC QA Liner Track 14' in s.get('long_album_tracks_text', ''))
+            screenshot('format-07-long-album-first')
+            time.sleep(16)
+            screenshot('format-07-long-album-scrolled')
+            checks.append({'check':'full-long-album-liner-notes-with-current-marker',
+                           'text':actual['long_album_tracks_text']})
+            press('x')
+            wait_music('Long album test stopped', lambda s: s.get('player') is None)
+            return_home()
         finally:
             temporary.write_bytes(original_library)
             temporary.replace(library_path)

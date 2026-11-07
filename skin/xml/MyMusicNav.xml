@@ -234,16 +234,16 @@
         <viewtype label="Coverflow">list</viewtype>
         <visible>String.IsEqual(Container.PluginName,plugin.audio.aperture.format) + String.IsEqual(Container.Property(Aperture.FormatView),albums)</visible>
         <scrolltime tween="cubic" easing="out">280</scrolltime>
-        <focusposition>2</focusposition><movement>0</movement><preloaditems>2</preloaditems>
+        <focusposition>4</focusposition><movement>0</movement><preloaditems>2</preloaditems>
         <onleft>64</onleft><onright>64</onright><onup>64</onup>
         <ondown condition="!Player.HasAudio">66</ondown>
-        <itemlayout width="440" height="600">
+        <itemlayout width="220" height="600">
           <control type="group">
             <left>0</left><top>0</top><width>440</width><height>460</height>
             <animation effect="zoom" start="82" end="82" center="220,230" time="0" condition="true">Conditional</animation>
             <!-- Global selected position is published outside item rendering. -->
-            <animation effect="rotatey" start="45" end="45" center="220,0" time="0" condition="Integer.IsLess(ListItem.Property(Aperture.FormatPosition),Window(10000).Property(Aperture.FormatSelectedPosition))">Conditional</animation>
-            <animation effect="rotatey" start="-45" end="-45" center="220,0" time="0" condition="Integer.IsGreater(ListItem.Property(Aperture.FormatPosition),Window(10000).Property(Aperture.FormatSelectedPosition))">Conditional</animation>
+            <animation effect="rotatey" start="0" end="45" center="220,0" time="200" condition="Integer.IsLess(ListItem.Property(Aperture.FormatPosition),Window(10000).Property(Aperture.FormatSelectedPosition))">Conditional</animation>
+            <animation effect="rotatey" start="0" end="-45" center="220,0" time="200" condition="Integer.IsGreater(ListItem.Property(Aperture.FormatPosition),Window(10000).Property(Aperture.FormatSelectedPosition))">Conditional</animation>
             <control type="image">
               <left>0</left><top>10</top><width>440</width><height>440</height>
               <texture fallback="DefaultAlbumCover.png">$INFO[ListItem.Art(thumb)]</texture>
@@ -251,7 +251,7 @@
             </control>
           </control>
         </itemlayout>
-        <focusedlayout width="440" height="600">
+        <focusedlayout width="220" height="600">
           <control type="group">
             <animation effect="zoom" start="82" end="100" center="220,230" time="280" tween="cubic" easing="out">Focus</animation>
             <control type="image">

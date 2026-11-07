@@ -387,6 +387,16 @@ class Driver:
         self.set_unknown_sources(False)
         self.choose_skin(skin_name, 'skin.aperture', 'zip-08-accepted-aperture')
         self.exit_native()
+        # The direct shelf needs a configured server. Configure only the
+        # disposable profile with the already-running synthetic loopback fixture.
+        ready = json.loads((self.out.parent / 'format-ready.json').read_text())
+        if not ready['url'].startswith('http://127.0.0.1:'):
+            raise AssertionError('ZIP smoke requires the local synthetic Format server')
+        settings = self.target / 'data/userdata/addon_data/plugin.audio.aperture.format/settings.xml'
+        settings.parent.mkdir(parents=True, exist_ok=True)
+        config = ET.Element('settings', version='2')
+        ET.SubElement(config, 'setting', id='server_url').text = ready['url']
+        ET.ElementTree(config).write(settings, encoding='utf-8', xml_declaration=True)
         self.start('skin.aperture')
         self.wait('accepted skin/sources-off persisted after restart', lambda s: setting_matches(s, False) and
             installed_matches(s, self.packages, self.target / 'data'))

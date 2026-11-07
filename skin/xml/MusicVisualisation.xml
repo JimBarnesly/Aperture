@@ -59,24 +59,45 @@
         <font>font27</font><textcolor>FF9CCCD1</textcolor><label>ALBUM TRACKS</label>
       </control>
       <control type="list" id="7120">
-        <visible>Integer.IsGreater(Playlist.Length(music),0) + String.IsEqual(MusicPlayer.Album,MusicPlayer.Position(0).Album) + String.IsEqual(MusicPlayer.AlbumArtist,MusicPlayer.Position(0).AlbumArtist)</visible>
+        <visible>Integer.IsGreater(Playlist.Length(music),0) + String.IsEqual(MusicPlayer.Album,MusicPlayer.Position(0).Album) + String.IsEqual(MusicPlayer.AlbumArtist,MusicPlayer.Position(0).AlbumArtist) + !Integer.IsGreater(Playlist.Length(music),10)</visible>
         <left>90</left><top>548</top><width>430</width><height>350</height>
         <enable>false</enable>
         <itemlayout width="430" height="34">
           <control type="label">
+            <visible>!ListItem.IsPlaying</visible>
             <left>0</left><top>0</top><width>430</width><height>34</height>
             <font>font20_title</font><textcolor>FFBFCDD0</textcolor>
             <label>$INFO[ListItem.TrackNumber,,.  ]$INFO[ListItem.Title]</label>
+          </control>
+          <control type="label">
+            <visible>ListItem.IsPlaying</visible>
+            <left>0</left><top>0</top><width>430</width><height>34</height>
+            <font>font20_title</font><textcolor>FF9CCCD1</textcolor>
+            <label>▶ $INFO[ListItem.TrackNumber,,.  ]$INFO[ListItem.Title]</label>
           </control>
         </itemlayout>
         <focusedlayout width="430" height="34">
           <control type="label">
+            <visible>!ListItem.IsPlaying</visible>
             <left>0</left><top>0</top><width>430</width><height>34</height>
             <font>font20_title</font><textcolor>FFBFCDD0</textcolor>
             <label>$INFO[ListItem.TrackNumber,,.  ]$INFO[ListItem.Title]</label>
           </control>
+          <control type="label">
+            <visible>ListItem.IsPlaying</visible>
+            <left>0</left><top>0</top><width>430</width><height>34</height>
+            <font>font20_title</font><textcolor>FF9CCCD1</textcolor>
+            <label>▶ $INFO[ListItem.TrackNumber,,.  ]$INFO[ListItem.Title]</label>
+          </control>
         </focusedlayout>
         <content>playlistmusic://</content>
+      </control>
+      <control type="textbox" id="7122">
+        <visible>Integer.IsGreater(Playlist.Length(music),0) + String.IsEqual(MusicPlayer.Album,MusicPlayer.Position(0).Album) + String.IsEqual(MusicPlayer.AlbumArtist,MusicPlayer.Position(0).AlbumArtist) + Integer.IsGreater(Playlist.Length(music),10)</visible>
+        <left>90</left><top>548</top><width>430</width><height>350</height>
+        <font>font20_title</font><textcolor>FFBFCDD0</textcolor>
+        <label>$INFO[Window(10000).Property(Aperture.FormatAlbumTracks)]</label>
+        <autoscroll delay="6000" time="2200" repeat="6000">true</autoscroll>
       </control>
       <control type="label" id="7102">
         <left>580</left><top>795</top><width>1160</width><height>65</height>

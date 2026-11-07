@@ -24,13 +24,15 @@ class MusicSkinTests(unittest.TestCase):
             self.assertEqual(list(view.iter('onclick')), [])
         shelf = self.root.find('.//control[@id="64"]')
         self.assertEqual(shelf.get('type'), 'fixedlist')
-        self.assertEqual(shelf.findtext('focusposition'), '2')
+        self.assertEqual(shelf.findtext('focusposition'), '4')
         self.assertEqual(shelf.findtext('movement'), '0')
         self.assertEqual(shelf.find('viewtype').get('label'), 'Coverflow')
         turns = shelf.findall('./itemlayout/control/animation[@effect="rotatey"]')
         self.assertEqual({turn.get('end') for turn in turns}, {'45', '-45'})
         for turn in turns:
             self.assertEqual(turn.get('center'), '220,0')
+            self.assertEqual(turn.get('start'), '0')
+            self.assertEqual(turn.get('time'), '200')
             self.assertIn('Window(10000).Property(Aperture.FormatSelectedPosition)', turn.get('condition'))
             self.assertNotIn('Container(64).ListItem', turn.get('condition'))
         # Native container remains responsible for playback and navigation.

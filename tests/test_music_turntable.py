@@ -50,6 +50,10 @@ class TurntableTests(unittest.TestCase):
         self.assertLessEqual(int(listing.findtext('top')) + int(listing.findtext('height')), 930)
         self.assertGreaterEqual(int(tree.findtext('.//control[@id="7102"]/left')), 580)
         self.assertFalse(list(listing.iter('onclick')))
+        long_list = tree.find('.//control[@id="7122"]')
+        self.assertEqual(long_list.findtext('autoscroll'), 'true')
+        self.assertIn('Aperture.FormatAlbumTracks', long_list.findtext('label'))
+        self.assertTrue(any(x.text == 'ListItem.IsPlaying' for x in listing.iter('visible')))
         self.assertTrue(all('ListItem.Title' in label.text for label in listing.iter('label')))
 
     def test_art_is_packaged_and_deterministic(self):

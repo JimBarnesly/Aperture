@@ -90,6 +90,8 @@ try:
                      "window":xbmcgui.getCurrentWindowId(),
                      "dialog":xbmcgui.getCurrentWindowDialogId(),
                      "nowplaying_visible":bool(xbmc.getCondVisibility("Control.IsVisible(7100)")),
+                     "long_album_tracks_visible":bool(xbmc.getCondVisibility("Control.IsVisible(7122)")),
+                     "long_album_tracks_text":xbmcgui.Window(10000).getProperty("Aperture.FormatAlbumTracks"),
                      "album_tracks_visible":bool(xbmc.getCondVisibility("Control.IsVisible(7120)")),
                      "album_track_titles":[xbmc.getInfoLabel("Container(7120).ListItemAbsolute({}).Title".format(i)) for i in range(12)],
                      "nowplaying_button_visible":bool(xbmc.getCondVisibility("Control.IsVisible(65)")),

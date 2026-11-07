@@ -37,3 +37,14 @@ class ShelfServiceTests(unittest.TestCase):
         self.xbmc.getInfoLabel.side_effect=RuntimeError('not in this skin')
         self.service.update_focus()
         self.home.setProperty.assert_not_called()
+
+    def test_long_album_liner_notes_keep_every_track_and_current_marker(self):
+        titles = ['Track ' + str(i) for i in range(1, 25)]
+        lines = self.service.album_lines(titles, 12).splitlines()
+        self.assertEqual(len(lines), 24)
+        self.assertEqual(lines[0], '1.  Track 1')
+        self.assertEqual(lines[12], '▶ 13.  Track 13')
+        self.assertEqual(lines[-1], '24.  Track 24')
+
+    def test_liner_notes_do_not_render_title_markup(self):
+        self.assertEqual(self.service.album_lines(['[COLOR red]Title'], 0), '▶ 1.  (COLOR red)Title')

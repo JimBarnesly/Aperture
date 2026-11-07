@@ -4,6 +4,8 @@ Container integer infos can resolve against a neighbour while item layouts are
 being rendered. A window property gives both sides one stable selected index.
 This service never performs network requests or changes navigation/playback.
 """
+import time
+
 import xbmc
 import xbmcgui
 
@@ -24,10 +26,39 @@ def update_focus():
         pass
 
 
+def album_lines(titles, current):
+    """Plain liner notes retain every track, with a current-track marker."""
+    return '\n'.join(('▶ ' if i == current else '') + str(i + 1) + '.  '
+                     + str(title).replace('[', '(').replace(']', ')')
+                     for i, title in enumerate(titles))
+
+
+def update_liner_notes():
+    if xbmcgui.getCurrentWindowId() != 12006:
+        return
+    home = xbmcgui.Window(10000)
+    try:
+        count = int(xbmc.getInfoLabel('Playlist.Length(music)') or '0')
+        if count <= 10:
+            return
+        current = xbmc.PlayList(xbmc.PLAYLIST_MUSIC).getposition()
+        titles = [xbmc.getInfoLabel('MusicPlayer.Position({}).Title'.format(i))
+                  for i in range(count)]
+        text = album_lines(titles, current)
+        if home.getProperty('Aperture.FormatAlbumTracks') != text:
+            home.setProperty('Aperture.FormatAlbumTracks', text)
+    except (ValueError, RuntimeError, AttributeError):
+        pass
+
+
 def run():
     monitor = xbmc.Monitor()
+    next_liner_update = 0.0
     while not monitor.abortRequested():
         update_focus()
+        if time.monotonic() >= next_liner_update:
+            update_liner_notes()
+            next_liner_update = time.monotonic() + 1.0
         if monitor.waitForAbort(0.05):
             break
 
