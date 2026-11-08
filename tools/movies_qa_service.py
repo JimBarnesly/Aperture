@@ -223,12 +223,14 @@ try:
         focus('Amber Horizon'); capture('movies-after-playback')
         checks.append({'check':'playback-stop-returns-to-source','view':61})
     if SCENARIO != 'empty':
-        # New discovery controls are exercised through real remote navigation.
-        # This isolated profile deliberately has no scanned movie catalogue.
+        # Check the navigation strip, then explicitly enter local-library discovery.
+        # Discover now opens the public online catalogue; this offline fixture
+        # must not call a live provider or claim to test online results.
+        # The isolated profile deliberately has no scanned movie catalogue.
         rpc('Input.Up')
         until('Discover navigation focused', lambda: xbmc.getInfoLabel('System.CurrentControl') == 'Discover')
         capture('movies-discovery-navigation')
-        rpc('Input.Select')
+        xbmc.executebuiltin('Container.Update(plugin://plugin.video.aperture.movies/?mode=discover)')
         until('empty catalogue guidance', lambda: xbmcgui.getCurrentWindowDialogId() == 12002)
         capture('movies-empty-catalogue')
         rpc('Input.Select')
@@ -257,8 +259,8 @@ try:
         until('discovery Back returns to local files', lambda: cinematic() and xbmc.getInfoLabel('Container.FolderPath') == root_path)
         xbmc.executebuiltin('SetFocus(61)')
         focus('Amber Horizon'); assert_art('Amber Horizon')
-        checks.append({'check':'discovery-navigation-search-cancel-repeat-collection-cancel-and-back','provider_calls':False,'populated_catalogue_tested':False})
-    result={'status':'passed','scenario':SCENARIO,'checks':checks,'limitations':['Disposable x86_64 software-rendered Kodi 21.3 profile only','No physical Pi, remote controller, external drive, SMB or personal media validation','Artwork and video generated locally; no external media downloaded']}
+        checks.append({'check':'local-library-search-cancel-repeat-collection-cancel-and-back','provider_calls':False,'populated_catalogue_tested':False,'online_catalogue_ui_tested':False})
+    result={'status':'passed','scenario':SCENARIO,'checks':checks,'limitations':['Disposable x86_64 software-rendered Kodi 21.3 profile only','No physical Pi, remote controller, external drive, SMB or personal media validation','Artwork and video generated locally; no external media downloaded','Online catalogue UI is not exercised by this offline local-library fixture']}
     (OUT/'result.json').write_text(json.dumps(result,indent=2)+'\n')
 except Exception as exc:
     try:

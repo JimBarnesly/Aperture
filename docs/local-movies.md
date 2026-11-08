@@ -43,35 +43,51 @@ Acceptance still needs to verify that real library artwork reaches Aperture for 
 
 ## Boundaries
 
-This is local-source browsing and native video playback, not a Stremio or Real-Debrid implementation. Network sources already configured in Kodi are supported by Kodi itself, but no new remote source or credential is created. Diagnostic errors deliberately omit source URLs, which can contain credentials. Physical Pi/video/audio/controller behavior still needs actual device validation.
+Local files use existing source browsing and native video playback. Online Discover is described below. Network sources already configured in Kodi are supported by Kodi itself, and are not changed by this update. Optional Real-Debrid access is configured separately with explicit consent. Diagnostic errors deliberately omit source URLs, which can contain credentials. Physical Pi/video/audio/controller behavior still needs actual device validation.
 
 
 
-## Discover interface (candidate)
+## Online Discover (candidate)
 
-From the cinematic poster shelf, press Up for Discover, Search, Collections,
-Genres, Local files and Sources. Discover reads the **existing Kodi movie
-library**, with All movies, Recently added, Continue watching, Not watched and
-Top rated collections. Search matches titles; genres combine with the selected
-collection and search. Discover resets filters. Results are bounded to 60 per
-page with a More movies card. Back returns through native Kodi directory history.
-Search and collection cancellation never add a directory or replay an action.
+Press Up → Discover to browse Cinemeta's public online movie catalogue, not just
+films in the Kodi library. Search and genre controls follow the current view.
+Online Collections offers Popular, Featured, and My Kodi library; local-library
+collections remain available there. Local files still opens the existing drive.
+Search/collection/genre cancellation does not navigate. Paging retains filters;
+Cinemeta supplies no total, so the last More page can legitimately be empty.
 
-Existing source browsing, playback and local poster choices are unchanged.
-Library results retain native movie IDs and resume positions. Metadata is only
-what Kodi already knows: no fabricated ratings, titles, or stream availability.
-An empty library explains how to use Local files. It does not trigger scraping
-or a whole-drive scan. This version does not automatically retrieve posters.
+Online cards show provider-supplied posters and synopsis. Select a card for
+metadata details (year, genres, IMDb rating where provided and synopsis).
+These cards are not playable and **availability is not checked**. Metadata is
+not proof that a stream exists or that the user has access to it. There is no
+stream resolver, torrent search, account signup, API key or Real-Debrid connection
+in this catalogue adapter. The separate Real-Debrid connector can coexist via
+Sources; neither adapter guesses a match between a catalogue film and a download.
+See [Real-Debrid setup and privacy](real-debrid.md) for application ID, sign-in,
+private storage and the remaining live-provider acceptance requirements.
 
-Real-Debrid is optional and starts disconnected. Sources offers explicit device
-sign-in, existing account downloads and authorized link playback. See
-[Real-Debrid setup and limitations](real-debrid.md). It is not a movie catalogue;
-Discover/Search still use Kodi's existing library. No background access occurs.
+### Provider and privacy
 
-Verification: focused tests cover paging, combined filters, resume metadata,
-redacted failures, empty libraries, cancelled/repeated search, stale navigation,
-collection/genre choices, focus links and preservation of local browsing.
-The native Movies CI also exercises the navigation strip, empty-library guidance,
-repeated keyboard cancellation, collection cancellation, Back and actual Kodi
-filter schema acceptance. Populated library discovery and real provider playback
-are not proven by that empty-library fixture. No device installation is included.
+[Cinemeta's official public manifest](https://v3-cinemeta.strem.io/manifest.json)
+advertises movie catalogue and metadata resources, not streams. Requests use
+fixed HTTPS endpoints with an 8-second socket timeout, a 2 MiB response limit,
+no redirects, no credentials and no cookies. Searches send only explicitly
+entered search text and selected filters; details send the selected IMDb ID.
+Kodi can fetch returned artwork from images.metahub.space or image.tmdb.org.
+No local filenames, source paths, library entries or watch history are uploaded.
+This is a public service with no availability guarantee, not a bundled licence
+to redistribute its artwork or films. Metadata/artwork retain their owners' rights.
+
+Local browsing remains usable when the catalogue fails. Nothing scans the drive,
+updates Kodi library metadata, saves online searches, installs a scraper or
+changes existing local poster choices. Provider failures are redacted.
+
+### Verification
+
+Focused tests cover catalogue query encoding/bounds, malformed/oversized data,
+redirect refusal, artwork host restrictions, details identity, paging, cancellation,
+stale navigation and metadata-only cards. A live public read-only search for
+Metropolis returned 19 records and the matching tt0017136 details/poster on
+2026-11-08. This proves the service/schema at that time, not future uptime.
+The online screens still need native Kodi/controller visual acceptance; existing
+local-library native smoke coverage does not prove online navigation or playback.
