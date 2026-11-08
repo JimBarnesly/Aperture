@@ -86,7 +86,9 @@ class MovieIdleTests(unittest.TestCase):
     def test_poster_cancel_and_reset_use_guard_before_more_input(self):
         calls = [node for node in ast.walk(self.tree)
                  if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
-                 and node.func.id == 'wait_for_movie_idle']
+                 and node.func.id == 'wait_for_movie_idle'
+                 and isinstance(node.args[0], ast.Constant)
+                 and node.args[0].value.startswith('poster')]
         self.assertCountEqual([node.args[0].value for node in calls],
                          ['poster reset returns to movies', 'poster picker cancelled'])
         self.assertTrue(all(isinstance(node.args[1], ast.Name)
@@ -95,3 +97,4 @@ class MovieIdleTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+

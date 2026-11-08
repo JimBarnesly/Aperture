@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<addon id="plugin.video.aperture.movies" name="Aperture Movies" version="0.1.1" provider-name="JimBarnesly">
+<addon id="plugin.video.aperture.movies" name="Aperture Movies" version="0.2.0" provider-name="JimBarnesly">
  <requires><import addon="xbmc.python" version="3.0.0"/></requires>
  <extension point="xbmc.python.pluginsource" library="addon.py"><provides>video</provides></extension>
- <extension point="xbmc.addon.metadata"><summary lang="en_GB">Your movies, centre stage</summary><description lang="en_GB">Cinematic browser for existing Kodi video sources with profile-only local poster choices. No scraping, downloads or media changes.</description><platform>all</platform><license>GPL-2.0-or-later</license></extension>
+ <extension point="xbmc.addon.metadata"><summary lang="en_GB">Your movies, centre stage</summary><description lang="en_GB">Discover and search your Kodi movie library, or browse existing video sources with profile-only local poster choices. No scraping, downloads or media changes.</description><platform>all</platform><license>GPL-2.0-or-later</license></extension>
 </addon>
+

@@ -44,3 +44,37 @@ Acceptance still needs to verify that real library artwork reaches Aperture for 
 ## Boundaries
 
 This is local-source browsing and native video playback, not a Stremio or Real-Debrid implementation. Network sources already configured in Kodi are supported by Kodi itself, but no new remote source or credential is created. Diagnostic errors deliberately omit source URLs, which can contain credentials. Physical Pi/video/audio/controller behavior still needs actual device validation.
+
+
+
+## Discover interface (candidate)
+
+From the cinematic poster shelf, press Up for Discover, Search, Collections,
+Genres, Local files and Sources. Discover reads the **existing Kodi movie
+library**, with All movies, Recently added, Continue watching, Not watched and
+Top rated collections. Search matches titles; genres combine with the selected
+collection and search. Discover resets filters. Results are bounded to 60 per
+page with a More movies card. Back returns through native Kodi directory history.
+Search and collection cancellation never add a directory or replay an action.
+
+Existing source browsing, playback and local poster choices are unchanged.
+Library results retain native movie IDs and resume positions. Metadata is only
+what Kodi already knows: no fabricated ratings, titles, or stream availability.
+An empty library explains how to use Local files. It does not trigger scraping
+or a whole-drive scan. This version does not automatically retrieve posters.
+
+Real-Debrid is **not connected or implemented** in this candidate. The Sources
+button reports that boundary rather than presenting fake streams or account
+status. Real-Debrid is not itself a movie discovery catalogue. Live online
+metadata/search, source resolution and authenticated provider playback need
+separate adapters and explicitly approved provider/account configuration. No
+provider credentials, OAuth grants, background account access, downloads or
+service changes are made by this interface update.
+
+Verification: focused tests cover paging, combined filters, resume metadata,
+redacted failures, empty libraries, cancelled/repeated search, stale navigation,
+collection/genre choices, focus links and preservation of local browsing.
+The native Movies CI also exercises the navigation strip, empty-library guidance,
+repeated keyboard cancellation, collection cancellation, Back and actual Kodi
+filter schema acceptance. Populated library discovery and real provider playback
+are not proven by that empty-library fixture. No device installation is included.

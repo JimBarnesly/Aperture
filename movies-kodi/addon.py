@@ -10,6 +10,7 @@ import xbmcplugin
 import xbmcvfs
 from resources.lib.library import select_source, default_from_xml, within_source, display_title, artwork
 from resources.lib.posters import read_choice, save_choice, reset_choice
+from resources.lib.discovery import request as discovery_request, COLLECTIONS
 
 ADDON = xbmcaddon.Addon()
 HANDLE = int(sys.argv[1])
@@ -100,9 +101,99 @@ def apply_cinema_view():
             return
 
 
+def discovery_action(action):
+    """Modal controls are actions, not folders: cancel must not alter Back history."""
+    origin = xbmc.getInfoLabel('Container.FolderPath')
+    parsed = urlsplit(origin)
+    if parsed.netloc != urlsplit(BASE).netloc:
+        return
+    query = parse_qs(parsed.query)
+    _, state, _ = discovery_request(query)
+    if action == 'search':
+        value = xbmcgui.Dialog().input('Search your Kodi movie library', defaultt=state.get('search', ''))
+        if not value or not value.strip():
+            return
+        state['search'] = value.strip()[:200]
+    elif action == 'collection':
+        selected = xbmcgui.Dialog().select('Discover your movies', [label for _, label in COLLECTIONS])
+        if selected < 0 or selected >= len(COLLECTIONS):
+            return
+        state['collection'] = COLLECTIONS[selected][0]
+    elif action == 'genre':
+        genres = rpc('VideoLibrary.GetGenres', {'type': 'movie'}).get('genres', [])
+        labels = sorted({g.get('label') for g in genres if isinstance(g.get('label'), str) and g['label']})
+        selected = xbmcgui.Dialog().select('Genre', ['All genres'] + labels)
+        if selected < 0 or selected > len(labels):
+            return
+        state.pop('genre', None)
+        if selected:
+            state['genre'] = labels[selected - 1]
+    elif action == 'providers':
+        xbmcgui.Dialog().ok('Movie sources', 'Kodi library and existing video folders are available. Real-Debrid is not connected. This build does not search an online catalogue or resolve provider streams. No account credentials have been saved.')
+        return
+    else:
+        return
+    if (xbmc.getInfoLabel('Container.FolderPath') == origin
+            and not xbmc.getCondVisibility('System.HasModalDialog')):
+        xbmc.executebuiltin('Container.Update(' + BASE + '?' + urlencode(state) + ')')
+
+
+def discover(query):
+    params, state, heading = discovery_request(query)
+    xbmcplugin.setContent(HANDLE, 'movies')
+    xbmcplugin.setPluginCategory(HANDLE, heading)
+    try:
+        result = rpc('VideoLibrary.GetMovies', params)
+    except RuntimeError:
+        xbmcgui.Dialog().ok('Discover', 'The Kodi movie library is unavailable. Your local movie folders are still available from Local files.')
+        end(False)
+        return
+    movies = result.get('movies', [])
+    for movie in movies:
+        target = movie.get('file')
+        if not target:
+            continue
+        li = xbmcgui.ListItem(label=display_title(movie), path=target)
+        li.setInfo('video', {key: movie[key] for key in ('title', 'year', 'plot', 'genre', 'rating', 'playcount') if movie.get(key) is not None})
+        if movie.get('runtime'):
+            li.getVideoInfoTag().setDuration(int(movie['runtime']))
+        # Kodi's DB identity preserves native Information/Resume/mark-watched actions.
+        if isinstance(movie.get('movieid'), int):
+            li.getVideoInfoTag().setDbId(movie['movieid'])
+            li.getVideoInfoTag().setMediaType('movie')
+        resume = movie.get('resume') or {}
+        if resume.get('position', 0) > 0:
+            li.getVideoInfoTag().setResumePoint(resume['position'], resume.get('total', 0))
+        li.setProperty('IsPlayable', 'true')
+        li.setProperty('Aperture.MovieFolder', 'false')
+        li.setArt(artwork(movie, local_art_exists, poster=read_choice(poster_profile(), target)))
+        li.addContextMenuItems([('Movie information', 'Action(Info)')])
+        xbmcplugin.addDirectoryItem(HANDLE, target, li, False)
+    limits = result.get('limits') or {}
+    next_start = limits.get('end', 0)
+    if isinstance(next_start, int) and next_start > params['limits']['start'] and next_start < limits.get('total', 0):
+        state['start'] = next_start
+        li = xbmcgui.ListItem(label='More movies')
+        li.setArt({'icon': 'DefaultFolder.png'})
+        li.setProperty('Aperture.MovieFolder', 'true')
+        xbmcplugin.addDirectoryItem(HANDLE, BASE + '?' + urlencode(state), li, True)
+    if not movies:
+        message = ('No matches. Try another title, collection or genre.' if state.get('search') or state.get('genre') or state['collection'] != 'all'
+                   else 'Your Kodi movie library is empty. Use Local files to browse existing folders, or add movies to the library in Kodi. No online catalogue is connected.')
+        xbmcgui.Dialog().ok('Discover', message)
+    end()
+    apply_cinema_view()
+
+
 def main():
     query = parse_qs(sys.argv[2].lstrip('?'))
     action = query.get('action', [''])[0]
+    if action in ('search', 'collection', 'genre', 'providers'):
+        discovery_action(action)
+        return
+    if query.get('mode', [''])[0] == 'discover':
+        discover(query)
+        return
     if not action:
         xbmcplugin.setContent(HANDLE, 'movies')
         xbmcplugin.setPluginCategory(HANDLE, 'Movies')
@@ -195,3 +286,4 @@ if __name__ == '__main__':
         xbmc.log('Aperture Movies: source listing failed ('+type(error).__name__+', line '+str(location)+')', xbmc.LOGERROR)
         xbmcgui.Dialog().ok('Movies', 'Could not read the movie source. Check that the drive is connected and available in Kodi.')
         end(False)
+
