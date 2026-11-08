@@ -1,0 +1,51 @@
+name: Collect verified Kodi packages
+on:
+  push:
+    branches: [build/kodi-rpt3-audio-cleanup]
+    paths: ['.github/workflows/kodi-rpt3-collect.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  collect:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 15
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: kodi-rpt3-ff9fix1-arm64-caafc6fe94157f011f723bca20ce379177f2a686
+          run-id: 42360886760
+          github-token: ${{ github.token }}
+          path: original
+      - name: Verify existing artifacts and collect evidence
+        shell: bash
+        run: |
+          cd original
+          sha256sum --check SHA256SUMS > ../hash-verification.txt
+          test "$(cat workflow-commit.txt)" = caafc6fe94157f011f723bca20ce379177f2a686
+          cat BUILD-STATUS.txt patched-build-id.txt patched-binary-control.txt patched-dbgsym-control.txt
+          ls -lh *.deb
+          grep -E 'tests passed|tests failed|Total Test time|Skipped|Not Run|FAILED|PASSED' build.log | tail -100 || true
+          mkdir ../evidence
+          cp BUILD-STATUS.txt patched-build-id.txt patched-binary-control.txt patched-dbgsym-control.txt SHA256SUMS build.log build-dependencies.tsv compiler.txt build-flags.txt workflow-commit.txt *.buildinfo *.changes ../evidence/
+          cp -a focused-regression build ../evidence/
+          cp ../hash-verification.txt ../evidence/
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: kodi-bin-ff9fix1-arm64
+          path: original/kodi-bin_21.3+dfsg-1+rpt3+ff9fix1_arm64.deb
+          retention-days: 30
+          compression-level: 0
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: kodi-bin-dbgsym-ff9fix1-arm64
+          path: original/kodi-bin-dbgsym_21.3+dfsg-1+rpt3+ff9fix1_arm64.deb
+          retention-days: 30
+          compression-level: 0
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: kodi-ff9fix1-build-evidence
+          path: evidence/
+          retention-days: 30
+          compression-level: 6
