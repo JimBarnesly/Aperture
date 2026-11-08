@@ -20,6 +20,9 @@ API = 'https://api.real-debrid.com/rest/1.0/'
 OAUTH = 'https://api.real-debrid.com/oauth/v2/'
 GRANT = 'http://oauth.net/grant_type/device/1.0'
 PAGE_SIZE = 60
+# Official shared open-source app ID, not an account secret.
+# https://api.real-debrid.com/ (Opensource Apps)
+PUBLIC_CLIENT_ID = 'X245A4XAIBGVM'
 
 
 class DebridError(Exception):

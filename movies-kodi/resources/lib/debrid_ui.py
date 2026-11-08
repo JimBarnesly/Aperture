@@ -4,7 +4,7 @@ from urllib.parse import urlencode
 import xbmc
 import xbmcgui
 import xbmcplugin
-from resources.lib.debrid import Client, Store, DebridError, PAGE_SIZE, secret
+from resources.lib.debrid import Client, Store, DebridError, PAGE_SIZE, PUBLIC_CLIENT_ID, secret
 from resources.lib import source_match
 
 
@@ -68,7 +68,7 @@ def run(query, addon, profile, base, handle):
             origin = xbmc.getInfoLabel('Container.FolderPath')
             connected = store.load() is not None
             choices = (['Browse existing downloads', 'Play a link I am authorized to use', 'Disconnect from this profile']
-                       if connected else ['Connect Real-Debrid', 'Configure application client ID'])
+                       if connected else ['Connect Real-Debrid', 'Application client ID (optional override)'])
             selected = dialog.select('Movie sources: Real-Debrid' + (' connected' if connected else ' not connected'), choices)
             if selected < 0 or xbmc.getInfoLabel('Container.FolderPath') != origin:
                 return
@@ -83,21 +83,22 @@ def run(query, addon, profile, base, handle):
                 path = client.resolve_link(link.strip())
                 xbmc.Player().play(path)
             elif connected and selected == 2:
-                if dialog.yesno('Disconnect Real-Debrid?', 'Remove saved credentials from this Kodi profile? To revoke the server-side grant too, remove Aperture in your Real-Debrid account applications.'):
+                if dialog.yesno('Disconnect Real-Debrid?', 'Remove saved credentials from this Kodi profile? To revoke the server-side grant too, remove the authorized application in your Real-Debrid account applications.'):
                     store.clear()
                     dialog.ok('Real-Debrid', 'Local credentials removed. Revoke the application on Real-Debrid to remove its server-side access.')
             elif not connected and selected == 1:
                 addon.openSettings()
             elif not connected and selected == 0:
-                client_id = addon.getSetting('rd_client_id').strip()
-                if not client_id:
-                    raise DebridError('config')
-                if not dialog.yesno('Connect Real-Debrid?', 'Authorize Aperture on Real-Debrid to access your account downloads and resolve links you choose. Save refresh credentials in this profile, restricted to your OS user (not encrypted). Other apps running as you and profile backups may read them. Continue?'):
+                client_id = addon.getSetting('rd_client_id').strip() or PUBLIC_CLIENT_ID
+                application = ('Use Real-Debrid\'s official shared open-source app (not a custom Aperture name). Its permissions include unrestrict, torrents, downloads and user information. '
+                               if client_id == PUBLIC_CLIENT_ID else
+                               'Use your configured application. Review its name and permissions on Real-Debrid. ')
+                if not dialog.yesno('Connect Real-Debrid?', application + 'Aperture uses account downloads and links you choose. Save refresh credentials in this profile, restricted to your OS user (not encrypted). Same-user apps and backups may read them. Continue?'):
                     return
                 session = client.begin(client_id)
                 progress = xbmcgui.DialogProgress()
                 monitor = xbmc.Monitor()
-                progress.create('Connect Real-Debrid', 'Open https://real-debrid.com/device\nEnter code: ' + session['user_code'] + '\nApprove Aperture there, or Cancel here.')
+                progress.create('Connect Real-Debrid', 'Open https://real-debrid.com/device\nEnter code: ' + session['user_code'] + '\nReview and approve the application there, or Cancel here.')
                 def cancelled():
                     return (progress.iscanceled() or monitor.abortRequested()
                             or xbmc.getInfoLabel('Container.FolderPath') != origin)

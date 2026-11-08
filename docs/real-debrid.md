@@ -9,17 +9,24 @@ files, scrape indexes, buy subscriptions, or modify account settings.
 
 ## Prerequisites and sign-in
 
-1. Obtain an **Aperture application client ID** from Real-Debrid's application
-   registration process. This is a public app identifier, not the user's API key.
-   No other application's ID is borrowed or shipped. Registration is not performed
-   by this implementation. Without this ID the connector cannot sign in.
-2. Set the public identifier in Movies add-on settings (Sources > Configure
-   application client ID). Never paste an API key, password or client secret there.
+1. No app registration or API key is required for the default flow. The add-on
+   uses **X245A4XAIBGVM**, the client ID explicitly published for open-source apps
+   in [Real-Debrid's official API documentation](https://api.real-debrid.com/).
+   This public identifier is not an account credential. The shared application
+   does not have a custom Aperture name; review the application shown by RD.
+2. The shared application's documented scopes are unrestrict, torrents, downloads
+   and user. This build only uses downloads and explicitly chosen link resolution;
+   the grant is broader than those operations. Read the consent screen before
+   approving. Shared-client rate limits may be stricter than service-wide limits.
+   A custom application client ID remains an optional Movies setting for those
+   needing a custom name/scopes. Never enter an API key, password or client secret
+   in that public-ID setting. Empty/old settings fall back to the official ID.
 3. Choose Sources > Connect Real-Debrid. Read and approve the on-device disclosure
    of account access and local credential storage. Go to
    https://real-debrid.com/device yourself, enter the displayed short-lived code,
-   and approve the application. An assistant-driven real grant still requires
-   the user's action-time approval. No live grant was created during development.
+   and review/approve the application. An assistant-driven real grant still
+   requires the user's action-time approval. No live grant, device-code request,
+   token exchange or account read was performed to implement this default.
 4. Polling runs only while that sign-in dialog is active, with the returned
    interval (at least five seconds), expiry, Cancel and Kodi shutdown handling.
    Closing/cancelling does not save newly issued credentials. If you approved on

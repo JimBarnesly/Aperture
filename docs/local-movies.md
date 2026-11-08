@@ -63,7 +63,7 @@ not proof that a stream exists or that the user has access to it. There is no
 stream resolver, torrent search, account signup, API key or Real-Debrid connection
 in this catalogue adapter. The separate Real-Debrid connector can coexist via
 Sources; neither adapter guesses a match between a catalogue film and a download.
-See [Real-Debrid setup and privacy](real-debrid.md) for application ID, sign-in,
+See [Real-Debrid setup and privacy](real-debrid.md) for the default public client ID, optional override, sign-in,
 private storage and the remaining live-provider acceptance requirements.
 
 ### Provider and privacy
