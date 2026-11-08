@@ -140,7 +140,7 @@ def source_consent():
     rpc('Input.Select')
     until('RD consent',lambda:xbmcgui.getCurrentWindowDialogId()==10100)
     text=xbmc.getInfoLabel('Control.GetLabel(9)')
-    for phrase in ('shared open-source app','torrents','not encrypted','backups','Continue?'):
+    for phrase in ('shared open-source app','torrents','user information','Continue to storage consent?'):
         if phrase not in text:
             raise RuntimeError('Missing RD disclosure: '+phrase)
     return text
@@ -184,33 +184,41 @@ try:
         capture('online-'+label.lower())
         rpc('Input.Back'); wait_for_movie_idle('cancel '+label,online_path)
     checks.append({'check':'online-search-repeat-collection-genre-cancel','history_preserved':True})
-    for attempt in range(2):
+    for stage, back in ((1,False),(1,True),(2,False),(2,True)):
         text=source_consent()
-        capture('rd-consent-'+str(attempt))
-        if attempt == 0:
-            monitor.waitForAbort(5)
-            capture('rd-consent-scroll-6s')
-            monitor.waitForAbort(5)
-            capture('rd-consent-scroll-12s')
+        if stage == 2:
+            consent_choice(True)
+            until('storage consent',lambda:'Same-user apps' in xbmc.getInfoLabel('Control.GetLabel(9)'))
+            text=xbmc.getInfoLabel('Control.GetLabel(9)')
+            for phrase in ('refresh credentials','OS user','not encrypted','Same-user apps','backups','Connect?'):
+                assert phrase in text
+        capture('rd-consent-stage-'+str(stage)+('-back' if back else '-no'))
         assert 'fake-device-code' not in events()
-        if attempt==0:
-            consent_choice(False)
-        else:
+        if back:
             rpc('Input.Back')
-        wait_for_movie_idle('RD decline/back',online_path)
+        else:
+            consent_choice(False)
+        wait_for_movie_idle('RD staged decline/back',online_path)
         assert 'fake-device-code' not in events()
-    checks.append({'check':'RD-consent-decline-and-back','provider_calls':False,'text':text})
+    checks.append({'check':'RD-both-consent-stages-No-and-Back','provider_calls':False})
     source_consent(); consent_choice(True)
+    until('storage consent before fake request',lambda:'Same-user apps' in xbmc.getInfoLabel('Control.GetLabel(9)'))
+    assert 'fake-device-code' not in events()
+    consent_choice(True)
     until('fake device progress',lambda:xbmcgui.getCurrentWindowDialogId()==10101)
     capture('rd-fake-device-progress')
     assert events().count('fake-device-code')==1
+    until('first fake pending poll',lambda:'fake-pending' in events(),10)
     rpc('Input.Back')
     wait_for_movie_idle('cancel fake device progress',online_path)
     import xbmcvfs
     private=Path(xbmcvfs.translatePath('special://profile/addon_data/plugin.video.aperture.movies/real-debrid-private'))
     assert not (private/'credentials.json').exists()
     assert 'unexpected-provider-operation' not in events()
-    checks.append({'check':'RD-fake-device-cancel','real_provider_calls':False,'credentials_saved':False})
+    stopped_events = events()
+    monitor.waitForAbort(6)
+    assert events() == stopped_events
+    checks.append({'check':'RD-fake-device-cancel-after-first-poll','real_provider_calls':False,'credentials_saved':False})
     nav('Local files'); rpc('Input.Select')
     until('return to local files',lambda:cinematic() and xbmc.getInfoLabel('Container.FolderPath')==local_path)
     rpc('Input.Down')
