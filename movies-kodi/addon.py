@@ -133,7 +133,8 @@ def discovery_action(action):
         if selected:
             state['genre'] = labels[selected - 1]
     elif action == 'providers':
-        xbmcgui.Dialog().ok('Movie sources', 'Kodi library and existing video folders are available. Real-Debrid is not connected. This build does not search an online catalogue or resolve provider streams. No account credentials have been saved.')
+        from resources.lib.debrid_ui import run
+        run({'action': ['providers']}, ADDON, poster_profile(), BASE, HANDLE)
         return
     else:
         return
@@ -192,6 +193,10 @@ def discover(query):
 def main():
     query = parse_qs(sys.argv[2].lstrip('?'))
     action = query.get('action', [''])[0]
+    if action == 'rd_play' or query.get('mode', [''])[0] == 'rd':
+        from resources.lib.debrid_ui import run
+        run(query, ADDON, poster_profile(), BASE, HANDLE)
+        return
     if action in ('search', 'collection', 'genre', 'providers'):
         discovery_action(action)
         return

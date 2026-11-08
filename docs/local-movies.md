@@ -63,13 +63,10 @@ what Kodi already knows: no fabricated ratings, titles, or stream availability.
 An empty library explains how to use Local files. It does not trigger scraping
 or a whole-drive scan. This version does not automatically retrieve posters.
 
-Real-Debrid is **not connected or implemented** in this candidate. The Sources
-button reports that boundary rather than presenting fake streams or account
-status. Real-Debrid is not itself a movie discovery catalogue. Live online
-metadata/search, source resolution and authenticated provider playback need
-separate adapters and explicitly approved provider/account configuration. No
-provider credentials, OAuth grants, background account access, downloads or
-service changes are made by this interface update.
+Real-Debrid is optional and starts disconnected. Sources offers explicit device
+sign-in, existing account downloads and authorized link playback. See
+[Real-Debrid setup and limitations](real-debrid.md). It is not a movie catalogue;
+Discover/Search still use Kodi's existing library. No background access occurs.
 
 Verification: focused tests cover paging, combined filters, resume metadata,
 redacted failures, empty libraries, cancelled/repeated search, stale navigation,

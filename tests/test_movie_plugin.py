@@ -291,7 +291,7 @@ class DiscoveryTests(unittest.TestCase):
         self.assertEqual(c[0]['method'],'VideoLibrary.GetGenres');self.assertIn('genre=Drama',b[0])
     def test_provider_status_never_authenticates(self):
         c,e,d,x,b=self.run_plugin([],query='?action=providers')
-        self.assertEqual((c,e,x,b),([],[],[],[]));self.assertIn('Real-Debrid is not connected',d[0][1])
+        self.assertEqual((c,e,d,x,b),([],[],[],[],[]))  # Closing Sources does not authenticate.
 
     def test_genre_failure_does_not_finish_current_directory(self):
         c,e,d,x,b=self.run_plugin([],query='?action=genre',fail=True)
