@@ -62,12 +62,36 @@ class DebridUITests(unittest.TestCase):
         self.run_ui()
         self.client.begin.assert_not_called()
 
-    def test_configured_id_required(self):
+    def test_empty_setting_uses_public_id_only_after_consent(self):
         self.dialog.select.return_value = 0
-        self.addon.getSetting.return_value = ''
+        self.addon.getSetting.return_value = ' '
         self.run_ui()
         self.client.begin.assert_not_called()
-        self.dialog.ok.assert_called_once()
+        self.dialog.ok.assert_not_called()
+        self.dialog.yesno.return_value = True
+        self.client.begin.return_value = {'user_code': 'ABC123'}
+        self.run_ui()
+        self.client.begin.assert_called_once_with(rd.PUBLIC_CLIENT_ID)
+        self.client.connect.assert_called_once()
+        self.assertIn('shared open-source app', self.dialog.yesno.call_args.args[1])
+        self.assertIn('torrents', self.dialog.yesno.call_args.args[1])
+        self.assertNotIn('Approve Aperture', self.gui.DialogProgress.return_value.create.call_args.args[1])
+
+    def test_custom_id_is_preserved(self):
+        self.dialog.select.return_value = 0
+        self.addon.getSetting.return_value = ' custom-app '
+        self.dialog.yesno.return_value = True
+        self.client.begin.return_value = {'user_code': 'ABC123'}
+        self.run_ui()
+        self.client.begin.assert_called_once_with('custom-app')
+        self.assertIn('configured application', self.dialog.yesno.call_args.args[1])
+        self.assertNotIn('shared open-source app', self.dialog.yesno.call_args.args[1])
+
+    def test_setting_default_matches_official_public_id(self):
+        import xml.etree.ElementTree as ET
+        settings = ET.parse(ROOT / 'movies-kodi/resources/settings.xml')
+        self.assertEqual(settings.findtext('.//setting[@id="rd_client_id"]/default'), rd.PUBLIC_CLIENT_ID)
+        self.assertEqual(rd.PUBLIC_CLIENT_ID, 'X245A4XAIBGVM')
 
     def test_configure_only_opens_settings(self):
         self.dialog.select.return_value = 1
