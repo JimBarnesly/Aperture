@@ -105,7 +105,7 @@ if [ "$BASELINE" -eq 0 ]; then
   printf '%s  %s\n' "$GAMES_SHA" "$SOURCE_DIR/skin/xml/MyGames.xml" | sha256sum -c - >/dev/null || fail 'MyGames.xml integrity check failed'
   cp "$SOURCE_DIR/skin/xml/MyGames.xml" "$TMP/xml/MyGames.xml"
   [ -f "$SOURCE_DIR/skin/xml/MyVideoNav.xml" ] || fail 'Matching movie browser XML missing'
-  MOVIES_SHA=65c9f400e002bdfe6f2abb2e954276b9a36bea6e1743a17379e462a82a9e5b5f
+  MOVIES_SHA=30d5eae1dde70d66a9a3da7cfc7af0cb76f9bd9511fc6288b54f29e08d80b8db
   printf '%s  %s\n' "$MOVIES_SHA" "$SOURCE_DIR/skin/xml/MyVideoNav.xml" | sha256sum -c - >/dev/null || fail 'MyVideoNav.xml integrity check failed'
   cp "$SOURCE_DIR/skin/xml/MyVideoNav.xml" "$TMP/xml/MyVideoNav.xml"
   [ -f "$SOURCE_DIR/skin/xml/MyMusicNav.xml" ] || fail 'Matching music browser XML missing'
@@ -147,3 +147,4 @@ printf 'Installed Aperture 4.0.1~rc1: %s\n' "$TARGET"
 [ "$BASELINE" -eq 0 ] || printf 'Diagnostic baseline selected: Home is unchanged Estuary.\n'
 printf 'Start Kodi, enable Aperture in My add-ons, then choose it in Settings > Interface > Skin.\n'
 printf 'Confirm Keep only if the screen and controls work. Estuary is unchanged.\n'
+

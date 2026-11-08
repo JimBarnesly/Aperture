@@ -120,7 +120,11 @@ def discovery_action(action):
             return
         state['collection'] = COLLECTIONS[selected][0]
     elif action == 'genre':
-        genres = rpc('VideoLibrary.GetGenres', {'type': 'movie'}).get('genres', [])
+        try:
+            genres = rpc('VideoLibrary.GetGenres', {'type': 'movie'}).get('genres', [])
+        except RuntimeError:
+            xbmcgui.Dialog().ok('Genres', 'Could not read genres from the Kodi library. Local files remain available.')
+            return
         labels = sorted({g.get('label') for g in genres if isinstance(g.get('label'), str) and g['label']})
         selected = xbmcgui.Dialog().select('Genre', ['All genres'] + labels)
         if selected < 0 or selected > len(labels):
