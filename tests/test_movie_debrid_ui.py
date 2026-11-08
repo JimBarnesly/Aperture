@@ -73,8 +73,8 @@ class DebridUITests(unittest.TestCase):
         self.run_ui()
         self.client.begin.assert_called_once_with(rd.PUBLIC_CLIENT_ID)
         self.client.connect.assert_called_once()
-        self.assertIn('shared open-source app', self.dialog.yesno.call_args.args[1])
-        self.assertIn('torrents', self.dialog.yesno.call_args.args[1])
+        self.assertIn('shared open-source app', self.dialog.yesno.call_args_list[-2].args[1])
+        self.assertIn('torrents', self.dialog.yesno.call_args_list[-2].args[1])
         self.assertNotIn('Approve Aperture', self.gui.DialogProgress.return_value.create.call_args.args[1])
 
     def test_custom_id_is_preserved(self):
@@ -84,8 +84,38 @@ class DebridUITests(unittest.TestCase):
         self.client.begin.return_value = {'user_code': 'ABC123'}
         self.run_ui()
         self.client.begin.assert_called_once_with('custom-app')
-        self.assertIn('configured application', self.dialog.yesno.call_args.args[1])
-        self.assertNotIn('shared open-source app', self.dialog.yesno.call_args.args[1])
+        self.assertIn('configured application', self.dialog.yesno.call_args_list[-2].args[1])
+        self.assertNotIn('shared open-source app', self.dialog.yesno.call_args_list[-2].args[1])
+
+    def test_decline_second_consent_no_network(self):
+        self.dialog.select.return_value = 0
+        self.dialog.yesno.side_effect = [True, False]
+        self.run_ui()
+        self.assertEqual(self.dialog.yesno.call_count, 2)
+        self.client.begin.assert_not_called()
+
+    def test_both_prompts_fit_short_native_disclosure(self):
+        self.dialog.select.return_value = 0
+        self.addon.getSetting.return_value = ''
+        self.dialog.yesno.side_effect = [True, False]
+        self.run_ui()
+        prompts = [call.args[1] for call in self.dialog.yesno.call_args_list]
+        self.assertEqual(len(prompts), 2)
+        self.assertTrue(all(len(text) <= 210 for text in prompts))
+        self.assertIn('shared open-source app', prompts[0])
+        self.assertIn('unrestrict, torrents, downloads and user information', prompts[0])
+        for phrase in ('refresh credentials', 'OS user', 'not encrypted', 'Same-user apps', 'backups'):
+            self.assertIn(phrase, prompts[1])
+        self.client.begin.assert_not_called()
+
+    def test_navigation_change_after_consent_prevents_request(self):
+        for labels in (['original', 'original', 'new'], ['original', 'original', 'original', 'new']):
+            with self.subTest(labels=labels):
+                self.dialog.select.return_value = 0
+                self.dialog.yesno.return_value = True
+                self.xbmc.getInfoLabel.side_effect = labels
+                self.run_ui()
+                self.client.begin.assert_not_called()
 
     def test_setting_default_matches_official_public_id(self):
         import xml.etree.ElementTree as ET
@@ -101,6 +131,7 @@ class DebridUITests(unittest.TestCase):
 
     def test_connect_prompt_contains_storage_and_access_disclosure(self):
         self.dialog.select.return_value = 0
+        self.dialog.yesno.side_effect = [True, False]
         self.run_ui()
         text = self.dialog.yesno.call_args.args[1]
         self.assertIn('not encrypted', text)
@@ -193,3 +224,4 @@ class DebridUITests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+

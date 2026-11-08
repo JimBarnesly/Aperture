@@ -90,10 +90,18 @@ def run(query, addon, profile, base, handle):
                 addon.openSettings()
             elif not connected and selected == 0:
                 client_id = addon.getSetting('rd_client_id').strip() or PUBLIC_CLIENT_ID
-                application = ('Use Real-Debrid\'s official shared open-source app (not a custom Aperture name). Its permissions include unrestrict, torrents, downloads and user information. '
+                application = ("Use Real-Debrid's official shared open-source app, not named Aperture. Permissions: unrestrict, torrents, downloads and user information. "
                                if client_id == PUBLIC_CLIENT_ID else
                                'Use your configured application. Review its name and permissions on Real-Debrid. ')
-                if not dialog.yesno('Connect Real-Debrid?', application + 'Aperture uses account downloads and links you choose. Save refresh credentials in this profile, restricted to your OS user (not encrypted). Same-user apps and backups may read them. Continue?'):
+                # Two short, independently cancellable screens keep every risk
+                # visible before approval in Kodi's four-line confirmation box.
+                if not dialog.yesno('Real-Debrid permissions (1/2)', application + 'Continue to storage consent?'):
+                    return
+                if xbmc.getInfoLabel('Container.FolderPath') != origin:
+                    return
+                if not dialog.yesno('Real-Debrid storage (2/2)', 'Aperture accesses account downloads and links you choose. Save refresh credentials in this profile, restricted to your OS user (not encrypted). Same-user apps and backups may read them. Connect?'):
+                    return
+                if xbmc.getInfoLabel('Container.FolderPath') != origin:
                     return
                 session = client.begin(client_id)
                 progress = xbmcgui.DialogProgress()
@@ -126,3 +134,4 @@ def run(query, addon, profile, base, handle):
             xbmcplugin.setResolvedUrl(handle, False, xbmcgui.ListItem())
         elif directory:
             xbmcplugin.endOfDirectory(handle, succeeded=False, cacheToDisc=False)
+
