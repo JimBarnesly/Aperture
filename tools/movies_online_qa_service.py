@@ -136,11 +136,10 @@ def source_consent():
     nav('Sources'); rpc('Input.Select')
     until('Sources selection',lambda:xbmcgui.getCurrentWindowDialogId()==12000)
     # New disconnected selection opens on its first item; verify before Select.
-    window=xbmcgui.Window(12000)
-    until('Connect choice focused',lambda:window.getControl(6).getSelectedItem().getLabel()=='Connect Real-Debrid')
+    until('Connect choice focused',lambda:xbmc.getInfoLabel('Container(6).ListItem.Label')=='Connect Real-Debrid')
     rpc('Input.Select')
     until('RD consent',lambda:xbmcgui.getCurrentWindowDialogId()==10100)
-    text=xbmcgui.Window(10100).getControl(9).getText()
+    text=xbmc.getInfoLabel('Control.GetLabel(9)')
     for phrase in ('shared open-source app','torrents','not encrypted','backups','Continue?'):
         if phrase not in text:
             raise RuntimeError('Missing RD disclosure: '+phrase)
@@ -148,10 +147,9 @@ def source_consent():
 
 
 def consent_choice(yes):
-    expected=11 if yes else 10
-    dialog=xbmcgui.Window(10100)
+    expected='Yes' if yes else 'No'
     for _ in range(4):
-        if dialog.getFocusId()==expected:
+        if xbmc.getInfoLabel('System.CurrentControl')==expected:
             rpc('Input.Select'); return
         rpc('Input.Right'); monitor.waitForAbort(.2)
     raise RuntimeError('Cannot reach consent choice by D-pad')
@@ -175,7 +173,7 @@ try:
     assert xbmc.getInfoLabel('ListItem.Property(IsPlayable)').lower()=='false'
     rpc('Input.Select')
     until('online details',lambda:xbmcgui.getCurrentWindowDialogId()==12002)
-    text=xbmcgui.Window(12002).getControl(9).getText()
+    text=xbmc.getInfoLabel('Control.GetLabel(9)')
     assert 'Playback availability not checked' in text
     capture('online-details'); rpc('Input.Select')
     wait_for_movie_idle('details dismissed without history change',online_path)
