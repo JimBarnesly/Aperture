@@ -1,7 +1,8 @@
 # Optional Real-Debrid connector
 
 This candidate adds an **opt-in connector**, not a Stremio catalogue or torrent
-search. Discover/Search remain the Kodi library. Sources can list existing
+search. Discover/Search use the separate Cinemeta metadata adapter; My Kodi
+library remains accessible under Collections. Sources can list existing
 Real-Debrid download-history video entries (60 per page) and resolve an HTTPS
 link the user is authorized to access. It does not add magnets, select torrent
 files, scrape indexes, buy subscriptions, or modify account settings.

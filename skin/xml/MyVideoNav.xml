@@ -295,7 +295,7 @@
         <width>1450</width>
         <height>35</height>
         <font>font20_title</font>
-        <label>Up  Discover / Search       •       Select  Play / Open       •       Back  Return       •       Menu  Information</label>
+        <label>Up  Discover / Search       •       Select  Details / Play / Open       •       Back  Return       •       Menu  Information</label>
         <textcolor>FF99B0B8</textcolor>
       </control>
       <control type="label">
@@ -322,7 +322,7 @@
         <onright>711</onright>
         <onup>61</onup>
         <ondown>61</ondown>
-        <onclick>Container.Update(plugin://plugin.video.aperture.movies/?mode=discover)</onclick>
+        <onclick>Container.Update(plugin://plugin.video.aperture.movies/?mode=online)</onclick>
       </control>
       <control type="button" id="711">
         <left>344</left>

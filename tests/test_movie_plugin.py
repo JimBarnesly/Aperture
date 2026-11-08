@@ -1,5 +1,5 @@
 from pathlib import Path
-import json,runpy,sys,types,unittest,tempfile
+import json,runpy,sys,types,unittest,tempfile,io
 from unittest.mock import patch
 from urllib.parse import urlencode
 ROOT=Path(__file__).resolve().parents[1]
@@ -21,7 +21,7 @@ class PluginTests(unittest.TestCase):
         self.temporary=tempfile.TemporaryDirectory()
         self.profile=self.temporary.name
         self.addCleanup(self.temporary.cleanup)
-    def run_plugin(self,sources,query='',default='',files=None,fail=False,vfs_listing=None,vfs_exists=(),vfs_trace=None,folder_paths=None,busy_checks=0,view_trace=None,abort=False,picture="",movies=None,limits=None,search="",selection=-1,genres=None):
+    def run_plugin(self,sources,query='',default='',files=None,fail=False,vfs_listing=None,vfs_exists=(),vfs_trace=None,folder_paths=None,busy_checks=0,view_trace=None,abort=False,picture="",movies=None,limits=None,search="",selection=-1,genres=None,catalog_payload=None):
         calls=[]; entries=[]; dialogs=[]; ended=[]; builtins=[]
         vfs_trace = vfs_trace if vfs_trace is not None else []
         def exists(path):
@@ -71,7 +71,7 @@ class PluginTests(unittest.TestCase):
         saved={k:v for k,v in sys.modules.items() if k=='resources' or k.startswith('resources.')}
         for k in list(saved):sys.modules.pop(k)
         try:
-            with patch.dict(sys.modules,mods),patch.object(sys,'argv',['plugin://plugin.video.aperture.movies/','3',query]):
+            with patch('urllib.request.OpenerDirector.open', return_value=io.BytesIO(json.dumps(catalog_payload or {'metas': []}).encode())),patch.dict(sys.modules,mods),patch.object(sys,'argv',['plugin://plugin.video.aperture.movies/','3',query]):
                 exec(compile((ROOT/'movies-kodi/addon.py').read_text(), str(ROOT/'movies-kodi/addon.py'), 'exec'), {'__name__':'__main__'})
         finally:
             sys.path.pop(0)
@@ -79,6 +79,26 @@ class PluginTests(unittest.TestCase):
                 if k=='resources' or k.startswith('resources.'):sys.modules.pop(k)
             sys.modules.update(saved)
         return calls,entries,dialogs,ended,builtins
+    def test_online_catalogue_never_calls_local_library_or_plays(self):
+        c,e,d,x,b=self.run_plugin([],query='?mode=online',catalog_payload={'metas':[{'id':'tt1234567','name':'Online Film','poster':'https://example.org/p.jpg','streams':[{'url':'https://example.org/film'}]}]})
+        self.assertEqual(c,[])
+        self.assertEqual(e[0][2].props['IsPlayable'],'false')
+        self.assertIn('action=online_details',e[0][1])
+        self.assertNotIn('https://example.org/film',repr(e))
+        self.assertIn('start=1',e[-1][1])
+    def test_online_search_cancel_does_not_navigate(self):
+        c,e,d,x,b=self.run_plugin([],query='?action=search',folder_paths=['plugin://plugin.video.aperture.movies/?mode=online'],search='')
+        self.assertEqual((c,e,x,b),([],[],[],[]))
+    def test_online_search_navigation_is_stale_safe(self):
+        c,e,d,x,b=self.run_plugin([],query='?action=search',folder_paths=['plugin://plugin.video.aperture.movies/?mode=online','plugin://other/'],search='Example')
+        self.assertEqual(b,[])
+    def test_online_details_is_metadata_only(self):
+        c,e,d,x,b=self.run_plugin([],query='?action=online_details&id=tt1234567',catalog_payload={'meta':{'id':'tt1234567','name':'Example','description':'A plot'}})
+        self.assertEqual((c,e,b),([],[],[]))
+        self.assertIn('Playback availability not checked',repr(d))
+    def test_online_collection_can_open_local_library(self):
+        c,e,d,x,b=self.run_plugin([],query='?action=collection',folder_paths=['plugin://plugin.video.aperture.movies/?mode=online'],selection=2)
+        self.assertEqual(b,['Container.Update(plugin://plugin.video.aperture.movies/?mode=discover)'])
     def test_single_source_opens_without_chooser(self):
         c,e,d,x,b=self.run_plugin([{'label':'Drive','file':'/movies/'}],files=[{'label':'Film.mkv','file':'/movies/Film.mkv','filetype':'file'}])
         self.assertEqual(c[1]['params']['directory'],'/movies/')

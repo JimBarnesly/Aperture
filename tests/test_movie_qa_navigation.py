@@ -83,6 +83,12 @@ class MovieIdleTests(unittest.TestCase):
         self.assertFalse(self.sample(101))
         self.assertFalse(self.sample(200))
 
+    def test_native_discovery_fixture_is_explicitly_local_and_offline(self):
+        source = (ROOT/'tools/movies_qa_service.py').read_text()
+        self.assertIn('Container.Update(plugin://plugin.video.aperture.movies/?mode=discover)', source)
+        self.assertIn("'online_catalogue_ui_tested':False", source)
+        self.assertNotIn('Container.Update(plugin://plugin.video.aperture.movies/?mode=online)', source)
+
     def test_poster_cancel_and_reset_use_guard_before_more_input(self):
         calls = [node for node in ast.walk(self.tree)
                  if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
