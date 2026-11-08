@@ -169,6 +169,7 @@ try:
     local_path=xbmc.getInfoLabel('Container.FolderPath')
     nav('Discover'); rpc('Input.Select')
     until('online cinematic listing',lambda:cinematic() and 'mode=online' in xbmc.getInfoLabel('Container.FolderPath'))
+    rpc('Input.Down')
     focus('Synthetic Online Horizon'); capture('online-catalogue')
     online_path=xbmc.getInfoLabel('Container.FolderPath')
     assert xbmc.getInfoLabel('ListItem.Property(IsPlayable)').lower()=='false'
@@ -209,6 +210,7 @@ try:
     checks.append({'check':'RD-fake-device-cancel','real_provider_calls':False,'credentials_saved':False})
     nav('Local files'); rpc('Input.Select')
     until('return to local files',lambda:cinematic() and xbmc.getInfoLabel('Container.FolderPath')==local_path)
+    rpc('Input.Down')
     focus('Amber Horizon'); capture('online-return-local')
     checks.append({'check':'controller-navigation-return-local'})
     result={'status':'passed','scenario':'online','checks':checks,'limitations':['Native Kodi 21.3 software-rendered CI only; not physical controller/Pi acceptance','Synthetic catalogue transport; no live service, usable device code, token exchange or grant','Screenshots require visual review for disclosure readability']}
