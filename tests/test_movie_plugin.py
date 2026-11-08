@@ -244,7 +244,6 @@ class PluginTests(unittest.TestCase):
         c,e,*_=self.run_plugin([{'file':'/movies/'}],files=files[:1],vfs_exists={'/movies/poster.jpg'})
         self.assertEqual(e[0][2].art['poster'],'/movies/poster.jpg')
 
-if __name__=='__main__':unittest.main()
 
 
 class DiscoveryTests(unittest.TestCase):
@@ -297,3 +296,6 @@ class DiscoveryTests(unittest.TestCase):
     def test_genre_failure_does_not_finish_current_directory(self):
         c,e,d,x,b=self.run_plugin([],query='?action=genre',fail=True)
         self.assertEqual((e,x,b),([],[],[]));self.assertNotIn('secret',repr(d))
+
+if __name__ == '__main__':
+    unittest.main()
