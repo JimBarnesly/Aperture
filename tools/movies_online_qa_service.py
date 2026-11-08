@@ -187,6 +187,11 @@ try:
     for attempt in range(2):
         text=source_consent()
         capture('rd-consent-'+str(attempt))
+        if attempt == 0:
+            monitor.waitForAbort(5)
+            capture('rd-consent-scroll-6s')
+            monitor.waitForAbort(5)
+            capture('rd-consent-scroll-12s')
         assert 'fake-device-code' not in events()
         if attempt==0:
             consent_choice(False)
