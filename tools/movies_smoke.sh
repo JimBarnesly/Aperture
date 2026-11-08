@@ -4,7 +4,7 @@ set -Eeuo pipefail
 ROOT=$(cd -- "$(dirname -- "$0")/.." && pwd)
 OUT="${APERTURE_MOVIES_OUT:-$ROOT/build/movies-smoke}"
 SCENARIO="${APERTURE_MOVIES_SCENARIO:-single}"
-[[ "$SCENARIO" =~ ^(single|default|multiple|empty)$ ]] || { echo 'Invalid source scenario' >&2; exit 2; }
+[[ "$SCENARIO" =~ ^(single|default|multiple|empty|online)$ ]] || { echo 'Invalid source scenario' >&2; exit 2; }
 [[ ! -d "$OUT" || -z "$(ls -A "$OUT")" ]] || { echo 'Output directory must be empty; preserving prior evidence' >&2; exit 2; }
 mkdir -p "$OUT"; OUT=$(cd "$OUT" && pwd)
 printf '{"status":"not_run","reason":"GUI acceptance has not completed"}\n' > "$OUT/result.json"
@@ -59,3 +59,4 @@ python3 - "$OUT/result.json" <<'PY'
 import json,sys
 r=json.load(open(sys.argv[1])); print(json.dumps(r,indent=2)); assert r['status']=='passed'
 PY
+
