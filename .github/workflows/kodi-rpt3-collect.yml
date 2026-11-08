@@ -28,8 +28,8 @@ jobs:
           ls -lh *.deb
           grep -E 'tests passed|tests failed|Total Test time|Skipped|Not Run|FAILED|PASSED' build.log | tail -100 || true
           mkdir ../evidence
-          cp BUILD-STATUS.txt patched-build-id.txt patched-binary-control.txt patched-dbgsym-control.txt SHA256SUMS build.log build-dependencies.tsv compiler.txt build-flags.txt workflow-commit.txt *.buildinfo *.changes ../evidence/
-          cp -a focused-regression build ../evidence/
+          cp BUILD-STATUS.txt patched-build-id.txt patched-binary-control.txt patched-dbgsym-control.txt SHA256SUMS build.log build-dependencies.tsv compiler.txt build-flags.txt workflow-commit.txt *.buildinfo *.changes *.dsc *.debian.tar.xz elf-header.txt debug-notes.txt debug-sections.txt ../evidence/
+          cp -a focused-regression build source-provenance ../evidence/
           cp ../hash-verification.txt ../evidence/
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
