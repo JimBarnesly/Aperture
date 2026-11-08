@@ -136,7 +136,7 @@ def source_consent():
     nav('Sources'); rpc('Input.Select')
     until('Sources selection',lambda:xbmcgui.getCurrentWindowDialogId()==12000)
     # New disconnected selection opens on its first item; verify before Select.
-    until('Connect choice focused',lambda:xbmc.getInfoLabel('Container(6).ListItem.Label')=='Connect Real-Debrid')
+    until('Connect choice focused',lambda:xbmc.getInfoLabel('System.CurrentControl')=='Connect Real-Debrid')
     rpc('Input.Select')
     until('RD consent',lambda:xbmcgui.getCurrentWindowDialogId()==10100)
     text=xbmc.getInfoLabel('Control.GetLabel(9)')
