@@ -8,6 +8,9 @@ from unittest.mock import Mock, patch
 from test_movie_debrid import rd
 
 ROOT = Path(__file__).resolve().parents[1]
+matcher_spec = importlib.util.spec_from_file_location('source_match', ROOT / 'movies-kodi/resources/lib/source_match.py')
+source_match = importlib.util.module_from_spec(matcher_spec)
+matcher_spec.loader.exec_module(source_match)
 
 
 class DebridUITests(unittest.TestCase):
@@ -24,7 +27,7 @@ class DebridUITests(unittest.TestCase):
         self.gui.Dialog.return_value = self.dialog
         self.addon = Mock()
         self.addon.getSetting.return_value = 'public-app'
-        mods = {'xbmc': self.xbmc, 'xbmcgui': self.gui, 'xbmcplugin': self.plugin, 'resources.lib.debrid': rd}
+        mods = {'xbmc': self.xbmc, 'xbmcgui': self.gui, 'xbmcplugin': self.plugin, 'resources.lib.debrid': rd, 'resources.lib': types.SimpleNamespace(source_match=source_match)}
         with patch.dict(sys.modules, mods):
             spec = importlib.util.spec_from_file_location('debrid_ui_test', ROOT / 'movies-kodi/resources/lib/debrid_ui.py')
             self.ui = importlib.util.module_from_spec(spec)
@@ -87,6 +90,31 @@ class DebridUITests(unittest.TestCase):
         self.assertIn('action=rd_play&id=ONE&page=1', call[1])
         self.assertNotIn('secret', str(self.plugin.mock_calls))
         self.plugin.endOfDirectory.assert_called_once_with(3, succeeded=True, cacheToDisc=False)
+
+    def test_match_checks_only_requested_page_and_does_not_send_title(self):
+        self.client.downloads.return_value = [
+            {'id': 'ONE', 'filename': 'Example.tt1234567.mp4'},
+            {'id': 'TWO', 'filename': 'Example.mp4'}]
+        self.run_ui({'mode': ['rd'], 'imdb': ['tt1234567']})
+        self.client.downloads.assert_called_once_with(1)
+        self.assertEqual(self.plugin.addDirectoryItem.call_count, 1)
+        self.assertIn('id=ONE', self.plugin.addDirectoryItem.call_args.args[1])
+        self.client.resolve_link.assert_not_called()
+
+    def test_invalid_match_id_never_accesses_account(self):
+        self.run_ui({'mode': ['rd'], 'imdb': ['bad']})
+        self.client.downloads.assert_not_called()
+        self.plugin.endOfDirectory.assert_called_once_with(3, succeeded=False, cacheToDisc=False)
+
+    def test_empty_match_is_not_a_global_availability_claim(self):
+        self.client.downloads.return_value = []
+        self.run_ui({'mode': ['rd'], 'imdb': ['tt1234567']})
+        self.assertIn('does not mean the title is unavailable', self.dialog.ok.call_args.args[1])
+
+    def test_next_page_preserves_identity_filter(self):
+        self.client.downloads.return_value = [{'id': 'ONE', 'filename': 'Other.mp4'}] * rd.PAGE_SIZE
+        self.run_ui({'mode': ['rd'], 'imdb': ['tt1234567']})
+        self.assertIn('page=2&imdb=tt1234567', self.plugin.addDirectoryItem.call_args.args[1])
 
     def test_playback_fail_resolves_false_not_directory(self):
         self.client.playback.side_effect = rd.DebridError('missing')

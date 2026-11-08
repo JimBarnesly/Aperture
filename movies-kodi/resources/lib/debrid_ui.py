@@ -5,6 +5,7 @@ import xbmc
 import xbmcgui
 import xbmcplugin
 from resources.lib.debrid import Client, Store, DebridError, PAGE_SIZE, secret
+from resources.lib import source_match
 
 
 def run(query, addon, profile, base, handle):
@@ -26,12 +27,17 @@ def run(query, addon, profile, base, handle):
                 return
             if directory:
                 page = int(query.get('page', ['1'])[0])
+                identifier = query.get('imdb', [''])[0]
+                if identifier and not source_match.valid_id(identifier):
+                    raise DebridError('invalid')
                 entries = client.downloads(page)
                 xbmcplugin.setContent(handle, 'movies')
-                xbmcplugin.setPluginCategory(handle, 'Real-Debrid downloads')
+                xbmcplugin.setPluginCategory(handle, 'Real-Debrid downloads' + (' · Filename ID: ' + identifier if identifier else ''))
                 count = 0
                 for entry in entries:
                     if not isinstance(entry, dict):
+                        continue
+                    if identifier and not source_match.matches(entry, identifier):
                         continue
                     try:
                         item_id = secret(entry.get('id'))
@@ -41,6 +47,8 @@ def run(query, addon, profile, base, handle):
                     if not isinstance(label, str) or not label.lower().endswith(('.mkv', '.mp4', '.avi', '.mov', '.m4v', '.webm', '.ts')):
                         continue
                     li = xbmcgui.ListItem(label=label)
+                    if identifier:
+                        li.setInfo('video', {'plot': 'Filename contains IMDb ID ' + identifier + '. File contents and playback availability have not been verified.'})
                     li.setProperty('IsPlayable', 'true')
                     li.setProperty('Aperture.MovieFolder', 'false')
                     li.setArt({'icon': 'DefaultVideo.png'})
@@ -50,9 +58,9 @@ def run(query, addon, profile, base, handle):
                 if len(entries) == PAGE_SIZE and page < 10000:
                     li = xbmcgui.ListItem(label='More downloads')
                     li.setProperty('Aperture.MovieFolder', 'true')
-                    xbmcplugin.addDirectoryItem(handle, base + '?' + urlencode({'mode': 'rd', 'page': page + 1}), li, True)
+                    xbmcplugin.addDirectoryItem(handle, base + '?' + urlencode(dict({'mode': 'rd', 'page': page + 1}, **({'imdb': identifier} if identifier else {}))), li, True)
                 if not count:
-                    dialog.ok('Real-Debrid', 'No video downloads on this page. This lists existing account downloads, not an online movie catalogue.')
+                    dialog.ok('Real-Debrid', ('No filename ID matches on this page. Other pages may contain matches. Files without an explicit IMDb ID are not matched. This does not mean the title is unavailable.' if identifier else 'No video downloads on this page. This lists existing account downloads, not an online movie catalogue.'))
                 xbmcplugin.endOfDirectory(handle, succeeded=True, cacheToDisc=False)
                 return
             if action != 'providers':

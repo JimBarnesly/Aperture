@@ -77,3 +77,22 @@ redirect refusal, safe routes, download paging and explicit user choices. No
 real account sign-in, provider entitlement, link availability, live playback,
 physical remote or audible output has been verified. Existing Movies native UI
 CI is separate and does not prove the RD dialogs or live provider path.
+
+## Linking catalogue titles to existing downloads
+
+A catalogue card's context menu offers **Check my Real-Debrid downloads (filename
+IMDb ID)**. This explicitly reads one page of the connected account's existing
+downloads and compares filenames locally against the card's IMDb identifier. No
+library filenames, links or account data are sent to Cinemeta or another search
+provider. More downloads retains the same filter; pages are not fetched in the
+background. Connection is still a separate, explicit Sources action.
+
+A match requires a video filename containing that exact standalone IMDb ID and
+no conflicting IMDb ID. Filename evidence is not proof of file contents, rights,
+or playback availability. Title/year guesses and fuzzy matching are deliberately
+excluded. Many ordinary filenames contain no IMDb ID and will not match; a blank
+page is not a claim that the movie is unavailable. Use Sources to browse those
+downloads manually or resolve an explicitly supplied, authorized HTTPS link.
+Playback revalidates the selected download ID on its current account page and
+uses the existing resolver. No torrent search, add-on stream scraper, magnet
+submission, or automatic source acquisition has been added.

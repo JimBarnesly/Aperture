@@ -244,7 +244,9 @@ def online(query):
         li.setProperty('Aperture.MovieFolder', 'false')
         li.setProperty('Aperture.Availability', 'Not checked')
         route = BASE + '?' + urlencode({'action': 'online_details', 'id': movie['id']})
-        li.addContextMenuItems([('Movie details (Cinemeta)', 'RunPlugin(' + route + ')')])
+        match_route = BASE + '?' + urlencode({'mode': 'rd', 'imdb': movie['id']})
+        li.addContextMenuItems([('Movie details (Cinemeta)', 'RunPlugin(' + route + ')'),
+                                ('Check my Real-Debrid downloads (filename IMDb ID)', 'Container.Update(' + match_route + ')')])
         xbmcplugin.addDirectoryItem(HANDLE, route, li, False)
     if next_start is not None:
         state['start'] = next_start
