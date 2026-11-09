@@ -104,6 +104,12 @@ class PluginTests(unittest.TestCase):
     def test_online_search_navigation_is_stale_safe(self):
         c,e,d,x,b=self.run_plugin([],query='?action=search',folder_paths=['plugin://plugin.video.aperture.movies/?mode=online','plugin://other/'],search='Example')
         self.assertEqual(b,[])
+    def test_movie_details_exposes_visible_find_streams_action(self):
+        c,e,d,x,b=self.run_plugin([],query='?action=online_details&id=tt1234567',selection=0,catalog_payload={'meta':{'id':'tt1234567','name':'Example','description':'A plot'}})
+        self.assertEqual(b, ['RunPlugin(plugin://plugin.video.aperture.movies/?action=torrentio_find&id=tt1234567)'])
+        self.assertIn('Playback availability not checked', repr(d))
+        self.assertEqual(c, [])
+
     def test_online_details_is_metadata_only(self):
         c,e,d,x,b=self.run_plugin([],query='?action=online_details&id=tt1234567',catalog_payload={'meta':{'id':'tt1234567','name':'Example','description':'A plot'}})
         self.assertEqual((c,e,b),([],[],[]))

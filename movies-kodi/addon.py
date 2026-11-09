@@ -263,6 +263,7 @@ def online(query):
 
 
 def online_details(query):
+    origin = xbmc.getInfoLabel('Container.FolderPath')
     try:
         movie = catalog.details(catalog.value(query, 'id'))
     except catalog.CatalogError:
@@ -272,6 +273,16 @@ def online_details(query):
                             ('IMDb ' + movie['rating']) if movie['rating'] else '']))
     xbmcgui.Dialog().ok(movie['title'], summary + '\n\n' + movie['plot'] +
                        '\n\nMetadata: Cinemeta. Playback availability not checked. This catalogue does not supply streams.')
+    if xbmc.Monitor().abortRequested() or xbmc.getInfoLabel('Container.FolderPath') != origin:
+        return
+    selected = xbmcgui.Dialog().select('Movie actions', ['Find streams (Torrentio)', 'Set up online playback', 'Back to browsing'])
+    if xbmc.Monitor().abortRequested() or xbmc.getInfoLabel('Container.FolderPath') != origin:
+        return
+    if selected == 0:
+        route = BASE + '?' + urlencode({'action': 'torrentio_find', 'id': movie['id']})
+        xbmc.executebuiltin('RunPlugin(' + route + ')')
+    elif selected == 1:
+        xbmc.executebuiltin('RunPlugin(' + BASE + '?action=torrentio_setup)')
 
 
 def main():

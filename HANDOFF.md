@@ -4,19 +4,21 @@ Updated: 2026-11-09. Public project status only.
 
 ## Torrentio development slice (local only)
 
-Base `20f8e228a1bef620ba61c3f75a017deb03a0feb9`; branch
-`feat/torrentio-sources`. Adds the opt-in provider-browser setup wizard, optional
-private configuration import, bounded RD-only source lookup and explicit selection
-with re-fetch before playback. Discover Select remains metadata-only. Full unittest
-suite: 693 passed (baseline 674); compileall and diff whitespace checks passed.
-See [setup and unresolved connection/device gates](docs/torrentio.md) and
-[executed RED/GREEN evidence](docs/torrentio-tdd-evidence.md).
+Review-fix base `086f4d1b521570018e01ee94ef9c0e5e0b2ffd6d` in the isolated
+`Aperture-torrentio` checkout. Native setup now uses the existing RD device flow,
+separate access-token disclosure consent, marker-only persistence and locked
+refresh before check/search/play. No manual token copying is required. Visible
+movie-details actions expose Find streams; `undefined` resolver indices, sanitized
+technical labels, distinct resolver outcomes and corrupt-config recovery are covered.
+See [setup/security and live acceptance gates](docs/torrentio.md),
+[review-fix RED/GREEN evidence](docs/torrentio-review-tdd.md), and the historical
+[first-slice evidence](docs/torrentio-tdd-evidence.md).
 
 No live account/search/playback requests, deployment, device changes, merge or push.
-Guided automatic connection is blocked: reviewed Torrentio RD setup uses API tokens,
-not a supported Kodi OAuth/device callback. Browser handoff does not claim connection.
-Physical playback, dialog readability and strict HTTPS resolver compatibility remain
-unverified. Self-review only; independent parent review is required before deployment.
+Official Torrentio source uses bearer authentication, making OAuth access tokens
+source-compatible, not live-proven. Physical playback, remote dialog readability
+and strict HTTPS resolver compatibility remain unverified. Parent independent
+review is still required before deployment.
 
 ## Current source candidate
 

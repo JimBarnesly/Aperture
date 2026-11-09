@@ -24,11 +24,14 @@ features, retained alternatives and exact-source verification requirements.
 
 ## Optional Torrentio movie sources (development)
 
-This branch adds an opt-in Sources setup wizard and **Find streams (Torrentio)**
-movie context action. Default Discover selection remains metadata-only. The
-provider-browser handoff cannot complete a secure automatic connection yet;
-advanced private-file import is optional. See [setup, security boundaries and
-remaining acceptance](docs/torrentio.md). Nothing is deployed by this change.
+Sources → **Set up online playback (Torrentio)** now offers in-app Real-Debrid
+device sign-in (or explicitly consented reuse), with **no manual token copying**.
+Torrentio still receives an access token with broad account capabilities, only
+after separate disclosure consent. Discover opens metadata and visible movie
+actions including **Find streams (Torrentio)**; search and Play remain explicit.
+Advanced private-file import is optional. OAuth compatibility is source-supported,
+not live-proven. See [setup, security boundaries and remaining acceptance](docs/torrentio.md).
+Nothing is deployed by this change.
 
 ## Install the complete ZIPs
 

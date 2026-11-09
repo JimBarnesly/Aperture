@@ -27,6 +27,19 @@ MANIFEST = 'https://torrentio.strem.fun/realdebrid=' + TOKEN + '|debridoptions=n
 
 
 class ConfigurationTests(unittest.TestCase):
+    def test_oauth_token_is_encoded_as_one_config_and_resolver_segment(self):
+        self.assertTrue(hasattr(t.Config, 'from_token'), 'Native OAuth config builder missing')
+        token = 'SYNTHETIC.oauth~token+/ABC_-123'
+        config = t.Config.from_token(token)
+        self.assertEqual(config._token, token)
+        self.assertIn('%2F', config._manifest)
+        from urllib.parse import quote
+        resolver = t.ORIGIN + '/resolve/realdebrid/' + quote(token, safe='') + '/' + 'a' * 40 + '/null/undefined'
+        self.assertEqual(len(t.parse_streams({'streams': [{'name': '[RD+]', 'url': resolver}]}, config)), 1)
+        for bad in ['', 'short', 'a' * 4097, 'token|injection', 'token%2Fencoded', 'token?query', 'token\ncontrol']:
+            with self.assertRaises(t.ProviderError):
+                t.Config.from_token(bad)
+
     def test_only_strict_rd_configured_manifest_can_build_movie_lookup(self):
         self.assertIsNotNone(t, 'Torrentio adapter is missing')
         config = t.Config(MANIFEST)
@@ -49,6 +62,18 @@ class ConfigurationTests(unittest.TestCase):
 
 
 class StorageTests(unittest.TestCase):
+    def test_native_consent_persists_marker_not_a_token_copy(self):
+        self.assertTrue(hasattr(t.Store, 'enable_native'), 'Native consent storage missing')
+        with tempfile.TemporaryDirectory() as root:
+            store = t.Store(root)
+            store.enable_native()
+            self.assertEqual(store.load(), 'rd-oauth-v1')
+            saved = Path(root) / 'torrentio-private/connection'
+            self.assertEqual(saved.read_text(), 'rd-oauth-v1')
+            self.assertEqual(saved.stat().st_mode & 0o777, 0o600)
+            store.clear()
+            self.assertIsNone(store.load())
+
     def test_private_atomic_import_load_disconnect_with_symlink_refusal(self):
         self.assertTrue(hasattr(t, 'Store'), 'Private configuration store is missing')
         with tempfile.TemporaryDirectory() as root:
@@ -93,6 +118,38 @@ class StorageTests(unittest.TestCase):
 
 
 class StreamTests(unittest.TestCase):
+    def test_official_missing_index_sentinel_fixture(self):
+        # support.rs index_text(None), upstream f347bf5181da82a79a9f2527864125187ea95bd3.
+        payload = json.loads((ROOT / 'tests/fixtures/torrentio_rd_undefined.json').read_text())
+        self.assertEqual(len(t.parse_streams(payload, t.Config(MANIFEST))), 1)
+        for bad in ['Undefined', 'undefinedx', '-1', '1.0', '1000000']:
+            payload['streams'][0]['url'] = payload['streams'][0]['url'].rsplit('/', 1)[0] + '/' + bad
+            self.assertEqual(t.parse_streams(payload, t.Config(MANIFEST)), [])
+
+    def test_labels_expose_only_bounded_recognized_technical_fields(self):
+        payload = json.loads((ROOT / 'tests/fixtures/torrentio_rd_undefined.json').read_text())
+        entry = payload['streams'][0]
+        entry['title'] += ' ' + TOKEN + ' https://evil.example [B]BAD[/B]'
+        label = t.parse_streams(payload, t.Config(MANIFEST))[0].label
+        for value in ['1080p', 'HEVC', 'English', '2.0 GiB']:
+            self.assertIn(value, label)
+        for value in [TOKEN, 'https', '[B]', 'BAD']:
+            self.assertNotIn(value, label)
+        self.assertLessEqual(len(label), 140)
+        entry['title'] = '[B]evil[/B] ' * 10000
+        entry['behaviorHints']['videoSize'] = float('inf')
+        self.assertLessEqual(len(t.parse_streams(payload, t.Config(MANIFEST))[0].label), 140)
+
+    def test_source_identity_survives_token_rotation_only(self):
+        payload = json.loads((ROOT / 'tests/fixtures/torrentio_rd_undefined.json').read_text())
+        first = t.parse_streams(payload, t.Config(MANIFEST))[0]
+        rotated = 'ROTATED1234567890'
+        payload['streams'][0]['url'] = payload['streams'][0]['url'].replace(TOKEN, rotated)
+        second = t.parse_streams(payload, t.Config(MANIFEST.replace(TOKEN, rotated)))[0]
+        self.assertEqual(first.id, second.id)
+        payload['streams'][0]['url'] = payload['streams'][0]['url'].replace('/undefined', '/1')
+        self.assertNotEqual(first.id, t.parse_streams(payload, t.Config(MANIFEST.replace(TOKEN, rotated)))[0].id)
+
     def test_resolver_path_accepts_optional_filename_but_no_extra_segments(self):
         bare = 'https://torrentio.strem.fun/resolve/realdebrid/' + TOKEN + '/' + 'a' * 40 + '/null/0'
         for suffix, count in [('', 1), ('/Example.mkv', 1), ('/Example%20Movie.mkv', 1), ('/Example.mkv/extra', 0)]:
@@ -134,6 +191,30 @@ class NetworkTests(unittest.TestCase):
         dns = patch.object(t.socket, 'getaddrinfo', return_value=[(2, 1, 6, '', ('93.184.216.34', 443))])
         dns.start()
         self.addCleanup(dns.stop)
+
+    def test_known_resolver_states_have_fixed_distinct_messages_without_retry(self):
+        payload = json.loads((ROOT / 'tests/fixtures/torrentio_rd_undefined.json').read_text())
+        source = t.parse_streams(payload, t.Config(MANIFEST))[0]
+        cases = {'downloading_v3.mp4': 'queued', 'download_failed_v3.mp4': 'failed',
+                 'failed_access_v3.mp4': 'access', 'failed_rar_v3.mp4': 'archive',
+                 'failed_too_big_v2.mp4': 'large', 'failed_opening_v3.mp4': 'open',
+                 'failed_unexpected_v3.mp4': 'unexpected', 'failed_infringement_v3.mp4': 'removed',
+                 'limits_exceeded_v2.mp4': 'limit', 'blocked_access_v2.mp4': 'blocked',
+                 'failed_unavailable_v1.mp4': 'unavailable'}
+        messages = set()
+        for path, expected in cases.items():
+            replies = [Response(json.dumps(payload).encode()), Response(status=302, headers={'Location': t.ORIGIN + '/videos/' + path})]
+            calls = []
+            def request(url):
+                calls.append(url)
+                return replies.pop(0)
+            with self.assertRaises(t.ProviderError) as error:
+                t.Client(t.Config(MANIFEST), request=request).playback('tt1234567', source.id)
+            self.assertIn(expected, str(error.exception).lower())
+            self.assertNotIn(TOKEN, str(error.exception))
+            messages.add(str(error.exception))
+            self.assertEqual(len(calls), 2)
+        self.assertEqual(len(messages), len(cases))
 
     def test_manifest_check_is_bounded_and_does_not_validate_account(self):
         self.assertTrue(hasattr(t.Client, 'check'), 'Manifest check is missing')

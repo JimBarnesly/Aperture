@@ -12,7 +12,7 @@ import ssl
 import threading
 import queue
 from contextlib import contextmanager
-from urllib.parse import unquote, urlsplit
+from urllib.parse import quote, unquote, urlsplit
 
 ORIGIN = 'https://torrentio.strem.fun'
 
@@ -21,6 +21,17 @@ class ProviderError(Exception):
     """Only fixed, credential-free messages may cross the UI boundary."""
     def __init__(self, kind='invalid'):
         messages = {
+            'downloading_v3.mp4': 'Real-Debrid reports downloading. A transfer may be queued. Wait and choose Find streams later; no automatic retry or playback.',
+            'download_failed_v3.mp4': 'Real-Debrid download failed. A transfer may remain queued. Check your account; no automatic retry.',
+            'failed_access_v3.mp4': 'Real-Debrid access denied. Check sign-in and subscription in Sources.',
+            'failed_rar_v3.mp4': 'This source is an unsupported archive. Choose another source.',
+            'failed_too_big_v2.mp4': 'This source is too large for Real-Debrid. Choose another source.',
+            'failed_opening_v3.mp4': 'Real-Debrid could not open this source. Check your account before trying later.',
+            'failed_unexpected_v3.mp4': 'Torrentio reported an unexpected resolver failure. No playback started.',
+            'failed_infringement_v3.mp4': 'The provider reports this file was removed for infringement. Choose content you may access.',
+            'limits_exceeded_v2.mp4': 'Real-Debrid account or traffic limit reached. Check your account before trying later.',
+            'blocked_access_v2.mp4': 'The provider reports blocked access. No playback started.',
+            'failed_unavailable_v1.mp4': 'Real-Debrid is temporarily unavailable or busy. Wait before trying later.',
             'invalid': 'Unsupported Torrentio configuration or response. Use HTTPS Torrentio with Real-Debrid only and exclude download links.',
             'network': 'Torrentio could not be reached safely. Retry later; redirects during lookup are not allowed.',
             'storage': 'Private local configuration is unavailable. Use a local, owner-only regular file; symbolic links are not accepted.',
@@ -46,15 +57,24 @@ class Config:
         allowed = {'realdebrid', 'debridoptions', 'providers', 'sort', 'qualityfilter', 'sizefilter', 'limit', 'language'}
         for pair in decoded.split('|'):
             values = pair.split('=')
-            if len(values) != 2 or values[0] in options or values[0] not in allowed or not re.fullmatch(r'[A-Za-z0-9_,.-]+', values[1]):
+            if len(values) != 2 or values[0] in options or values[0] not in allowed:
+                raise ProviderError()
+            grammar = r'[A-Za-z0-9._~+/-]{10,256}' if values[0] == 'realdebrid' else r'[A-Za-z0-9_,.-]+'
+            if not re.fullmatch(grammar, values[1]):
                 raise ProviderError()
             options[values[0]] = values[1]
-        if not re.fullmatch(r'[A-Za-z0-9_-]{10,256}', options.get('realdebrid', '')):
+        if 'realdebrid' not in options:
             raise ProviderError()
         if set(options.get('debridoptions', '').split(',')) not in ({'nodownloadlinks'}, {'nodownloadlinks', 'nocatalog'}):
             raise ProviderError()
         self._manifest = manifest
         self._token = options['realdebrid']
+
+    @classmethod
+    def from_token(cls, token):
+        if not isinstance(token, str) or not re.fullmatch(r'[A-Za-z0-9._~+/-]{10,256}', token):
+            raise ProviderError()
+        return cls(ORIGIN + '/realdebrid=' + quote(token, safe='') + '|debridoptions=nodownloadlinks,nocatalog/manifest.json')
 
     def lookup(self, identifier):
         if not isinstance(identifier, str) or not re.fullmatch(r'tt[0-9]{7,10}', identifier):
@@ -97,9 +117,9 @@ def read_private(fd, name):
 
 class Source:
     """Raw provider text/URLs never enter labels, reprs or navigation."""
-    def __init__(self, url, label):
+    def __init__(self, url, label, identity):
         self._url = url
-        self.id = hashlib.sha256(url.encode('utf-8')).hexdigest()
+        self.id = hashlib.sha256(identity.encode('utf-8')).hexdigest()
         self.label = label
 
 
@@ -113,6 +133,21 @@ def strict_url(url):
     if parsed.scheme != 'https' or parsed.username or parsed.password or parsed.fragment or parsed.port is not None:
         raise ProviderError()
     return parsed
+
+
+def source_label(entry, hints):
+    # Recognize finite vocabulary; never copy provider strings into Kodi markup.
+    text = ' '.join(value[:2048] for value in (entry.get('name'), entry.get('title'), hints.get('filename')) if isinstance(value, str))
+    fields = ['Real-Debrid']
+    for pattern, fallback in [(r'2160p|1080p|720p|480p|4k', 'quality unspecified'),
+                              (r'HEVC|x265|H[.]?265|AVC|x264|H[.]?264|AV1', 'codec unspecified'),
+                              (r'English|French|German|Spanish|Italian|Japanese|Korean|Hindi|Multi', 'language unspecified')]:
+        match = re.search(r'(?i)\b(' + pattern + r')\b', text)
+        fields.append(match[0] if match else fallback)
+    size = hints.get('videoSize')
+    if type(size) is int and 0 < size <= 1024 ** 4:
+        fields.append(f'{size / 1024 ** 3:.1f} GiB')
+    return ' · '.join(fields)[:140]
 
 
 def parse_streams(payload, config):
@@ -133,13 +168,13 @@ def parse_streams(payload, config):
             if parsed.netloc != 'torrentio.strem.fun' or parsed.query:
                 continue
             parts = parsed.path.split('/')
-            if len(parts) not in (7, 8) or parts[1:3] != ['resolve', 'realdebrid'] or parts[3] != config._token:
+            if len(parts) not in (7, 8) or parts[1:3] != ['resolve', 'realdebrid'] or unquote(parts[3]) != config._token:
                 continue
-            if not re.fullmatch('[a-fA-F0-9]{40}', parts[4]) or not re.fullmatch(r'[A-Za-z0-9_-]{1,256}', parts[5]) or not re.fullmatch(r'(?:null|[0-9]{1,6})', parts[6]):
+            if not re.fullmatch('[a-fA-F0-9]{40}', parts[4]) or not re.fullmatch(r'[A-Za-z0-9_-]{1,256}', parts[5]) or not re.fullmatch(r'(?:null|undefined|[0-9]{1,6})', parts[6]):
                 continue
-            quality = re.search(r'(?i)\b(2160p|1080p|720p|480p|4k)\b', name)
-            label = 'Real-Debrid · ' + (quality[0] if quality else 'quality unspecified')
-            source = Source(entry['url'], label)
+            label = source_label(entry, hints)
+            # Only validated resolver identity, never the rotating credential.
+            source = Source(entry['url'], label, '/'.join(parts[1:3] + parts[4:]))
             found.setdefault(source.id, source)
         except (ProviderError, ValueError):
             continue
@@ -259,6 +294,8 @@ class Client:
                     raise ProviderError('resolve')
                 url = response.headers.get('Location')
                 parsed = strict_url(url)
+                if parsed.netloc == 'torrentio.strem.fun' and not parsed.query and parsed.path.startswith('/videos/'):
+                    raise ProviderError(parsed.path.removeprefix('/videos/'))
                 if not re.fullmatch(r'[a-z0-9-]+\.download\.real-debrid\.com', parsed.netloc):
                     raise ProviderError('resolve')
                 if not parsed.path.lower().endswith(('.mkv', '.mp4', '.avi', '.mov', '.m4v', '.webm', '.ts')):
@@ -287,7 +324,8 @@ class Store:
     def load(self):
         try:
             with self._open() as fd:
-                return Config(read_private(fd, 'connection'))
+                value = read_private(fd, 'connection')
+                return value if value == 'rd-oauth-v1' else Config(value)
         except FileNotFoundError:
             return None
         except (OSError, UnicodeError, ValueError):
@@ -297,16 +335,25 @@ class Store:
         try:
             with local_directory(os.path.dirname(path)) as fd:
                 config = Config(read_private(fd, os.path.basename(path)))
+            self._save(config._manifest)
+        except (OSError, UnicodeError, ValueError):
+            raise ProviderError('storage') from None
+
+    def enable_native(self):
+        self._save('rd-oauth-v1')
+
+    def _save(self, value):
+        try:
             with self._open(create=True) as fd:
                 try:
-                    read_private(fd, 'connection')
+                    self._validate_target(fd)
                 except FileNotFoundError:
                     pass
                 name = '.new-' + secrets.token_hex(16)
                 try:
                     output = os.open(name, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600, dir_fd=fd)
                     with os.fdopen(output, 'wb') as stream:
-                        stream.write(config._manifest.encode('utf-8'))
+                        stream.write(value.encode('utf-8'))
                         stream.flush()
                         os.fsync(stream.fileno())
                     os.replace(name, 'connection', src_dir_fd=fd, dst_dir_fd=fd)
@@ -319,10 +366,16 @@ class Store:
         except (OSError, UnicodeError, ValueError):
             raise ProviderError('storage') from None
 
+    def _validate_target(self, fd):
+        # Reset/replace checks inode safety without reading or decoding secrets.
+        info = os.stat('connection', dir_fd=fd, follow_symlinks=False)
+        if not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid() or info.st_mode & 0o077 or info.st_nlink != 1:
+            raise ProviderError('storage')
+
     def clear(self):
         try:
             with self._open() as fd:
-                read_private(fd, 'connection')
+                self._validate_target(fd)
                 os.unlink('connection', dir_fd=fd)
                 os.fsync(fd)
         except FileNotFoundError:
