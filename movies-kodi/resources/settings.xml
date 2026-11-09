@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<settings version="1">
+ <section id="plugin.video.aperture.movies">
+  <category id="realdebrid" label="Real-Debrid">
+   <group id="1">
+    <setting id="rd_client_id" type="string" label="Application client ID (optional override, not your API key)">
+     <default>X245A4XAIBGVM</default>
+     <control type="edit" format="string"/>
+    </setting>
+   </group>
+  </category>
+ </section>
+</settings>

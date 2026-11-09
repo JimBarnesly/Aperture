@@ -1,5 +1,5 @@
 from pathlib import Path
-import json,runpy,sys,types,unittest,tempfile
+import json,runpy,sys,types,unittest,tempfile,io
 from unittest.mock import patch
 from urllib.parse import urlencode
 ROOT=Path(__file__).resolve().parents[1]
@@ -12,13 +12,16 @@ class Item:
     def setInfo(self,*a):pass
     def getVideoInfoTag(self):return self
     def setDuration(self,x):pass
+    def setDbId(self,x):self.dbid=x
+    def setMediaType(self,x):self.media_type=x
+    def setResumePoint(self,*x):self.resume=x
 
 class PluginTests(unittest.TestCase):
     def setUp(self):
         self.temporary=tempfile.TemporaryDirectory()
         self.profile=self.temporary.name
         self.addCleanup(self.temporary.cleanup)
-    def run_plugin(self,sources,query='',default='',files=None,fail=False,vfs_listing=None,vfs_exists=(),vfs_trace=None,folder_paths=None,busy_checks=0,view_trace=None,abort=False,picture=""):
+    def run_plugin(self,sources,query='',default='',files=None,fail=False,vfs_listing=None,vfs_exists=(),vfs_trace=None,folder_paths=None,busy_checks=0,view_trace=None,abort=False,picture="",movies=None,limits=None,search="",selection=-1,genres=None,catalog_payload=None):
         calls=[]; entries=[]; dialogs=[]; ended=[]; builtins=[]
         vfs_trace = vfs_trace if vfs_trace is not None else []
         def exists(path):
@@ -49,12 +52,14 @@ class PluginTests(unittest.TestCase):
             r=json.loads(raw);calls.append(r)
             if r['method']=='Files.GetSources':return json.dumps({'result':{'sources':sources}})
             if fail:return json.dumps({'error':{'message':'secret remote URL'}})
+            if r['method']=='VideoLibrary.GetMovies':return json.dumps({'result':{'movies':movies or [],'limits':limits or {}}})
+            if r['method']=='VideoLibrary.GetGenres':return json.dumps({'result':{'genres':genres or []}})
             return json.dumps({'result':{'files':files or []}})
         class F:
             def __init__(self,*a):vfs_trace.append(('File', a))
             def read(self):return '<sources><video><default>'+default+'</default></video></sources>'
             def close(self):pass
-        dialog=types.SimpleNamespace(ok=lambda *a:dialogs.append(a),notification=lambda *a,**kw:dialogs.append(a),browseSingle=lambda *a:picture)
+        dialog=types.SimpleNamespace(ok=lambda *a:dialogs.append(a),notification=lambda *a,**kw:dialogs.append(a),browseSingle=lambda *a:picture,input=lambda *a,**kw:search,select=lambda *a:selection)
         mods={
             'xbmc':types.SimpleNamespace(executeJSONRPC=rpc,executebuiltin=builtins.append,log=lambda *a:None,LOGERROR=4,getSupportedMedia=lambda kind:'.avi|.mkv|.mp4',Monitor=Monitor,getInfoLabel=folder_path,getCondVisibility=condition),
             'xbmcaddon':types.SimpleNamespace(Addon=lambda:types.SimpleNamespace(getAddonInfo=lambda key:self.profile)),
@@ -66,7 +71,7 @@ class PluginTests(unittest.TestCase):
         saved={k:v for k,v in sys.modules.items() if k=='resources' or k.startswith('resources.')}
         for k in list(saved):sys.modules.pop(k)
         try:
-            with patch.dict(sys.modules,mods),patch.object(sys,'argv',['plugin://plugin.video.aperture.movies/','3',query]):
+            with patch('urllib.request.OpenerDirector.open', return_value=io.BytesIO(json.dumps(catalog_payload or {'metas': []}).encode())),patch.dict(sys.modules,mods),patch.object(sys,'argv',['plugin://plugin.video.aperture.movies/','3',query]):
                 exec(compile((ROOT/'movies-kodi/addon.py').read_text(), str(ROOT/'movies-kodi/addon.py'), 'exec'), {'__name__':'__main__'})
         finally:
             sys.path.pop(0)
@@ -74,6 +79,26 @@ class PluginTests(unittest.TestCase):
                 if k=='resources' or k.startswith('resources.'):sys.modules.pop(k)
             sys.modules.update(saved)
         return calls,entries,dialogs,ended,builtins
+    def test_online_catalogue_never_calls_local_library_or_plays(self):
+        c,e,d,x,b=self.run_plugin([],query='?mode=online',catalog_payload={'metas':[{'id':'tt1234567','name':'Online Film','poster':'https://example.org/p.jpg','streams':[{'url':'https://example.org/film'}]}]})
+        self.assertEqual(c,[])
+        self.assertEqual(e[0][2].props['IsPlayable'],'false')
+        self.assertIn('action=online_details',e[0][1])
+        self.assertNotIn('https://example.org/film',repr(e))
+        self.assertIn('start=1',e[-1][1])
+    def test_online_search_cancel_does_not_navigate(self):
+        c,e,d,x,b=self.run_plugin([],query='?action=search',folder_paths=['plugin://plugin.video.aperture.movies/?mode=online'],search='')
+        self.assertEqual((c,e,x,b),([],[],[],[]))
+    def test_online_search_navigation_is_stale_safe(self):
+        c,e,d,x,b=self.run_plugin([],query='?action=search',folder_paths=['plugin://plugin.video.aperture.movies/?mode=online','plugin://other/'],search='Example')
+        self.assertEqual(b,[])
+    def test_online_details_is_metadata_only(self):
+        c,e,d,x,b=self.run_plugin([],query='?action=online_details&id=tt1234567',catalog_payload={'meta':{'id':'tt1234567','name':'Example','description':'A plot'}})
+        self.assertEqual((c,e,b),([],[],[]))
+        self.assertIn('Playback availability not checked',repr(d))
+    def test_online_collection_can_open_local_library(self):
+        c,e,d,x,b=self.run_plugin([],query='?action=collection',folder_paths=['plugin://plugin.video.aperture.movies/?mode=online'],selection=2)
+        self.assertEqual(b,['Container.Update(plugin://plugin.video.aperture.movies/?mode=discover)'])
     def test_single_source_opens_without_chooser(self):
         c,e,d,x,b=self.run_plugin([{'label':'Drive','file':'/movies/'}],files=[{'label':'Film.mkv','file':'/movies/Film.mkv','filetype':'file'}])
         self.assertEqual(c[1]['params']['directory'],'/movies/')
@@ -239,4 +264,58 @@ class PluginTests(unittest.TestCase):
         c,e,*_=self.run_plugin([{'file':'/movies/'}],files=files[:1],vfs_exists={'/movies/poster.jpg'})
         self.assertEqual(e[0][2].art['poster'],'/movies/poster.jpg')
 
-if __name__=='__main__':unittest.main()
+
+
+class DiscoveryTests(unittest.TestCase):
+    setUp = PluginTests.setUp
+    run_plugin = PluginTests.run_plugin
+    def test_catalogue_is_read_only_and_paged(self):
+        c,e,d,x,b=self.run_plugin([],query='?mode=discover',movies=[{'movieid':12,'title':'Example','file':'/films/Example.mkv','resume':{'position':12,'total':120}}],limits={'end':60,'total':80})
+        self.assertEqual([r['method'] for r in c],['VideoLibrary.GetMovies'])
+        self.assertEqual(c[0]['params']['limits'],{'start':0,'end':60})
+        self.assertEqual(e[0][1],'/films/Example.mkv')
+        self.assertEqual(e[0][2].dbid,12)
+        self.assertEqual(e[0][2].resume,(12,120))
+        self.assertIn('start=60',e[1][1])
+        self.assertEqual(e[1][2].kw['label'],'More movies')
+        self.assertTrue(x[-1]['succeeded'])
+    def test_filters_and_pagination_preserve_state(self):
+        c,e,*_=self.run_plugin([],query='?mode=discover&collection=unwatched&genre=Drama&search=Example&start=60',movies=[{'title':'Example','file':'/film.mkv'}],limits={'end':120,'total':200})
+        filters=c[0]['params']['filter']['and']
+        self.assertEqual({f['field'] for f in filters},{'title','genre','playcount'})
+        self.assertIn('genre=Drama',e[-1][1]);self.assertIn('search=Example',e[-1][1]);self.assertIn('start=120',e[-1][1])
+    def test_empty_discover_keeps_files_available(self):
+        c,e,d,x,b=self.run_plugin([],query='?mode=discover')
+        self.assertIn('Local files',d[0][1]);self.assertTrue(x[-1]['succeeded'])
+    def test_discover_failure_redacts_and_fails(self):
+        c,e,d,x,b=self.run_plugin([],query='?mode=discover',fail=True)
+        self.assertFalse(x[-1]['succeeded']);self.assertNotIn('secret',repr(d))
+    def test_cancelled_search_does_not_change_history(self):
+        c,e,d,x,b=self.run_plugin([],query='?action=search')
+        self.assertEqual((c,e,x,b),([],[],[],[]))
+    def test_search_is_encoded_and_does_not_scan_or_write(self):
+        c,e,d,x,b=self.run_plugin([],query='?action=search',search='Title & More)')
+        self.assertEqual((c,e,x),([],[],[]));self.assertEqual(len(b),1)
+        self.assertIn('search=Title+%26+More%29',b[0])
+    def test_stale_search_cannot_replace_new_destination(self):
+        c,e,d,x,b=self.run_plugin([],query='?action=search',search='Title',folder_paths=['plugin://plugin.video.aperture.movies/?mode=discover','videodb://movies/'])
+        self.assertEqual(b,[])
+    def test_cancelled_collection_keeps_history(self):
+        c,e,d,x,b=self.run_plugin([],query='?action=collection',selection=-1)
+        self.assertEqual((c,e,x,b),([],[],[],[]))
+    def test_collection_select_routes_without_playback(self):
+        c,e,d,x,b=self.run_plugin([],query='?action=collection',selection=2)
+        self.assertEqual(c,[]);self.assertIn('collection=resume',b[0])
+    def test_genre_choice_uses_existing_kodi_metadata(self):
+        c,e,d,x,b=self.run_plugin([],query='?action=genre',selection=1,genres=[{'label':'Drama'}])
+        self.assertEqual(c[0]['method'],'VideoLibrary.GetGenres');self.assertIn('genre=Drama',b[0])
+    def test_provider_status_never_authenticates(self):
+        c,e,d,x,b=self.run_plugin([],query='?action=providers')
+        self.assertEqual((c,e,d,x,b),([],[],[],[],[]))  # Closing Sources does not authenticate.
+
+    def test_genre_failure_does_not_finish_current_directory(self):
+        c,e,d,x,b=self.run_plugin([],query='?action=genre',fail=True)
+        self.assertEqual((e,x,b),([],[],[]));self.assertNotIn('secret',repr(d))
+
+if __name__ == '__main__':
+    unittest.main()

@@ -18,13 +18,11 @@ class HomeNowPlaying(unittest.TestCase):
   for direction in ('onleft','onright','onup','ondown'):
    self.assertEqual(self.bar.findtext(direction),'103')
   self.assertEqual(self.bar.findtext('onback'),'SetFocus(103)')
- def test_actions_reuse_home_destinations(self):
-  actions=self.bar.findall('onclick')
-  for ident in ('100','101','103'):
-   for source in self.root.findall('.//control[@id="'+ident+'"]/onclick'):
-    self.assertTrue(any(a.text==source.text for a in actions))
-  self.assertTrue(all('Player.Has' in a.get('condition','') for a in actions))
-  self.assertFalse(any('PlayMedia' in a.text or 'PlayerControl' in a.text for a in actions))
+ def test_actions_return_to_actual_native_player_without_changing_media(self):
+  actions={a.get('condition'):a.text for a in self.bar.findall('onclick')}
+  self.assertEqual(actions, {'Player.HasVideo':'ActivateWindow(fullscreenvideo)',
+    'Player.HasAudio + !Player.HasVideo':'ActivateWindow(visualisation)'})
+  self.assertFalse(any('PlayMedia' in value or 'PlayerControl' in value for value in actions.values()))
  def test_metadata_has_fallback_pause_and_no_path(self):
   text=E.tostring(self.root.find('.//control[@id="119"]'),encoding='unicode')
   for part in ('Current media','PAUSED','Player.Title','MusicPlayer.Artist','VideoPlayer.TVShowTitle'):

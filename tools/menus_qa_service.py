@@ -75,19 +75,13 @@ try:
   if not bar_visible():raise RuntimeError('Paused bar disappeared')
   shot('home-bar-'+kind+'-paused')
   rpc('Input.Select')
-  expected=10502 if kind=='audio' else 10025
-  # The fixture has no Format add-on, so audio uses the existing AddonBrowser fallback.
-  if kind=='audio' and not xbmc.getCondVisibility('System.AddonIsEnabled(plugin.audio.aperture.format)'):expected=10040
-  until('destination',lambda:xbmcgui.getCurrentWindowId()==expected)
-  expected_path = ('plugin://plugin.audio.aperture.format/' if kind=='audio' else 'sources://video/' if kind=='episode' else 'plugin://plugin.video.aperture.movies/')
-  if expected != 10040:
-   until('exact destination path '+expected_path,lambda:xbmc.getInfoLabel('Container.FolderPath').rstrip('/')==expected_path.rstrip('/'))
-  destination_path=xbmc.getInfoLabel('Container.FolderPath')
+  expected=12006 if kind=='audio' else 12005
+  until('actual native playing screen',lambda:xbmcgui.getCurrentWindowId()==expected)
+  destination_path=player.getPlayingFile()
+  if destination_path != path:raise RuntimeError('Home Now playing replaced the active file')
+  if not xbmc.getCondVisibility('Player.Paused'):raise RuntimeError('Home Now playing resumed paused media')
   shot('home-bar-'+kind+'-destination')
   if not player.isPlaying():raise RuntimeError('Bar navigation stopped playback')
-  if kind=='video' and xbmcgui.getCurrentWindowDialogId()==12002:
-   rpc('Input.Back');until('empty Movies notice closed',lambda:not xbmc.getCondVisibility('System.HasModalDialog'))
-   monitor.waitForAbort(.5)
   rpc('Input.Back');until('Back Home',lambda:xbmcgui.getCurrentWindowId()==10000)
   shot('home-bar-'+kind+'-returned')
   focus_home_bar(home,bar_visible)

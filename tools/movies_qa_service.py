@@ -222,7 +222,45 @@ try:
         until('return to cinematic view',cinematic)
         focus('Amber Horizon'); capture('movies-after-playback')
         checks.append({'check':'playback-stop-returns-to-source','view':61})
-    result={'status':'passed','scenario':SCENARIO,'checks':checks,'limitations':['Disposable x86_64 software-rendered Kodi 21.3 profile only','No physical Pi, remote controller, external drive, SMB or personal media validation','Artwork and video generated locally; no external media downloaded']}
+    if SCENARIO != 'empty':
+        # Check the navigation strip, then explicitly enter local-library discovery.
+        # Discover now opens the public online catalogue; this offline fixture
+        # must not call a live provider or claim to test online results.
+        # The isolated profile deliberately has no scanned movie catalogue.
+        rpc('Input.Up')
+        until('Discover navigation focused', lambda: xbmc.getInfoLabel('System.CurrentControl') == 'Discover')
+        capture('movies-discovery-navigation')
+        xbmc.executebuiltin('Container.Update(plugin://plugin.video.aperture.movies/?mode=discover)')
+        until('empty catalogue guidance', lambda: xbmcgui.getCurrentWindowDialogId() == 12002)
+        capture('movies-empty-catalogue')
+        rpc('Input.Select')
+        until('discover directory', lambda: cinematic() and 'mode=discover' in xbmc.getInfoLabel('Container.FolderPath'))
+        discovery_path = xbmc.getInfoLabel('Container.FolderPath')
+        # Explicit focus selects a control, not a URL or action result.
+        for attempt in range(2):
+            xbmc.executebuiltin('SetFocus(711)')
+            until('Search focused', lambda: xbmc.getInfoLabel('System.CurrentControl') == 'Search')
+            rpc('Input.Select')
+            until('search keyboard', lambda: xbmc.getCondVisibility('Window.IsActive(virtualkeyboard)'))
+            if attempt == 0:
+                capture('movies-search-keyboard')
+            rpc('Input.Back')
+            wait_for_movie_idle('cancel search preserves directory', discovery_path)
+        xbmc.executebuiltin('SetFocus(712)')
+        rpc('Input.Select')
+        until('collection chooser', lambda: xbmc.getCondVisibility('Window.IsActive(selectdialog)'))
+        capture('movies-collections')
+        rpc('Input.Back')
+        wait_for_movie_idle('cancel collection preserves directory', discovery_path)
+        # Validate filters against Kodi itself, rather than only the Python mocks.
+        for field, operator, value in [('inprogress', 'true', ''), ('playcount', 'is', '0'), ('title', 'contains', 'Amber'), ('genre', 'is', 'Adventure')]:
+            rpc('VideoLibrary.GetMovies', {'properties':['file','resume','dateadded'], 'filter':{'field':field,'operator':operator,'value':value}, 'limits':{'start':0,'end':60}})
+        rpc('Input.Back')
+        until('discovery Back returns to local files', lambda: cinematic() and xbmc.getInfoLabel('Container.FolderPath') == root_path)
+        xbmc.executebuiltin('SetFocus(61)')
+        focus('Amber Horizon'); assert_art('Amber Horizon')
+        checks.append({'check':'local-library-search-cancel-repeat-collection-cancel-and-back','provider_calls':False,'populated_catalogue_tested':False,'online_catalogue_ui_tested':False})
+    result={'status':'passed','scenario':SCENARIO,'checks':checks,'limitations':['Disposable x86_64 software-rendered Kodi 21.3 profile only','No physical Pi, remote controller, external drive, SMB or personal media validation','Artwork and video generated locally; no external media downloaded','Online catalogue UI is not exercised by this offline local-library fixture']}
     (OUT/'result.json').write_text(json.dumps(result,indent=2)+'\n')
 except Exception as exc:
     try:
@@ -232,3 +270,4 @@ except Exception as exc:
     (OUT/'result.json').write_text(json.dumps({'status':'failed','scenario':SCENARIO,'reason':str(exc),'checks':checks,'traceback':traceback.format_exc()},indent=2)+'\n')
 finally:
     xbmc.executebuiltin('Quit')
+

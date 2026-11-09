@@ -28,14 +28,19 @@ Use the complete, tested ZIPs from the candidate kit or matching CI artifact:
 
 1. Keep Estuary installed and back up your Kodi profile.
 2. Install `plugin.audio.aperture.format-0.4.0.zip` through Kodi's ZIP installer.
-3. Install `plugin.video.aperture.movies-0.1.1.zip`, then `skin.aperture-4.0.1~rc1.zip` through Kodi's ZIP installer.
+3. Install `plugin.video.aperture.movies-0.4.0.zip`, then `skin.aperture-4.0.1~rc1.zip` through Kodi's ZIP installer.
 4. If Kodi presents an unknown-sources warning, review it yourself. The software
    does not silently enable that setting. Disable it again after installation.
 5. Choose Aperture in Settings > Interface > Skin. Select Keep only when the
    screen and controls respond. Otherwise let the automatic rollback happen.
-6. Open Music. Configure the reachable Format server address, then open Albums.
-   Long-press an album (or press C) and choose **Play album** to play the complete
-   release in disc/track order. Music is one Format library, without a separate
+6. Open Music to enter the record shelf directly. If needed, use Store >
+   Configure Format server to set the reachable server address.
+   Select an album to play the complete release in disc/track order and open
+   the native turntable without the file-info popup, including during seek/pause.
+   Captions read track name, album, then artist. While music is playing, the album
+   shelf returns to the turntable after one minute without input. Down/Up on the
+   keyboard or remote use next/previous track while in fullscreen music. Long-press (or press C) and choose **Browse tracks**
+   when you want a particular track. Music is one Format library, without a separate
    local/streaming choice. See [Format integration](docs/format-integration.md)
    for server setup, download restrictions and Pi acceptance.
 

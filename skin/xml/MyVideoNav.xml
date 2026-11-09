@@ -295,7 +295,7 @@
         <width>1450</width>
         <height>35</height>
         <font>font20_title</font>
-        <label>Left / Right  Browse       •       Select  Play / Open       •       Back  Return       •       Menu  Options</label>
+        <label>Up  Discover / Search       •       Select  Details / Play / Open       •       Back  Return       •       Menu  Information</label>
         <textcolor>FF99B0B8</textcolor>
       </control>
       <control type="label">
@@ -304,8 +304,110 @@
         <width>275</width>
         <height>35</height>
         <font>font20_title</font>
-        <label>LOCAL COLLECTION</label>
+        <label>KODI LIBRARY / FILES</label>
         <textcolor>FF9BD5D0</textcolor>
+      </control>
+      <control type="button" id="710">
+        <left>84</left>
+        <top>112</top>
+        <width>244</width>
+        <height>48</height>
+        <label>Discover</label>
+        <font>font20_title</font>
+        <textcolor>FFE8F2F3</textcolor>
+        <focusedcolor>FF102C35</focusedcolor>
+        <texturefocus>aperture/movies/accent.png</texturefocus>
+        <texturenofocus>aperture/movies/plate.png</texturenofocus>
+        <onleft>715</onleft>
+        <onright>711</onright>
+        <onup>61</onup>
+        <ondown>61</ondown>
+        <onclick>Container.Update(plugin://plugin.video.aperture.movies/?mode=online)</onclick>
+      </control>
+      <control type="button" id="711">
+        <left>344</left>
+        <top>112</top>
+        <width>244</width>
+        <height>48</height>
+        <label>Search</label>
+        <font>font20_title</font>
+        <textcolor>FFE8F2F3</textcolor>
+        <focusedcolor>FF102C35</focusedcolor>
+        <texturefocus>aperture/movies/accent.png</texturefocus>
+        <texturenofocus>aperture/movies/plate.png</texturenofocus>
+        <onleft>710</onleft>
+        <onright>712</onright>
+        <onup>61</onup>
+        <ondown>61</ondown>
+        <onclick>RunPlugin(plugin://plugin.video.aperture.movies/?action=search)</onclick>
+      </control>
+      <control type="button" id="712">
+        <left>604</left>
+        <top>112</top>
+        <width>244</width>
+        <height>48</height>
+        <label>Collections</label>
+        <font>font20_title</font>
+        <textcolor>FFE8F2F3</textcolor>
+        <focusedcolor>FF102C35</focusedcolor>
+        <texturefocus>aperture/movies/accent.png</texturefocus>
+        <texturenofocus>aperture/movies/plate.png</texturenofocus>
+        <onleft>711</onleft>
+        <onright>713</onright>
+        <onup>61</onup>
+        <ondown>61</ondown>
+        <onclick>RunPlugin(plugin://plugin.video.aperture.movies/?action=collection)</onclick>
+      </control>
+      <control type="button" id="713">
+        <left>864</left>
+        <top>112</top>
+        <width>244</width>
+        <height>48</height>
+        <label>Genres</label>
+        <font>font20_title</font>
+        <textcolor>FFE8F2F3</textcolor>
+        <focusedcolor>FF102C35</focusedcolor>
+        <texturefocus>aperture/movies/accent.png</texturefocus>
+        <texturenofocus>aperture/movies/plate.png</texturenofocus>
+        <onleft>712</onleft>
+        <onright>714</onright>
+        <onup>61</onup>
+        <ondown>61</ondown>
+        <onclick>RunPlugin(plugin://plugin.video.aperture.movies/?action=genre)</onclick>
+      </control>
+      <control type="button" id="714">
+        <left>1124</left>
+        <top>112</top>
+        <width>244</width>
+        <height>48</height>
+        <label>Local files</label>
+        <font>font20_title</font>
+        <textcolor>FFE8F2F3</textcolor>
+        <focusedcolor>FF102C35</focusedcolor>
+        <texturefocus>aperture/movies/accent.png</texturefocus>
+        <texturenofocus>aperture/movies/plate.png</texturenofocus>
+        <onleft>713</onleft>
+        <onright>715</onright>
+        <onup>61</onup>
+        <ondown>61</ondown>
+        <onclick>Container.Update(plugin://plugin.video.aperture.movies/)</onclick>
+      </control>
+      <control type="button" id="715">
+        <left>1384</left>
+        <top>112</top>
+        <width>244</width>
+        <height>48</height>
+        <label>Sources</label>
+        <font>font20_title</font>
+        <textcolor>FFE8F2F3</textcolor>
+        <focusedcolor>FF102C35</focusedcolor>
+        <texturefocus>aperture/movies/accent.png</texturefocus>
+        <texturenofocus>aperture/movies/plate.png</texturenofocus>
+        <onleft>714</onleft>
+        <onright>710</onright>
+        <onup>61</onup>
+        <ondown>61</ondown>
+        <onclick>RunPlugin(plugin://plugin.video.aperture.movies/?action=providers)</onclick>
       </control>
     </control>
     <control type="panel" id="61">
@@ -319,7 +421,7 @@
       <scrolltime>240</scrolltime>
       <onleft>61</onleft>
       <onright>61</onright>
-      <onup>61</onup>
+      <onup>710</onup>
       <ondown>61</ondown>
       <itemlayout width="254" height="350">
         <control type="image">

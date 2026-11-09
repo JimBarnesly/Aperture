@@ -90,18 +90,32 @@ try:
                      "window":xbmcgui.getCurrentWindowId(),
                      "dialog":xbmcgui.getCurrentWindowDialogId(),
                      "nowplaying_visible":bool(xbmc.getCondVisibility("Control.IsVisible(7100)")),
+                     "long_album_tracks_visible":bool(xbmc.getCondVisibility("Control.IsVisible(7122)")),
+                     "long_album_current_page":xbmc.getInfoLabel("Container(7122).CurrentPage"),
+                     "long_album_pages":xbmc.getInfoLabel("Container(7122).NumPages"),
+                     "long_album_tracks_text":xbmcgui.Window(10000).getProperty("Aperture.FormatAlbumTracks"),
+                     "album_tracks_visible":bool(xbmc.getCondVisibility("Control.IsVisible(7120)")),
+                     "album_track_titles":[xbmc.getInfoLabel("Container(7120).ListItemAbsolute({}).Title".format(i)) for i in range(12)],
                      "nowplaying_button_visible":bool(xbmc.getCondVisibility("Control.IsVisible(65)")),
+                     "player_has_performed_seek":bool(xbmc.getCondVisibility("Player.HasPerformedSeek(3)")),
+                     "presentation_progress_visible":bool(xbmc.getCondVisibility("Control.IsVisible(7112)")),
+                     "player_show_info":bool(xbmc.getCondVisibility("Player.ShowInfo")),
+                     "native_topbar_visible":bool(xbmc.getCondVisibility("Window.IsVisible(1109)")),
                      "native_seekbar_visible":bool(xbmc.getCondVisibility("Window.IsVisible(seekbar)")),
                      "presentation_header_visible":bool(xbmc.getCondVisibility("Control.IsVisible(7110)")),
                      "presentation_footer_visible":bool(xbmc.getCondVisibility("Control.IsVisible(7111)")),
                      "paused_visible":bool(xbmc.getCondVisibility("Control.IsVisible(7103)")),
+                     "turntable_captions":[xbmc.getInfoLabel("Control.GetLabel({})".format(i)) for i in (7104, 7102, 7105)],
                      "playing_title":xbmc.getInfoLabel("MusicPlayer.Title"),
                      "playing_cover":xbmc.getInfoLabel("MusicPlayer.Cover"),
                      "folder":xbmc.getInfoLabel("Container.FolderPath"),
                      "focused_title":xbmc.getInfoLabel("ListItem.Title"),
+                     "shelf_position":xbmc.getInfoLabel("Container(64).ListItem.Property(Aperture.FormatPosition)"),
                      "focused_label":xbmc.getInfoLabel("ListItem.Label"),
                      "labels":[xbmc.getInfoLabel("Container.ListItemAbsolute({}).Label".format(i)) for i in range(12)],
                      "format_view":xbmc.getInfoLabel("Container.Property(Aperture.FormatView)"),
+                     "format_notice":xbmc.getInfoLabel("Container.Property(Aperture.FormatNotice)"),
+                     "shelf_focus_complete":bool(xbmc.getInfoLabel("Container.Property(Aperture.FormatEntry)")) and xbmc.getInfoLabel("Container.Property(Aperture.FormatEntry)") == xbmc.getInfoLabel("Window(10502).Property(Aperture.FormatFocusEntry)"),
                      "shelf_visible":bool(xbmc.getCondVisibility("Control.IsVisible(64)")),
                      "list_visible":bool(xbmc.getCondVisibility("Control.IsVisible(63)")),
                      "focus":xbmc.getInfoLabel("System.CurrentControlId"),
@@ -181,10 +195,14 @@ def write_wav(path, frequency):
         output.writeframes(samples)
 
 
-def cover_png():
+COVERFLOW_COLORS = [(220, 45, 45), (45, 210, 65), (45, 70, 225),
+                    (220, 190, 40), (190, 45, 210), (40, 200, 210)]
+
+
+def cover_png(color=None):
     def chunk(kind, data):
         return struct.pack("!I", len(data)) + kind + data + struct.pack("!I", zlib.crc32(kind + data) & 0xffffffff)
-    pixels = b"".join(b"\x00" + b"".join(bytes((30 + x, 60 + y, 130)) for x in range(128)) for y in range(128))
+    pixels = b"".join(b"\x00" + b"".join(bytes(color or (30 + x, 60 + y, 130)) for x in range(128)) for y in range(128))
     return b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack("!2I5B", 128, 128, 8, 2, 0, 0, 0)) + chunk(b"IDAT", zlib.compress(pixels)) + chunk(b"IEND", b"")
 
 
@@ -251,7 +269,7 @@ def prepare(runtime, out, root=ROOT):
     keymap.write_text('''<keymap><global><keyboard>
 <j>ActivateWindow(10502,plugin://plugin.audio.aperture.format/?action=albums,return)</j>
 <k>ActivateWindow(10502,plugin://plugin.audio.aperture.format/,return)</k>
-<l>Container.Refresh</l>
+<l>RunPlugin(plugin://plugin.audio.aperture.format/?action=refresh_library)</l>
 </keyboard></global></keymap>''')
     pulse.mkdir(mode=0o700)
     (pulse / "cookie").write_bytes(os.urandom(256))
@@ -321,6 +339,11 @@ def fixture_handler(config, fixture, out):
             # enter the same log. An unexpected mutation must never be invisible.
             with lock:
                 payload, mime, status = self.payload(url.path, query, identifier)
+            # Delay only synthetic covers, outside the mutation lock: emulate
+            # independent slow HTTP artwork without serializing library reads.
+            delay_file = fixture / "cover-delay.json"
+            if url.path == "/api/cover" and identifier.startswith("coverflow-track-") and delay_file.exists():
+                time.sleep(min(2.0, max(0.0, float(json.loads(delay_file.read_text())))))
             total = len(payload)
             start, end, ranged = 0, total - 1, False
             if status == 200 and url.path == "/api/audio":
@@ -403,6 +426,8 @@ def fixture_handler(config, fixture, out):
             if path == "/api/library":
                 payload, mime = (fixture / "library.json").read_bytes(), "application/json"
             elif path in ("/api/audio", "/api/cover"):
+                if path == "/api/cover" and identifier in ["coverflow-track-" + str(i) for i in range(1, 7)]:
+                    return cover_png(COVERFLOW_COLORS[int(identifier.rsplit("-", 1)[1]) - 1]), "image/png", 200
                 if identifier not in config["files"]:
                     return b"Not a fixture track", "text/plain", 404
                 elif path == "/api/cover":

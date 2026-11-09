@@ -225,110 +225,344 @@
           <textcolor>FFAACBD0</textcolor>
         </control>
       </control>
-      <control type="panel" id="64">
-        <left>80</left>
-        <top>325</top>
-        <width>1760</width>
-        <height>600</height>
-        <orientation>horizontal</orientation>
-        <viewtype label="Album shelf">list</viewtype>
+      <control type="image">
         <visible>String.IsEqual(Container.PluginName,plugin.audio.aperture.format) + String.IsEqual(Container.Property(Aperture.FormatView),albums)</visible>
-        <scrolltime>180</scrolltime>
-        <onleft>64</onleft>
-        <onright>64</onright>
-        <onup>64</onup>
-        <ondown condition="!Player.HasAudio">64</ondown>
-        <itemlayout width="440" height="600">
-          <control type="image">
-            <left>8</left>
-            <top>8</top>
-            <width>424</width>
-            <height>575</height>
-            <texture border="25">aperture/games/card.png</texture>
-          </control>
-          <control type="image">
-            <left>29</left>
-            <top>29</top>
-            <width>382</width>
-            <height>382</height>
-            <texture fallback="DefaultAlbumCover.png">$INFO[ListItem.Art(thumb)]</texture>
-            <aspectratio>keep</aspectratio>
-          </control>
-          <control type="textbox">
-            <left>29</left>
-            <top>433</top>
-            <width>382</width>
-            <height>95</height>
-            <font>font32</font>
-            <label>$INFO[ListItem.Title]</label>
-            <textcolor>FFE4F5F5</textcolor>
-          </control>
-          <control type="label">
-            <left>29</left>
-            <top>537</top>
-            <width>382</width>
-            <height>34</height>
-            <font>font27</font>
-            <label>$INFO[ListItem.Artist]</label>
-            <textcolor>FFAACBD0</textcolor>
-            <scroll>true</scroll>
-          </control>
-          <control type="label">
-            <left>29</left>
-            <top>433</top>
-            <width>382</width>
-            <height>70</height>
-            <font>font32</font>
-            <label>$INFO[ListItem.Label]</label>
-            <textcolor>FFE4F5F5</textcolor>
-            <scroll>true</scroll>
-            <visible>String.IsEmpty(ListItem.Title)</visible>
-          </control>
-        </itemlayout>
+        <left>0</left><top>270</top><width>1920</width><height>680</height>
+        <texture colordiffuse="ED080D13">colors/white.png</texture>
+      </control>
+      <!-- Perspective neighbours render far-to-near on both sides; the native
+           fixedlist below still owns focus, playback, history and selected art. -->
+      <!-- Request the selected sleeve before the wings. Native HTTP texture
+           loading is asynchronous; do not queue fourteen neighbours first. -->
+      <control type="image">
+        <left>0</left><top>0</top><width>1</width><height>1</height>
+        <visible>Control.IsVisible(64)</visible>
+        <texture background="true">$INFO[Container(64).ListItem.Art(thumb)]</texture>
+        <colordiffuse>00FFFFFF</colordiffuse><fadetime>0</fadetime>
+      </control>
+      <control type="group">
+        <visible>Control.IsVisible(64) + !String.IsEmpty(Container(64).ListItemNoWrap(-7).Property(Aperture.FormatPosition))</visible>
+        <left>40</left><top>325</top><width>440</width><height>460</height>
+        <!-- Transform local sleeve coordinates; rotatey center is X,Z, not X,Y. -->
+        <control type="group">
+          <left>0</left><top>0</top><width>440</width><height>460</height>
+        <animation effect="zoom" start="82" end="82" center="220,230" time="0" condition="true">Conditional</animation>
+        <animation effect="rotatey" start="-45" end="-45" center="220,0" time="0" condition="true">Conditional</animation>
+        <control type="image">
+          <left>0</left><top>10</top><width>440</width><height>440</height>
+          <texture fallback="DefaultAlbumCover.png">$INFO[Container(64).ListItemNoWrap(-7).Art(thumb)]</texture>
+          <aspectratio>keep</aspectratio><fadetime>0</fadetime><colordiffuse>82FFFFFF</colordiffuse>
+        </control>
+        <control type="image">
+          <left>0</left><top>450</top><width>440</width><height>440</height>
+          <texture fallback="DefaultAlbumCover.png" flipy="true" diffuse="aperture/music/reflection-fade.png">$INFO[Container(64).ListItemNoWrap(-7).Art(thumb)]</texture>
+          <aspectratio>keep</aspectratio><fadetime>0</fadetime><colordiffuse>66FFFFFF</colordiffuse>
+        </control>
+        </control>
+      </control>
+      <control type="group">
+        <visible>Control.IsVisible(64) + !String.IsEmpty(Container(64).ListItemNoWrap(7).Property(Aperture.FormatPosition))</visible>
+        <left>1440</left><top>325</top><width>440</width><height>460</height>
+        <!-- Transform local sleeve coordinates; rotatey center is X,Z, not X,Y. -->
+        <control type="group">
+          <left>0</left><top>0</top><width>440</width><height>460</height>
+        <animation effect="zoom" start="82" end="82" center="220,230" time="0" condition="true">Conditional</animation>
+        <animation effect="rotatey" start="45" end="45" center="220,0" time="0" condition="true">Conditional</animation>
+        <control type="image">
+          <left>0</left><top>10</top><width>440</width><height>440</height>
+          <texture fallback="DefaultAlbumCover.png">$INFO[Container(64).ListItemNoWrap(7).Art(thumb)]</texture>
+          <aspectratio>keep</aspectratio><fadetime>0</fadetime><colordiffuse>82FFFFFF</colordiffuse>
+        </control>
+        <control type="image">
+          <left>0</left><top>450</top><width>440</width><height>440</height>
+          <texture fallback="DefaultAlbumCover.png" flipy="true" diffuse="aperture/music/reflection-fade.png">$INFO[Container(64).ListItemNoWrap(7).Art(thumb)]</texture>
+          <aspectratio>keep</aspectratio><fadetime>0</fadetime><colordiffuse>66FFFFFF</colordiffuse>
+        </control>
+        </control>
+      </control>
+      <control type="group">
+        <visible>Control.IsVisible(64) + !String.IsEmpty(Container(64).ListItemNoWrap(-6).Property(Aperture.FormatPosition))</visible>
+        <left>100</left><top>325</top><width>440</width><height>460</height>
+        <!-- Transform local sleeve coordinates; rotatey center is X,Z, not X,Y. -->
+        <control type="group">
+          <left>0</left><top>0</top><width>440</width><height>460</height>
+        <animation effect="zoom" start="82" end="82" center="220,230" time="0" condition="true">Conditional</animation>
+        <animation effect="rotatey" start="-45" end="-45" center="220,0" time="0" condition="true">Conditional</animation>
+        <control type="image">
+          <left>0</left><top>10</top><width>440</width><height>440</height>
+          <texture fallback="DefaultAlbumCover.png">$INFO[Container(64).ListItemNoWrap(-6).Art(thumb)]</texture>
+          <aspectratio>keep</aspectratio><fadetime>0</fadetime><colordiffuse>91FFFFFF</colordiffuse>
+        </control>
+        <control type="image">
+          <left>0</left><top>450</top><width>440</width><height>440</height>
+          <texture fallback="DefaultAlbumCover.png" flipy="true" diffuse="aperture/music/reflection-fade.png">$INFO[Container(64).ListItemNoWrap(-6).Art(thumb)]</texture>
+          <aspectratio>keep</aspectratio><fadetime>0</fadetime><colordiffuse>66FFFFFF</colordiffuse>
+        </control>
+        </control>
+      </control>
+      <control type="group">
+        <visible>Control.IsVisible(64) + !String.IsEmpty(Container(64).ListItemNoWrap(6).Property(Aperture.FormatPosition))</visible>
+        <left>1380</left><top>325</top><width>440</width><height>460</height>
+        <!-- Transform local sleeve coordinates; rotatey center is X,Z, not X,Y. -->
+        <control type="group">
+          <left>0</left><top>0</top><width>440</width><height>460</height>
+        <animation effect="zoom" start="82" end="82" center="220,230" time="0" condition="true">Conditional</animation>
+        <animation effect="rotatey" start="45" end="45" center="220,0" time="0" condition="true">Conditional</animation>
+        <control type="image">
+          <left>0</left><top>10</top><width>440</width><height>440</height>
+          <texture fallback="DefaultAlbumCover.png">$INFO[Container(64).ListItemNoWrap(6).Art(thumb)]</texture>
+          <aspectratio>keep</aspectratio><fadetime>0</fadetime><colordiffuse>91FFFFFF</colordiffuse>
+        </control>
+        <control type="image">
+          <left>0</left><top>450</top><width>440</width><height>440</height>
+          <texture fallback="DefaultAlbumCover.png" flipy="true" diffuse="aperture/music/reflection-fade.png">$INFO[Container(64).ListItemNoWrap(6).Art(thumb)]</texture>
+          <aspectratio>keep</aspectratio><fadetime>0</fadetime><colordiffuse>66FFFFFF</colordiffuse>
+        </control>
+        </control>
+      </control>
+      <control type="group">
+        <visible>Control.IsVisible(64) + !String.IsEmpty(Container(64).ListItemNoWrap(-5).Property(Aperture.FormatPosition))</visible>
+        <left>160</left><top>325</top><width>440</width><height>460</height>
+        <!-- Transform local sleeve coordinates; rotatey center is X,Z, not X,Y. -->
+        <control type="group">
+          <left>0</left><top>0</top><width>440</width><height>460</height>
+        <animation effect="zoom" start="82" end="82" center="220,230" time="0" condition="true">Conditional</animation>
+        <animation effect="rotatey" start="-45" end="-45" center="220,0" time="0" condition="true">Conditional</animation>
+        <control type="image">
+          <left>0</left><top>10</top><width>440</width><height>440</height>
+          <texture fallback="DefaultAlbumCover.png">$INFO[Container(64).ListItemNoWrap(-5).Art(thumb)]</texture>
+          <aspectratio>keep</aspectratio><fadetime>0</fadetime><colordiffuse>A0FFFFFF</colordiffuse>
+        </control>
+        <control type="image">
+          <left>0</left><top>450</top><width>440</width><height>440</height>
+          <texture fallback="DefaultAlbumCover.png" flipy="true" diffuse="aperture/music/reflection-fade.png">$INFO[Container(64).ListItemNoWrap(-5).Art(thumb)]</texture>
+          <aspectratio>keep</aspectratio><fadetime>0</fadetime><colordiffuse>66FFFFFF</colordiffuse>
+        </control>
+        </control>
+      </control>
+      <control type="group">
+        <visible>Control.IsVisible(64) + !String.IsEmpty(Container(64).ListItemNoWrap(5).Property(Aperture.FormatPosition))</visible>
+        <left>1320</left><top>325</top><width>440</width><height>460</height>
+        <!-- Transform local sleeve coordinates; rotatey center is X,Z, not X,Y. -->
+        <control type="group">
+          <left>0</left><top>0</top><width>440</width><height>460</height>
+        <animation effect="zoom" start="82" end="82" center="220,230" time="0" condition="true">Conditional</animation>
+        <animation effect="rotatey" start="45" end="45" center="220,0" time="0" condition="true">Conditional</animation>
+        <control type="image">
+          <left>0</left><top>10</top><width>440</width><height>440</height>
+          <texture fallback="DefaultAlbumCover.png">$INFO[Container(64).ListItemNoWrap(5).Art(thumb)]</texture>
+          <aspectratio>keep</aspectratio><fadetime>0</fadetime><colordiffuse>A0FFFFFF</colordiffuse>
+        </control>
+        <control type="image">
+          <left>0</left><top>450</top><width>440</width><height>440</height>
+          <texture fallback="DefaultAlbumCover.png" flipy="true" diffuse="aperture/music/reflection-fade.png">$INFO[Container(64).ListItemNoWrap(5).Art(thumb)]</texture>
+          <aspectratio>keep</aspectratio><fadetime>0</fadetime><colordiffuse>66FFFFFF</colordiffuse>
+        </control>
+        </control>
+      </control>
+      <control type="group">
+        <visible>Control.IsVisible(64) + !String.IsEmpty(Container(64).ListItemNoWrap(-4).Property(Aperture.FormatPosition))</visible>
+        <left>220</left><top>325</top><width>440</width><height>460</height>
+        <!-- Transform local sleeve coordinates; rotatey center is X,Z, not X,Y. -->
+        <control type="group">
+          <left>0</left><top>0</top><width>440</width><height>460</height>
+        <animation effect="zoom" start="82" end="82" center="220,230" time="0" condition="true">Conditional</animation>
+        <animation effect="rotatey" start="-45" end="-45" center="220,0" time="0" condition="true">Conditional</animation>
+        <control type="image">
+          <left>0</left><top>10</top><width>440</width><height>440</height>
+          <texture fallback="DefaultAlbumCover.png">$INFO[Container(64).ListItemNoWrap(-4).Art(thumb)]</texture>
+          <aspectratio>keep</aspectratio><fadetime>0</fadetime><colordiffuse>AFFFFFFF</colordiffuse>
+        </control>
+        <control type="image">
+          <left>0</left><top>450</top><width>440</width><height>440</height>
+          <texture fallback="DefaultAlbumCover.png" flipy="true" diffuse="aperture/music/reflection-fade.png">$INFO[Container(64).ListItemNoWrap(-4).Art(thumb)]</texture>
+          <aspectratio>keep</aspectratio><fadetime>0</fadetime><colordiffuse>66FFFFFF</colordiffuse>
+        </control>
+        </control>
+      </control>
+      <control type="group">
+        <visible>Control.IsVisible(64) + !String.IsEmpty(Container(64).ListItemNoWrap(4).Property(Aperture.FormatPosition))</visible>
+        <left>1260</left><top>325</top><width>440</width><height>460</height>
+        <!-- Transform local sleeve coordinates; rotatey center is X,Z, not X,Y. -->
+        <control type="group">
+          <left>0</left><top>0</top><width>440</width><height>460</height>
+        <animation effect="zoom" start="82" end="82" center="220,230" time="0" condition="true">Conditional</animation>
+        <animation effect="rotatey" start="45" end="45" center="220,0" time="0" condition="true">Conditional</animation>
+        <control type="image">
+          <left>0</left><top>10</top><width>440</width><height>440</height>
+          <texture fallback="DefaultAlbumCover.png">$INFO[Container(64).ListItemNoWrap(4).Art(thumb)]</texture>
+          <aspectratio>keep</aspectratio><fadetime>0</fadetime><colordiffuse>AFFFFFFF</colordiffuse>
+        </control>
+        <control type="image">
+          <left>0</left><top>450</top><width>440</width><height>440</height>
+          <texture fallback="DefaultAlbumCover.png" flipy="true" diffuse="aperture/music/reflection-fade.png">$INFO[Container(64).ListItemNoWrap(4).Art(thumb)]</texture>
+          <aspectratio>keep</aspectratio><fadetime>0</fadetime><colordiffuse>66FFFFFF</colordiffuse>
+        </control>
+        </control>
+      </control>
+      <control type="group">
+        <visible>Control.IsVisible(64) + !String.IsEmpty(Container(64).ListItemNoWrap(-3).Property(Aperture.FormatPosition))</visible>
+        <left>280</left><top>325</top><width>440</width><height>460</height>
+        <!-- Transform local sleeve coordinates; rotatey center is X,Z, not X,Y. -->
+        <control type="group">
+          <left>0</left><top>0</top><width>440</width><height>460</height>
+        <animation effect="zoom" start="82" end="82" center="220,230" time="0" condition="true">Conditional</animation>
+        <animation effect="rotatey" start="-45" end="-45" center="220,0" time="0" condition="true">Conditional</animation>
+        <control type="image">
+          <left>0</left><top>10</top><width>440</width><height>440</height>
+          <texture fallback="DefaultAlbumCover.png">$INFO[Container(64).ListItemNoWrap(-3).Art(thumb)]</texture>
+          <aspectratio>keep</aspectratio><fadetime>0</fadetime><colordiffuse>BEFFFFFF</colordiffuse>
+        </control>
+        <control type="image">
+          <left>0</left><top>450</top><width>440</width><height>440</height>
+          <texture fallback="DefaultAlbumCover.png" flipy="true" diffuse="aperture/music/reflection-fade.png">$INFO[Container(64).ListItemNoWrap(-3).Art(thumb)]</texture>
+          <aspectratio>keep</aspectratio><fadetime>0</fadetime><colordiffuse>66FFFFFF</colordiffuse>
+        </control>
+        </control>
+      </control>
+      <control type="group">
+        <visible>Control.IsVisible(64) + !String.IsEmpty(Container(64).ListItemNoWrap(3).Property(Aperture.FormatPosition))</visible>
+        <left>1200</left><top>325</top><width>440</width><height>460</height>
+        <!-- Transform local sleeve coordinates; rotatey center is X,Z, not X,Y. -->
+        <control type="group">
+          <left>0</left><top>0</top><width>440</width><height>460</height>
+        <animation effect="zoom" start="82" end="82" center="220,230" time="0" condition="true">Conditional</animation>
+        <animation effect="rotatey" start="45" end="45" center="220,0" time="0" condition="true">Conditional</animation>
+        <control type="image">
+          <left>0</left><top>10</top><width>440</width><height>440</height>
+          <texture fallback="DefaultAlbumCover.png">$INFO[Container(64).ListItemNoWrap(3).Art(thumb)]</texture>
+          <aspectratio>keep</aspectratio><fadetime>0</fadetime><colordiffuse>BEFFFFFF</colordiffuse>
+        </control>
+        <control type="image">
+          <left>0</left><top>450</top><width>440</width><height>440</height>
+          <texture fallback="DefaultAlbumCover.png" flipy="true" diffuse="aperture/music/reflection-fade.png">$INFO[Container(64).ListItemNoWrap(3).Art(thumb)]</texture>
+          <aspectratio>keep</aspectratio><fadetime>0</fadetime><colordiffuse>66FFFFFF</colordiffuse>
+        </control>
+        </control>
+      </control>
+      <control type="group">
+        <visible>Control.IsVisible(64) + !String.IsEmpty(Container(64).ListItemNoWrap(-2).Property(Aperture.FormatPosition))</visible>
+        <left>340</left><top>325</top><width>440</width><height>460</height>
+        <!-- Transform local sleeve coordinates; rotatey center is X,Z, not X,Y. -->
+        <control type="group">
+          <left>0</left><top>0</top><width>440</width><height>460</height>
+        <animation effect="zoom" start="82" end="82" center="220,230" time="0" condition="true">Conditional</animation>
+        <animation effect="rotatey" start="-45" end="-45" center="220,0" time="0" condition="true">Conditional</animation>
+        <control type="image">
+          <left>0</left><top>10</top><width>440</width><height>440</height>
+          <texture fallback="DefaultAlbumCover.png">$INFO[Container(64).ListItemNoWrap(-2).Art(thumb)]</texture>
+          <aspectratio>keep</aspectratio><fadetime>0</fadetime><colordiffuse>CDFFFFFF</colordiffuse>
+        </control>
+        <control type="image">
+          <left>0</left><top>450</top><width>440</width><height>440</height>
+          <texture fallback="DefaultAlbumCover.png" flipy="true" diffuse="aperture/music/reflection-fade.png">$INFO[Container(64).ListItemNoWrap(-2).Art(thumb)]</texture>
+          <aspectratio>keep</aspectratio><fadetime>0</fadetime><colordiffuse>66FFFFFF</colordiffuse>
+        </control>
+        </control>
+      </control>
+      <control type="group">
+        <visible>Control.IsVisible(64) + !String.IsEmpty(Container(64).ListItemNoWrap(2).Property(Aperture.FormatPosition))</visible>
+        <left>1140</left><top>325</top><width>440</width><height>460</height>
+        <!-- Transform local sleeve coordinates; rotatey center is X,Z, not X,Y. -->
+        <control type="group">
+          <left>0</left><top>0</top><width>440</width><height>460</height>
+        <animation effect="zoom" start="82" end="82" center="220,230" time="0" condition="true">Conditional</animation>
+        <animation effect="rotatey" start="45" end="45" center="220,0" time="0" condition="true">Conditional</animation>
+        <control type="image">
+          <left>0</left><top>10</top><width>440</width><height>440</height>
+          <texture fallback="DefaultAlbumCover.png">$INFO[Container(64).ListItemNoWrap(2).Art(thumb)]</texture>
+          <aspectratio>keep</aspectratio><fadetime>0</fadetime><colordiffuse>CDFFFFFF</colordiffuse>
+        </control>
+        <control type="image">
+          <left>0</left><top>450</top><width>440</width><height>440</height>
+          <texture fallback="DefaultAlbumCover.png" flipy="true" diffuse="aperture/music/reflection-fade.png">$INFO[Container(64).ListItemNoWrap(2).Art(thumb)]</texture>
+          <aspectratio>keep</aspectratio><fadetime>0</fadetime><colordiffuse>66FFFFFF</colordiffuse>
+        </control>
+        </control>
+      </control>
+      <control type="group">
+        <visible>Control.IsVisible(64) + !String.IsEmpty(Container(64).ListItemNoWrap(-1).Property(Aperture.FormatPosition))</visible>
+        <left>400</left><top>325</top><width>440</width><height>460</height>
+        <!-- Transform local sleeve coordinates; rotatey center is X,Z, not X,Y. -->
+        <control type="group">
+          <left>0</left><top>0</top><width>440</width><height>460</height>
+        <animation effect="zoom" start="82" end="82" center="220,230" time="0" condition="true">Conditional</animation>
+        <animation effect="rotatey" start="-45" end="-45" center="220,0" time="0" condition="true">Conditional</animation>
+        <control type="image">
+          <left>0</left><top>10</top><width>440</width><height>440</height>
+          <texture fallback="DefaultAlbumCover.png">$INFO[Container(64).ListItemNoWrap(-1).Art(thumb)]</texture>
+          <aspectratio>keep</aspectratio><fadetime>0</fadetime><colordiffuse>DCFFFFFF</colordiffuse>
+        </control>
+        <control type="image">
+          <left>0</left><top>450</top><width>440</width><height>440</height>
+          <texture fallback="DefaultAlbumCover.png" flipy="true" diffuse="aperture/music/reflection-fade.png">$INFO[Container(64).ListItemNoWrap(-1).Art(thumb)]</texture>
+          <aspectratio>keep</aspectratio><fadetime>0</fadetime><colordiffuse>66FFFFFF</colordiffuse>
+        </control>
+        </control>
+      </control>
+      <control type="group">
+        <visible>Control.IsVisible(64) + !String.IsEmpty(Container(64).ListItemNoWrap(1).Property(Aperture.FormatPosition))</visible>
+        <left>1080</left><top>325</top><width>440</width><height>460</height>
+        <!-- Transform local sleeve coordinates; rotatey center is X,Z, not X,Y. -->
+        <control type="group">
+          <left>0</left><top>0</top><width>440</width><height>460</height>
+        <animation effect="zoom" start="82" end="82" center="220,230" time="0" condition="true">Conditional</animation>
+        <animation effect="rotatey" start="45" end="45" center="220,0" time="0" condition="true">Conditional</animation>
+        <control type="image">
+          <left>0</left><top>10</top><width>440</width><height>440</height>
+          <texture fallback="DefaultAlbumCover.png">$INFO[Container(64).ListItemNoWrap(1).Art(thumb)]</texture>
+          <aspectratio>keep</aspectratio><fadetime>0</fadetime><colordiffuse>DCFFFFFF</colordiffuse>
+        </control>
+        <control type="image">
+          <left>0</left><top>450</top><width>440</width><height>440</height>
+          <texture fallback="DefaultAlbumCover.png" flipy="true" diffuse="aperture/music/reflection-fade.png">$INFO[Container(64).ListItemNoWrap(1).Art(thumb)]</texture>
+          <aspectratio>keep</aspectratio><fadetime>0</fadetime><colordiffuse>66FFFFFF</colordiffuse>
+        </control>
+        </control>
+      </control>
+      <control type="fixedlist" id="64">
+        <onback condition="String.IsEqual(Container.FolderPath,plugin://plugin.audio.aperture.format/?action=albums)">ActivateWindow(Home)</onback>
+        <left>-140</left><top>325</top><width>2200</width><height>600</height>
+        <orientation>horizontal</orientation>
+        <viewtype label="Coverflow">list</viewtype>
+        <visible>String.IsEqual(Container.PluginName,plugin.audio.aperture.format) + String.IsEqual(Container.Property(Aperture.FormatView),albums)</visible>
+        <scrolltime tween="cubic" easing="out">280</scrolltime>
+        <focusposition>2</focusposition><movement>0</movement><preloaditems>2</preloaditems>
+        <onleft>64</onleft><onright>64</onright><onup>64</onup>
+        <ondown condition="!Player.HasAudio">66</ondown>
+        <itemlayout width="440" height="600" />
         <focusedlayout width="440" height="600">
-          <control type="image">
-            <left>8</left>
-            <top>8</top>
-            <width>424</width>
-            <height>575</height>
-            <texture border="25">aperture/games/card-focus.png</texture>
-          </control>
-          <control type="image">
-            <left>29</left>
-            <top>29</top>
-            <width>382</width>
-            <height>382</height>
-            <texture fallback="DefaultAlbumCover.png">$INFO[ListItem.Art(thumb)]</texture>
-            <aspectratio>keep</aspectratio>
-          </control>
-          <control type="textbox">
-            <left>29</left>
-            <top>433</top>
-            <width>382</width>
-            <height>95</height>
-            <font>font32</font>
-            <label>$INFO[ListItem.Title]</label>
-            <textcolor>FF173D47</textcolor>
+          <control type="group">
+            <animation effect="zoom" start="82" end="100" center="220,230" time="280" tween="cubic" easing="out">Focus</animation>
+            <control type="image">
+              <left>-18</left><top>-8</top><width>476</width><height>476</height>
+              <texture border="25">aperture/games/card-focus.png</texture>
+            </control>
+            <control type="image">
+              <left>0</left><top>10</top><width>440</width><height>440</height>
+              <texture fallback="DefaultAlbumCover.png">$INFO[ListItem.Art(thumb)]</texture>
+              <aspectratio>keep</aspectratio>
+            </control>
+            <control type="image">
+              <left>0</left><top>450</top><width>440</width><height>440</height>
+              <texture fallback="DefaultAlbumCover.png" flipy="true" diffuse="aperture/music/reflection-fade.png">$INFO[ListItem.Art(thumb)]</texture>
+              <aspectratio>keep</aspectratio><colordiffuse>88FFFFFF</colordiffuse>
+            </control>
           </control>
           <control type="label">
-            <left>29</left>
-            <top>537</top>
-            <width>382</width>
-            <height>34</height>
-            <font>font27</font>
-            <label>$INFO[ListItem.Artist]</label>
-            <textcolor>FF32606A</textcolor>
-            <scroll>true</scroll>
+            <left>-170</left><top>485</top><width>780</width><height>55</height>
+            <font>font32</font><align>center</align><scroll>true</scroll>
+            <label>$INFO[ListItem.Title]</label><textcolor>FFE4F5F5</textcolor>
           </control>
           <control type="label">
-            <left>29</left>
-            <top>433</top>
-            <width>382</width>
-            <height>70</height>
-            <font>font32</font>
-            <label>$INFO[ListItem.Label]</label>
-            <textcolor>FF173D47</textcolor>
-            <scroll>true</scroll>
+            <left>-170</left><top>544</top><width>780</width><height>42</height>
+            <font>font27</font><align>center</align><scroll>true</scroll>
+            <label>$INFO[ListItem.Artist]</label><textcolor>FFAACBD0</textcolor>
+          </control>
+          <control type="label">
+            <left>-170</left><top>485</top><width>780</width><height>55</height>
+            <font>font32</font><align>center</align><scroll>true</scroll>
+            <label>$INFO[ListItem.Label]</label><textcolor>FFE4F5F5</textcolor>
             <visible>String.IsEmpty(ListItem.Title)</visible>
           </control>
         </focusedlayout>
@@ -337,7 +571,7 @@
       <control type="label">
         <left>90</left>
         <top>980</top>
-        <width>1300</width>
+        <width>900</width>
         <height>45</height>
         <font>font27</font>
         <label>D-pad  Browse     ·     Select  Open / Play     ·     Back  Return</label>
@@ -355,7 +589,21 @@
         <scroll>true</scroll>
         <align>right</align>
       </control>
+      <control type="button" id="66">
+        <onback condition="String.IsEqual(Container.FolderPath,plugin://plugin.audio.aperture.format/?action=albums)">ActivateWindow(Home)</onback>
+        <left>1050</left><top>980</top><width>350</width><height>56</height>
+        <label>Store</label><font>font27</font><align>center</align>
+        <textcolor>FF9CCCD1</textcolor><focusedcolor>FF080D13</focusedcolor>
+        <onclick>Container.Update(plugin://plugin.audio.aperture.format/?action=store)</onclick>
+        <visible>Control.IsVisible(64)</visible>
+        <texturefocus colordiffuse="FF9CCCD1">colors/white.png</texturefocus>
+        <texturenofocus colordiffuse="442F424C">colors/white.png</texturenofocus>
+        <onleft>64</onleft><onup>64</onup><ondown>64</ondown>
+        <onright condition="Player.HasAudio">65</onright>
+        <onright condition="!Player.HasAudio">64</onright>
+      </control>
       <control type="button" id="65">
+        <onback condition="String.IsEqual(Container.FolderPath,plugin://plugin.audio.aperture.format/?action=albums)">ActivateWindow(Home)</onback>
         <left>1450</left>
         <top>980</top>
         <width>390</width>
@@ -369,7 +617,7 @@
         <visible>Player.HasAudio</visible>
         <texturefocus colordiffuse="FF9CCCD1">colors/white.png</texturefocus>
         <texturenofocus colordiffuse="442F424C">colors/white.png</texturenofocus>
-        <onleft condition="Control.IsVisible(64)">64</onleft>
+        <onleft condition="Control.IsVisible(64)">66</onleft>
         <onleft condition="Control.IsVisible(63)">63</onleft>
         <onright condition="Control.IsVisible(64)">64</onright>
         <onright condition="Control.IsVisible(63)">63</onright>

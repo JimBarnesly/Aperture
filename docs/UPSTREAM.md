@@ -6,6 +6,10 @@ retained. The distribution source and version are recorded in APERTURE_BUILD.jso
 Aperture's Home and media browser overrides use the existing Kodi GUI 5.17.0
 contract. MyMusicNav.xml retains the official Omega Estuary native fallback and
 adds Format-specific native containers; its upstream license remains applicable.
+DialogSeekBar.xml and Custom_1109_TopBarOverlay.xml retain the official Omega
+Estuary video controls and rules, with one fullscreen-music exclusion gate.
+MusicOSD.xml retains native actions and focus navigation, aligning its transparent
+seek sliders with Aperture's existing bar and moving the button hint below it.
 
 Estuary code is GPL-2.0-compatible and artwork is CC-BY-SA 4.0 as described in its
 retained addon.xml and license notices. Fonts retain their individual licenses.

@@ -441,6 +441,16 @@ try:
             if state().get('window')==HOME: break
             next_observation('Escape'); time.sleep(.2)
         wait_for('Home after skin choice',lambda s:s.get('window')==HOME and s.get('dialog')==9999)
+        keymap = Path(os.environ['KODI_DATA'])/'userdata/keymaps/zz-aperture-turntable.xml'
+        final_skin = expected_skin if accept else previous
+        if final_skin == 'skin.aperture':
+            source_keymap = Path(os.environ['KODI_HOME'])/'addons/plugin.audio.aperture.format/resources/keymaps/aperture-turntable.xml'
+            wait_for('Aperture loads only its owned turntable keymap',
+                     lambda s:keymap.is_file() and keymap.read_bytes() == source_keymap.read_bytes()
+                     and any('Loading ' in line and 'zz-aperture-turntable.xml' in line
+                             for line in (Path(os.environ['KODI_TEMP'])/'kodi.log').read_text(errors='replace').splitlines()))
+        else:
+            wait_for('Estuary restores original keys without owned override', lambda s:not keymap.exists())
         checks.append({'check':'skin-selection-'+name+('-accepted' if accept else '-auto-reverted'),'state':state()})
 
     choose_skin('Aperture','skin.aperture')
@@ -455,8 +465,8 @@ try:
             focus(control); before=press('Return')
             wait_for(name+' opened',lambda s:s.get('window')==expected and s.get('skin')=='skin.aperture',after=before)
             if control == 103:
-                wait_for('Music opens the unified Format root', lambda s:s.get('window')==10502
-                    and s.get('dialog')==9999 and s.get('folder')=='plugin://plugin.audio.aperture.format/', after=before)
+                wait_for('Music opens the direct Format shelf', lambda s:s.get('window')==10502
+                    and s.get('dialog')==9999 and s.get('folder')=='plugin://plugin.audio.aperture.format/?action=albums', after=before)
             if control in (100,101,104):
                 wait_for('Unscanned video sources are reachable', lambda s:s.get('folder')=='sources://video/', after=before)
             if cycle==0: screenshot('03-'+name)
@@ -497,7 +507,10 @@ try:
     format_result=format_driver.run(globals())
     checks.extend(format_result['checks'])
     log=(out/'logs/kodi.log').read_text(errors='replace')
-    fatal_markers=('Error loading skin', 'failed to load skin', 'EXCEPTION Thrown (PythonToCppException)', 'unable to load font')
+    # Omega's LoadTTF and ReloadTTFFonts use different messages. Reject both,
+    # including an initial load failure that subsequently falls back to Arial.
+    fatal_markers=('Error loading skin', 'failed to load skin', 'EXCEPTION Thrown (PythonToCppException)',
+                   'unable to load font', "Couldn't load font", "Couldn't re-load font file")
     errors=[line for line in log.splitlines() if any(marker.lower() in line.lower() for marker in fatal_markers)]
     if errors: raise AssertionError('Skin errors in Kodi log: '+'\n'.join(errors))
     result={'status':'passed','scope':'Kodi 21.3 actual GUI activation, repeated navigation, accepted skin switch, automatic recovery and synthetic Format HTTP playback',

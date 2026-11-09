@@ -12,14 +12,7 @@
       <texture colordiffuse="22FFFFFF">aperture/bridge.png</texture>
       <aspectratio>scale</aspectratio>
     </control>
-    <control type="label" id="7110">
-      <visible>!Window.IsVisible(seekbar)</visible>
-      <left>90</left><top>64</top><width>1400</width><height>50</height>
-      <font>font27</font><textcolor>FF9CCCD1</textcolor>
-      <label>APERTURE  /  NOW PLAYING</label>
-    </control>
     <control type="label">
-      <visible>!Window.IsVisible(seekbar)</visible>
       <left>1490</left><top>64</top><width>340</width><height>50</height>
       <font>font27</font><textcolor>FF9CCCD1</textcolor><align>right</align>
       <label>$INFO[System.Time]</label>
@@ -51,30 +44,80 @@
           <texture>aperture/music/spindle.png</texture>
         </control>
       </control>
-      <control type="label" id="7102">
-        <left>160</left><top>795</top><width>1600</width><height>65</height>
+      <!-- Secondary album liner notes. This reads Kodi's existing ordered
+           audio items; it does not expose queue editing or start another player. -->
+      <control type="label" id="7121">
+        <visible>Integer.IsGreater(Playlist.Length(music),0) + String.IsEqual(MusicPlayer.Album,MusicPlayer.Position(0).Album) + String.IsEqual(MusicPlayer.AlbumArtist,MusicPlayer.Position(0).AlbumArtist)</visible>
+        <left>90</left><top>500</top><width>430</width><height>40</height>
+        <font>font27</font><textcolor>FF9CCCD1</textcolor><label>ALBUM TRACKS</label>
+      </control>
+      <control type="list" id="7120">
+        <visible>Integer.IsGreater(Playlist.Length(music),0) + String.IsEqual(MusicPlayer.Album,MusicPlayer.Position(0).Album) + String.IsEqual(MusicPlayer.AlbumArtist,MusicPlayer.Position(0).AlbumArtist) + !Integer.IsGreater(Playlist.Length(music),10)</visible>
+        <left>90</left><top>548</top><width>430</width><height>350</height>
+        <enable>false</enable>
+        <itemlayout width="430" height="34">
+          <control type="label">
+            <visible>!ListItem.IsPlaying</visible>
+            <left>0</left><top>0</top><width>430</width><height>34</height>
+            <font>font20_title</font><textcolor>FFBFCDD0</textcolor>
+            <label>$INFO[ListItem.TrackNumber,,.  ]$INFO[ListItem.Title]</label>
+          </control>
+          <control type="label">
+            <visible>ListItem.IsPlaying</visible>
+            <left>0</left><top>0</top><width>430</width><height>34</height>
+            <font>font20_title</font><textcolor>FF9CCCD1</textcolor>
+            <label>&gt; $INFO[ListItem.TrackNumber,,.  ]$INFO[ListItem.Title]</label>
+          </control>
+        </itemlayout>
+        <focusedlayout width="430" height="34">
+          <control type="label">
+            <visible>!ListItem.IsPlaying</visible>
+            <left>0</left><top>0</top><width>430</width><height>34</height>
+            <font>font20_title</font><textcolor>FFBFCDD0</textcolor>
+            <label>$INFO[ListItem.TrackNumber,,.  ]$INFO[ListItem.Title]</label>
+          </control>
+          <control type="label">
+            <visible>ListItem.IsPlaying</visible>
+            <left>0</left><top>0</top><width>430</width><height>34</height>
+            <font>font20_title</font><textcolor>FF9CCCD1</textcolor>
+            <label>&gt; $INFO[ListItem.TrackNumber,,.  ]$INFO[ListItem.Title]</label>
+          </control>
+        </focusedlayout>
+        <content>playlistmusic://</content>
+      </control>
+      <control type="textbox" id="7122">
+        <visible>Integer.IsGreater(Playlist.Length(music),0) + String.IsEqual(MusicPlayer.Album,MusicPlayer.Position(0).Album) + String.IsEqual(MusicPlayer.AlbumArtist,MusicPlayer.Position(0).AlbumArtist) + Integer.IsGreater(Playlist.Length(music),10)</visible>
+        <left>90</left><top>548</top><width>430</width><height>350</height>
+        <font>font20_title</font><textcolor>FFBFCDD0</textcolor>
+        <label>$INFO[Window(10000).Property(Aperture.FormatAlbumTracks)]</label>
+        <autoscroll delay="6000" time="2200" repeat="6000">true</autoscroll>
+      </control>
+      <control type="label" id="7104">
+        <left>580</left><top>795</top><width>1160</width><height>65</height>
         <font>font45</font><align>center</align><textcolor>FFF1F5F4</textcolor><scroll>true</scroll>
         <label>$INFO[MusicPlayer.Title]</label>
       </control>
-      <control type="label">
-        <left>160</left><top>865</top><width>1600</width><height>45</height>
+      <control type="label" id="7102">
+        <left>580</left><top>865</top><width>1160</width><height>45</height>
         <font>font27</font><align>center</align><textcolor>FF9CCCD1</textcolor><scroll>true</scroll>
-        <label>$INFO[MusicPlayer.Artist]$INFO[MusicPlayer.Album,  ·  ,]</label>
+        <label>$INFO[MusicPlayer.Album]</label>
       </control>
-      <control type="progress">
-        <visible>!Window.IsVisible(seekbar)</visible>
+      <control type="label" id="7105">
+        <left>580</left><top>908</top><width>1160</width><height>30</height>
+        <font>font20_title</font><align>center</align><textcolor>FF869BA5</textcolor><scroll>true</scroll>
+        <label>$INFO[MusicPlayer.AlbumArtist]</label>
+      </control>
+      <control type="progress" id="7112">
         <left>260</left><top>944</top><width>1400</width><height>6</height>
         <info>Player.Progress</info>
         <texturebg colordiffuse="FF30414A">colors/white.png</texturebg>
         <lefttexture /><midtexture colordiffuse="FF9CCCD1">colors/white.png</midtexture><righttexture /><overlaytexture />
       </control>
       <control type="label">
-        <visible>!Window.IsVisible(seekbar)</visible>
         <left>90</left><top>921</top><width>145</width><height>45</height>
         <font>font27</font><align>right</align><textcolor>FFBFCDD0</textcolor><label>$INFO[Player.Time]</label>
       </control>
       <control type="label">
-        <visible>!Window.IsVisible(seekbar)</visible>
         <left>1685</left><top>921</top><width>145</width><height>45</height>
         <font>font27</font><textcolor>FFBFCDD0</textcolor><label>$INFO[Player.Duration]</label>
       </control>
@@ -90,10 +133,10 @@
       <label>No music playing</label><visible>!Player.HasAudio</visible>
     </control>
     <control type="label" id="7111">
-      <visible>!Window.IsVisible(seekbar)</visible>
+      <visible>!Window.IsVisible(musicosd)</visible>
       <left>90</left><top>1000</top><width>1740</width><height>45</height>
       <font>font27</font><align>center</align><textcolor>FF869BA5</textcolor>
-      <label>Select  Playback controls     ·     Back  Browse your library</label>
+      <label>Up  Previous track     ·     Down  Next track     ·     Select  Controls     ·     Back  Library</label>
     </control>
   </controls>
 </window>

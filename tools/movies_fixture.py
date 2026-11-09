@@ -68,7 +68,15 @@ def prepare(root, runtime, out, scenario):
     shutil.copytree(root/'movies-kodi',addons/PLUGIN,ignore=shutil.ignore_patterns('__pycache__','*.pyc'))
     service=addons/SERVICE; service.mkdir()
     (service/'addon.xml').write_text('<addon id="'+SERVICE+'" name="Movies QA" version="1.0.0" provider-name="Aperture"><requires><import addon="xbmc.python" version="3.0.1"/></requires><extension point="xbmc.service" library="service.py"/><extension point="xbmc.addon.metadata"><platform>all</platform><license>GPL-3.0-or-later</license></extension></addon>')
-    shutil.copy2(root/'tools/movies_qa_service.py',service/'service.py')
+    shutil.copy2(root/('tools/movies_online_qa_service.py' if scenario == 'online' else 'tools/movies_qa_service.py'),service/'service.py')
+    if scenario == 'online':
+        # Alter only the disposable copied add-on, never the production package.
+        lib = addons/PLUGIN/'resources/lib'
+        shutil.copy2(root/'tools/movies_online_mocks.py', lib/'qa_provider.py')
+        with (lib/'catalog.py').open('a') as stream:
+            stream.write('\nfrom resources.lib.qa_provider import catalogue as _qa_catalogue\nbrowse.__defaults__ = (_qa_catalogue,)\ndetails.__defaults__ = (_qa_catalogue,)\n')
+        with (lib/'debrid.py').open('a') as stream:
+            stream.write('\nfrom resources.lib.qa_provider import debrid as _qa_debrid\nClient.__init__.__defaults__ = (_qa_debrid, time.time)\n')
     manifest=runtime/'system/system/addon-manifest.xml'; tree=ET.parse(manifest)
     for name in (PLUGIN,SERVICE,'skin.aperture'):
         if not any(e.text==name for e in tree.getroot().findall('addon')):
@@ -98,5 +106,6 @@ def prepare(root, runtime, out, scenario):
     (out/'fixture.json').write_text(json.dumps({'runtime':str(runtime),'media':str(media),'scenario':scenario,'personal_or_public_media':False,'generated_video_seconds':45,'plugin':PLUGIN,'video_window_sha256':hashlib.sha256(video_view.read_bytes()).hexdigest(),'plugin_sha256':hashlib.sha256((addons/PLUGIN/'addon.py').read_bytes()).hexdigest()},indent=2))
 
 if __name__=='__main__':
-    p=argparse.ArgumentParser(); p.add_argument('--root',type=Path,required=True); p.add_argument('--runtime',type=Path,required=True); p.add_argument('--out',type=Path,required=True); p.add_argument('--scenario',choices=('single','default','multiple','empty'),required=True); a=p.parse_args()
+    p=argparse.ArgumentParser(); p.add_argument('--root',type=Path,required=True); p.add_argument('--runtime',type=Path,required=True); p.add_argument('--out',type=Path,required=True); p.add_argument('--scenario',choices=('single','default','multiple','empty','online'),required=True); a=p.parse_args()
     prepare(a.root,a.runtime,a.out,a.scenario)
+

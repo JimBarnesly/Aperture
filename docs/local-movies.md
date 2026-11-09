@@ -43,4 +43,51 @@ Acceptance still needs to verify that real library artwork reaches Aperture for 
 
 ## Boundaries
 
-This is local-source browsing and native video playback, not a Stremio or Real-Debrid implementation. Network sources already configured in Kodi are supported by Kodi itself, but no new remote source or credential is created. Diagnostic errors deliberately omit source URLs, which can contain credentials. Physical Pi/video/audio/controller behavior still needs actual device validation.
+Local files use existing source browsing and native video playback. Online Discover is described below. Network sources already configured in Kodi are supported by Kodi itself, and are not changed by this update. Optional Real-Debrid access is configured separately with explicit consent. Diagnostic errors deliberately omit source URLs, which can contain credentials. Physical Pi/video/audio/controller behavior still needs actual device validation.
+
+
+
+## Online Discover (candidate)
+
+Press Up → Discover to browse Cinemeta's public online movie catalogue, not just
+films in the Kodi library. Search and genre controls follow the current view.
+Online Collections offers Popular, Featured, and My Kodi library; local-library
+collections remain available there. Local files still opens the existing drive.
+Search/collection/genre cancellation does not navigate. Paging retains filters;
+Cinemeta supplies no total, so the last More page can legitimately be empty.
+
+Online cards show provider-supplied posters and synopsis. Select a card for
+metadata details (year, genres, IMDb rating where provided and synopsis).
+These cards are not playable and **availability is not checked**. Metadata is
+not proof that a stream exists or that the user has access to it. There is no
+stream resolver, torrent search, account signup, API key or Real-Debrid connection
+in this catalogue adapter. The separate Real-Debrid connector can coexist via
+Sources; neither adapter guesses a match between a catalogue film and a download.
+See [Real-Debrid setup and privacy](real-debrid.md) for the default public client ID, optional override, sign-in,
+private storage and the remaining live-provider acceptance requirements.
+
+### Provider and privacy
+
+[Cinemeta's official public manifest](https://v3-cinemeta.strem.io/manifest.json)
+advertises movie catalogue and metadata resources, not streams. Requests use
+fixed HTTPS endpoints with an 8-second socket timeout, a 2 MiB response limit,
+no redirects, no credentials and no cookies. Searches send only explicitly
+entered search text and selected filters; details send the selected IMDb ID.
+Kodi can fetch returned artwork from images.metahub.space or image.tmdb.org.
+No local filenames, source paths, library entries or watch history are uploaded.
+This is a public service with no availability guarantee, not a bundled licence
+to redistribute its artwork or films. Metadata/artwork retain their owners' rights.
+
+Local browsing remains usable when the catalogue fails. Nothing scans the drive,
+updates Kodi library metadata, saves online searches, installs a scraper or
+changes existing local poster choices. Provider failures are redacted.
+
+### Verification
+
+Focused tests cover catalogue query encoding/bounds, malformed/oversized data,
+redirect refusal, artwork host restrictions, details identity, paging, cancellation,
+stale navigation and metadata-only cards. A live public read-only search for
+Metropolis returned 19 records and the matching tt0017136 details/poster on
+2026-11-08. This proves the service/schema at that time, not future uptime.
+The online screens still need native Kodi/controller visual acceptance; existing
+local-library native smoke coverage does not prove online navigation or playback.

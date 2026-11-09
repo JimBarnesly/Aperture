@@ -1,7 +1,7 @@
 name: Kodi 21.3 startup and navigation
 on:
   push:
-    branches: [main, integration/comprehensive-main, fix/kodi21-startup, feat/native-format-turntable, feat/integrated-games-turntable, test/notification-lifecycle]
+    branches: [integration/latest-preserved-main, fix/coverflow-art-19, fix/album-turntable-flow, main, integration/comprehensive-main, fix/kodi21-startup, feat/native-format-turntable, feat/integrated-games-turntable, test/notification-lifecycle, fix/kodi-font-error-gate]
   workflow_dispatch:
 permissions:
   contents: read
