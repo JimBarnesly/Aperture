@@ -143,6 +143,26 @@ class TorrentioUITests(unittest.TestCase):
         self.client.streams.assert_not_called()
         self.xbmc.Player.return_value.play.assert_not_called()
 
+    def test_cancel_during_refresh_is_silent_even_when_refresh_fails(self):
+        t.Store(self.temp.name).enable_native()
+        rd.Store(self.temp.name).save(dict(PAIR, access_token=TOKEN, refresh_token='refresh-fixture', expires_at=1))
+        self.dialog.yesno.return_value = True
+        for failure in (None, rd.DebridError('service')):
+            with self.subTest(failure=failure):
+                self.gui.DialogProgress.return_value.iscanceled.return_value = False
+                rd.Store(self.temp.name).save(dict(PAIR, access_token=TOKEN, refresh_token='refresh-fixture', expires_at=1))
+                def refresh(*args, **kwargs):
+                    self.gui.DialogProgress.return_value.iscanceled.return_value = True
+                    if failure:
+                        raise failure
+                    return dict(access_token=TOKEN, refresh_token='rotated-fixture', expires_in=3600, token_type='Bearer')
+                with patch.object(self.ui, 'RDClient', lambda store: rd.Client(store, refresh, lambda: 1000)):
+                    self.run_ui({'action': ['torrentio_find'], 'id': ['tt1234567']})
+                self.client.streams.assert_not_called()
+                self.xbmc.Player.return_value.play.assert_not_called()
+                self.dialog.ok.assert_not_called()
+        self.assertEqual(self.gui.DialogProgress.return_value.close.call_count, 2)
+
     def test_cancel_during_resolver_discards_late_result(self):
         self.connect()
         self.dialog.yesno.return_value = True

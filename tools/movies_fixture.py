@@ -55,6 +55,26 @@ def movie(folder, title, blue=False):
     return path
 
 
+def install_online_mocks(root, lib):
+    # Refuse to patch a production add-on. These shims never ship in the ZIP.
+    if not any(parent.name.startswith('aperture-movies-qa.') for parent in lib.resolve().parents):
+        raise ValueError('A disposable movies runtime is required')
+    shutil.copy2(root/'tools/movies_online_mocks.py', lib/'qa_provider.py')
+    with (lib/'catalog.py').open('a') as stream:
+        stream.write('\nfrom resources.lib.qa_provider import catalogue as _qa_catalogue\nbrowse.__defaults__ = (_qa_catalogue,)\ndetails.__defaults__ = (_qa_catalogue,)\n')
+    with (lib/'debrid.py').open('a') as stream:
+        stream.write('\nfrom resources.lib.qa_provider import debrid as _qa_debrid\nClient.__init__.__defaults__ = (_qa_debrid, time.time)\n')
+    with (lib/'torrentio.py').open('a') as stream:
+        stream.write("""
+from resources.lib.qa_provider import torrentio as _qa_request, public_addresses, playback_file
+Client.__init__.__defaults__ = (_qa_request,)
+_qa_original_playback = Client.playback
+def _qa_playback(self, identifier, source_id, cancelled=lambda: False):
+    return playback_file(_qa_original_playback(self, identifier, source_id, cancelled))
+Client.playback = _qa_playback
+""")
+
+
 def prepare(root, runtime, out, scenario):
     from build_skin import copy_skin, assemble
     if not runtime.name.startswith('aperture-movies-qa.'):
@@ -70,13 +90,7 @@ def prepare(root, runtime, out, scenario):
     (service/'addon.xml').write_text('<addon id="'+SERVICE+'" name="Movies QA" version="1.0.0" provider-name="Aperture"><requires><import addon="xbmc.python" version="3.0.1"/></requires><extension point="xbmc.service" library="service.py"/><extension point="xbmc.addon.metadata"><platform>all</platform><license>GPL-3.0-or-later</license></extension></addon>')
     shutil.copy2(root/('tools/movies_online_qa_service.py' if scenario == 'online' else 'tools/movies_qa_service.py'),service/'service.py')
     if scenario == 'online':
-        # Alter only the disposable copied add-on, never the production package.
-        lib = addons/PLUGIN/'resources/lib'
-        shutil.copy2(root/'tools/movies_online_mocks.py', lib/'qa_provider.py')
-        with (lib/'catalog.py').open('a') as stream:
-            stream.write('\nfrom resources.lib.qa_provider import catalogue as _qa_catalogue\nbrowse.__defaults__ = (_qa_catalogue,)\ndetails.__defaults__ = (_qa_catalogue,)\n')
-        with (lib/'debrid.py').open('a') as stream:
-            stream.write('\nfrom resources.lib.qa_provider import debrid as _qa_debrid\nClient.__init__.__defaults__ = (_qa_debrid, time.time)\n')
+        install_online_mocks(root, addons/PLUGIN/'resources/lib')
     manifest=runtime/'system/system/addon-manifest.xml'; tree=ET.parse(manifest)
     for name in (PLUGIN,SERVICE,'skin.aperture'):
         if not any(e.text==name for e in tree.getroot().findall('addon')):

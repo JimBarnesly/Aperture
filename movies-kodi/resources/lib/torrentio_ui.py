@@ -13,9 +13,10 @@ def run(query, profile, base, handle):
     origin = xbmc.getInfoLabel('Container.FolderPath')
     monitor = xbmc.Monitor()
     active_progress = [None]
+    cancelled_action = [False]
 
     def current():
-        return (not monitor.abortRequested() and xbmc.getInfoLabel('Container.FolderPath') == origin
+        return (not cancelled_action[0] and not monitor.abortRequested() and xbmc.getInfoLabel('Container.FolderPath') == origin
                 and (active_progress[0] is None or not active_progress[0].iscanceled()))
 
     def consent(title, message):
@@ -34,6 +35,9 @@ def run(query, profile, base, handle):
                 if not current():
                     raise ProviderError('changed')
         finally:
+            # Closing progress must not erase cancellation before outer error
+            # handling (including a late refresh failure) checks the action.
+            cancelled_action[0] = not current()
             active_progress[0] = None
             progress.close()
 

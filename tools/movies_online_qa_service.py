@@ -132,6 +132,27 @@ def nav(label):
     raise RuntimeError('Navigation control not reachable: '+label)
 
 
+def select_choice(label):
+    until('selection dialog', lambda: xbmcgui.getCurrentWindowDialogId() == 12000)
+    for _ in range(12):
+        if xbmc.getInfoLabel('System.CurrentControl') == label:
+            rpc('Input.Select')
+            return
+        rpc('Input.Down')
+        monitor.waitForAbort(.15)
+    raise RuntimeError('Missing selection choice: ' + label)
+
+
+def movie_actions(choice):
+    # Details now lead to another modal, not directly back to the listing.
+    rpc('Input.Select')
+    until('Movie actions', lambda: xbmcgui.getCurrentWindowDialogId() == 12000
+          and xbmc.getInfoLabel('Control.GetLabel(1)') == 'Movie actions')
+    until('Find streams action', lambda: xbmc.getInfoLabel('System.CurrentControl') == 'Find streams (Torrentio)')
+    capture('online-movie-actions')
+    select_choice(choice)
+
+
 def source_consent():
     nav('Sources'); rpc('Input.Select')
     until('Sources selection',lambda:xbmcgui.getCurrentWindowDialogId()==12000)
@@ -155,6 +176,121 @@ def consent_choice(yes):
     raise RuntimeError('Cannot reach consent choice by D-pad')
 
 
+def torrentio_journey(online_path):
+    import xbmcvfs
+    profile = Path(xbmcvfs.translatePath('special://profile/addon_data/plugin.video.aperture.movies'))
+    connection = profile/'torrentio-private/connection'
+    credentials = profile/'real-debrid-private/credentials.json'
+    nav('Sources'); rpc('Input.Select')
+    select_choice('Set up online playback (Torrentio)')
+    until('Torrentio wizard', lambda: 'Set up online playback' in xbmc.getInfoLabel('Control.GetLabel(1)')
+          and xbmcgui.getCurrentWindowDialogId() == 12000)
+    capture('torrentio-wizard')
+    select_choice('1. Connect with Real-Debrid (no token copying)')
+    until('wizard storage consent', lambda: xbmcgui.getCurrentWindowDialogId() == 10100
+          and 'Online playback' in xbmc.getInfoLabel('Control.GetLabel(1)'))
+    text = xbmc.getInfoLabel('Control.GetLabel(9)')
+    assert 'not encrypted' in text and 'No P2P' in text
+    capture('torrentio-storage-consent'); consent_choice(True)
+    until('Share access with Torrentio', lambda: 'Share access with Torrentio' in xbmc.getInfoLabel('Control.GetLabel(1)'))
+    text = xbmc.getInfoLabel('Control.GetLabel(9)')
+    for phrase in ('torrentio.strem.fun', 'access token', 'movie IDs', 'Never share refresh tokens'):
+        assert phrase in text
+    assert not connection.exists() and not credentials.exists()
+    assert 'fake-token-exchange' not in events()
+    capture('torrentio-sharing-consent'); consent_choice(True)
+    until('wizard device consent', lambda: xbmcgui.getCurrentWindowDialogId() == 10100
+          and xbmc.getInfoLabel('Control.GetLabel(1)') == 'Real-Debrid sign-in')
+    assert 'official shared open-source' in xbmc.getInfoLabel('Control.GetLabel(9)')
+    consent_choice(True)
+    until('wizard synthetic device progress', lambda: xbmcgui.getCurrentWindowDialogId() == 10101)
+    capture('torrentio-device-approval')
+    # Simulate server approval only, never write credentials or a connection marker.
+    # The real wizard/device client must exchange and persist the synthetic grant.
+    (OUT/'approve-synthetic-device').touch()
+    until('wizard completed', lambda: xbmcgui.getCurrentWindowDialogId() == 12002
+          and xbmc.getInfoLabel('Control.GetLabel(1)') == 'Online playback enabled')
+    assert connection.read_text() == 'rd-oauth-v1' and credentials.is_file()
+    assert connection.stat().st_mode & 0o777 == 0o600
+    assert credentials.stat().st_mode & 0o777 == 0o600
+    assert events().count('fake-token-exchange') == 1
+    assert not any(event.startswith('torrentio-') for event in events())
+    capture('torrentio-enabled'); rpc('Input.Select')
+    wait_for_movie_idle('wizard returns to browsing', online_path)
+    checks.append({'check':'native-torrentio-wizard-device-approval', 'synthetic_grant':True, 'setup_provider_calls':False})
+
+    nav('Sources'); rpc('Input.Select')
+    select_choice('Set up online playback (Torrentio)')
+    until('saved wizard', lambda: 'Set up online playback' in xbmc.getInfoLabel('Control.GetLabel(1)'))
+    select_choice('Check saved connection (no playback)')
+    until('connection check consent', lambda: xbmcgui.getCurrentWindowDialogId() == 10100)
+    consent_choice(True)
+    until('manifest response', lambda: xbmcgui.getCurrentWindowDialogId() == 12002
+          and xbmc.getInfoLabel('Control.GetLabel(1)') == 'Provider responded')
+    assert events().count('torrentio-manifest') == 1
+    assert 'not verified' in xbmc.getInfoLabel('Control.GetLabel(9)')
+    capture('torrentio-check'); rpc('Input.Select')
+    wait_for_movie_idle('connection check returns', online_path)
+
+    nav('Search'); rpc('Input.Select')
+    until('native search keyboard', lambda: xbmc.getCondVisibility('Window.IsActive(virtualkeyboard)'))
+    rpc('Input.SendText', {'text':'Synthetic Online Horizon', 'done':True})
+    until('native search results', lambda: cinematic() and 'search=' in xbmc.getInfoLabel('Container.FolderPath'))
+    search_path = xbmc.getInfoLabel('Container.FolderPath')
+    assert 'catalogue-search' in events()
+    rpc('Input.Down'); focus('Synthetic Online Horizon')
+    capture('torrentio-search-results')
+
+    # Exercise cancel and No before accepting playback. Neither may resolve.
+    for decision in ('cancel-source', 'decline-play', 'play'):
+        focus('Synthetic Online Horizon'); rpc('Input.Select')
+        until('search result details', lambda: xbmcgui.getCurrentWindowDialogId() == 12002)
+        movie_actions('Find streams (Torrentio)')
+        until('stream lookup consent', lambda: xbmcgui.getCurrentWindowDialogId() == 10100
+              and xbmc.getInfoLabel('Control.GetLabel(1)') == 'Find streams with Torrentio?')
+        consent_choice(True)
+        until('Choose a source', lambda: xbmcgui.getCurrentWindowDialogId() == 12000
+              and 'Choose a source' in xbmc.getInfoLabel('Control.GetLabel(1)'))
+        source = xbmc.getInfoLabel('System.CurrentControl')
+        assert source.startswith('1. Real-Debrid') and '1080p' in source
+        assert 'availability unverified' in xbmc.getInfoLabel('Control.GetLabel(1)')
+        capture('torrentio-source-'+decision)
+        assert 'torrentio-resolve' not in events()
+        if decision == 'cancel-source':
+            rpc('Input.Back')
+        else:
+            rpc('Input.Select')
+            until('Play selected source?', lambda: xbmcgui.getCurrentWindowDialogId() == 10100
+                  and xbmc.getInfoLabel('Control.GetLabel(1)') == 'Play selected source?')
+            text = xbmc.getInfoLabel('Control.GetLabel(9)')
+            assert 'queue a transfer' in text and 'permission' in text
+            capture('torrentio-play-consent-'+decision)
+            consent_choice(decision == 'play')
+        if decision != 'play':
+            wait_for_movie_idle('source cancellation preserves search', search_path)
+            assert 'torrentio-resolve' not in events() and not xbmc.Player().isPlaying()
+    until('Torrentio native VideoPlayer', lambda: xbmc.Player().isPlayingVideo())
+    monitor.waitForAbort(3)
+    players = rpc('Player.GetActivePlayers')
+    assert any(p['type'] == 'video' for p in players)
+    playing = xbmc.Player().getPlayingFile()
+    assert Path(playing) == RUNTIME/'movies/Amber Horizon.mkv'
+    assert events().count('torrentio-streams') == 4  # Three lookups + playback refetch.
+    assert events().count('torrentio-resolve') == 1
+    assert events().count('torrentio-local-handoff') == 1
+    capture('torrentio-native-playback')
+    from PIL import Image, ImageStat
+    rgb = ImageStat.Stat(Image.open(OUT/'torrentio-native-playback.png').convert('RGB')).mean
+    assert rgb[1] > 35 and rgb[1] > rgb[0]*1.5 and rgb[1] > rgb[2]*1.3
+    checks.append({'check':'native-torrentio-search-source-cancel-decline-play', 'players':players,
+                   'file':playing, 'mean_rgb':rgb, 'synthetic_transport':True, 'real_provider_calls':False})
+    rpc('Player.Stop', {'playerid':next(p['playerid'] for p in players if p['type'] == 'video')})
+    until('Torrentio playback stopped', lambda: not xbmc.Player().isPlaying())
+    wait_for_movie_idle('Torrentio playback returns to search', search_path)
+    assert 'unexpected-provider-operation' not in events()
+    capture('torrentio-return-search')
+
+
 try:
     until('Home',lambda:xbmcgui.getCurrentWindowId()==10000)
     version=rpc('Application.GetProperties',{'properties':['version']})['version']
@@ -175,7 +311,7 @@ try:
     until('online details',lambda:xbmcgui.getCurrentWindowDialogId()==12002)
     text=xbmc.getInfoLabel('Control.GetLabel(9)')
     assert 'Playback availability not checked' in text
-    capture('online-details'); rpc('Input.Select')
+    capture('online-details'); movie_actions('Back to browsing')
     wait_for_movie_idle('details dismissed without history change',online_path)
     checks.append({'check':'online-catalogue-and-details','synthetic_provider':True})
     for label,dialog in [('Search','virtualkeyboard'),('Search','virtualkeyboard'),('Collections','selectdialog'),('Genres','selectdialog')]:
@@ -219,12 +355,13 @@ try:
     monitor.waitForAbort(6)
     assert events() == stopped_events
     checks.append({'check':'RD-fake-device-cancel-after-first-poll','real_provider_calls':False,'credentials_saved':False})
+    torrentio_journey(online_path)
     nav('Local files'); rpc('Input.Select')
     until('return to local files',lambda:cinematic() and xbmc.getInfoLabel('Container.FolderPath')==local_path)
     rpc('Input.Down')
     focus('Amber Horizon'); capture('online-return-local')
     checks.append({'check':'controller-navigation-return-local'})
-    result={'status':'passed','scenario':'online','checks':checks,'limitations':['Native Kodi 21.3 software-rendered CI only; not physical controller/Pi acceptance','Synthetic catalogue transport; no live service, usable device code, token exchange or grant','Screenshots require visual review for disclosure readability']}
+    result={'status':'passed','scenario':'online','checks':checks,'limitations':['Native Kodi 21.3 software-rendered CI only; not physical controller/Pi acceptance','Synthetic catalogue/RD/Torrentio transports and fake token exchange; no live account or usable grant. Validated resolver output maps only to generated local video, not real CDN playback','Screenshots require visual review for disclosure readability']}
     (OUT/'result.json').write_text(json.dumps(result,indent=2)+'\n')
 except Exception as exc:
     try: capture('failure')
