@@ -2,6 +2,22 @@
 
 Updated: 2026-11-09. Public project status only.
 
+## Torrentio development slice (local only)
+
+Base `20f8e228a1bef620ba61c3f75a017deb03a0feb9`; branch
+`feat/torrentio-sources`. Adds the opt-in provider-browser setup wizard, optional
+private configuration import, bounded RD-only source lookup and explicit selection
+with re-fetch before playback. Discover Select remains metadata-only. Full unittest
+suite: 693 passed (baseline 674); compileall and diff whitespace checks passed.
+See [setup and unresolved connection/device gates](docs/torrentio.md) and
+[executed RED/GREEN evidence](docs/torrentio-tdd-evidence.md).
+
+No live account/search/playback requests, deployment, device changes, merge or push.
+Guided automatic connection is blocked: reviewed Torrentio RD setup uses API tokens,
+not a supported Kodi OAuth/device callback. Browser handoff does not claim connection.
+Physical playback, dialog readability and strict HTTPS resolver compatibility remain
+unverified. Self-review only; independent parent review is required before deployment.
+
 ## Current source candidate
 
 The latest `integration/latest-preserved-main` candidate adds the complete Music

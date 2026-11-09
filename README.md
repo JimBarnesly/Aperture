@@ -22,6 +22,14 @@ Until the final test report is recorded, treat this branch as work in progress.
 See [integration scope and gates](docs/main-integration.md) for the consolidated
 features, retained alternatives and exact-source verification requirements.
 
+## Optional Torrentio movie sources (development)
+
+This branch adds an opt-in Sources setup wizard and **Find streams (Torrentio)**
+movie context action. Default Discover selection remains metadata-only. The
+provider-browser handoff cannot complete a secure automatic connection yet;
+advanced private-file import is optional. See [setup, security boundaries and
+remaining acceptance](docs/torrentio.md). Nothing is deployed by this change.
+
 ## Install the complete ZIPs
 
 Use the complete, tested ZIPs from the candidate kit or matching CI artifact:

@@ -41,6 +41,16 @@ class DebridUITests(unittest.TestCase):
     def sign_in(self):
         rd.Store(self.tmp.name).save({'client_id': 'fixture', 'client_secret': 'secret', 'access_token': 'access', 'refresh_token': 'refresh', 'expires_at': 2000000000})
 
+    def test_sources_offers_online_playback_setup_without_moving_existing_choices(self):
+        self.run_ui()
+        choices = self.dialog.select.call_args.args[1]
+        self.assertEqual(choices[:2], ['Connect Real-Debrid', 'Application client ID (optional override)'])
+        self.assertEqual(choices[-1], 'Set up online playback (Torrentio)')
+        self.dialog.select.return_value = len(choices) - 1
+        self.run_ui()
+        self.assertIn('action=torrentio_setup', self.xbmc.executebuiltin.call_args.args[0])
+        self.assertEqual(self.client.mock_calls, [])
+
     def test_cancel_sources_no_network_or_navigation(self):
         self.run_ui()
         self.assertEqual(self.client.mock_calls, [])

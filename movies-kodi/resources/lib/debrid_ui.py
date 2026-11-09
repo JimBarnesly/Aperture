@@ -69,10 +69,13 @@ def run(query, addon, profile, base, handle):
             connected = store.load() is not None
             choices = (['Browse existing downloads', 'Play a link I am authorized to use', 'Disconnect from this profile']
                        if connected else ['Connect Real-Debrid', 'Application client ID (optional override)'])
+            choices.append('Set up online playback (Torrentio)')
             selected = dialog.select('Movie sources: Real-Debrid' + (' connected' if connected else ' not connected'), choices)
             if selected < 0 or xbmc.getInfoLabel('Container.FolderPath') != origin:
                 return
-            if connected and selected == 0:
+            if selected == len(choices) - 1:
+                navigate = 'torrentio'
+            elif connected and selected == 0:
                 navigate = True
             elif connected and selected == 1:
                 link = dialog.input('HTTPS link you are authorized to play')
@@ -121,7 +124,9 @@ def run(query, addon, profile, base, handle):
                 finally:
                     progress.close()
                 dialog.ok('Real-Debrid', 'Connected. Sources can now browse existing downloads or play an authorized link. Online catalogue search is separate.')
-        if navigate:
+        if navigate == 'torrentio':
+            xbmc.executebuiltin('RunPlugin(' + base + '?action=torrentio_setup)')
+        elif navigate:
             xbmc.executebuiltin('Container.Update(' + base + '?mode=rd)')
     except (DebridError, OSError, ValueError):
         # Never expose filesystem paths, credentials, signed URLs or raw errors.

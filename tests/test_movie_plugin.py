@@ -86,6 +86,18 @@ class PluginTests(unittest.TestCase):
         self.assertIn('action=online_details',e[0][1])
         self.assertNotIn('https://example.org/film',repr(e))
         self.assertIn('start=1',e[-1][1])
+    def test_online_movie_has_explicit_torrentio_action_without_changing_default(self):
+        c,e,d,x,b=self.run_plugin([],query='?mode=online',catalog_payload={'metas':[{'id':'tt1234567','name':'Example'}]})
+        self.assertIn(('Find streams (Torrentio)', 'RunPlugin(plugin://plugin.video.aperture.movies/?action=torrentio_find&id=tt1234567)'), e[0][2].context)
+        self.assertIn('action=online_details', e[0][1])
+        self.assertEqual(e[0][2].props['IsPlayable'], 'false')
+
+    def test_torrentio_action_dispatches_without_local_source_access(self):
+        c,e,d,x,b=self.run_plugin([],query='?action=torrentio_find&id=tt1234567')
+        self.assertEqual(c, [])
+        self.assertIn('Online playback is not connected', repr(d))
+        self.assertEqual((e,x,b), ([],[],[]))
+
     def test_online_search_cancel_does_not_navigate(self):
         c,e,d,x,b=self.run_plugin([],query='?action=search',folder_paths=['plugin://plugin.video.aperture.movies/?mode=online'],search='')
         self.assertEqual((c,e,x,b),([],[],[],[]))
