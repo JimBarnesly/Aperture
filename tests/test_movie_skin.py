@@ -20,7 +20,7 @@ class MovieSkinTests(unittest.TestCase):
         self.assertEqual(list(self.view.iter('onclick')), [])
         self.assertEqual(self.view.findtext('viewtype'), 'icon')
         for direction in ('onleft', 'onright', 'onup', 'ondown'):
-            self.assertEqual(self.view.findtext(direction), '61')
+            self.assertEqual(self.view.findtext(direction), '710' if direction == 'onup' else '61')
 
     def test_native_views_remain_and_control_ids_are_unique(self):
         self.assertEqual(self.tree.findtext('defaultcontrol'), '50')
@@ -49,7 +49,7 @@ class MovieSkinTests(unittest.TestCase):
         labels = [node.text or '' for node in self.tree.iter('label')]
         self.assertFalse(any('Your collection. A world of stories.' in label for label in labels))
         self.assertFalse(any('←' in label or '→' in label for label in labels))
-        self.assertTrue(any(label.startswith('Left / Right  Browse') for label in labels))
+        self.assertTrue(any(label.startswith('Up  Discover / Search') for label in labels))
 
     def test_focus_is_visible_and_filmstrip_fits(self):
         self.assertEqual(self.view.findtext('orientation'), 'horizontal')
@@ -62,3 +62,4 @@ class MovieSkinTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+

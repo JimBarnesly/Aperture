@@ -1,0 +1,105 @@
+# Optional Real-Debrid connector
+
+This candidate adds an **opt-in connector**, not a Stremio catalogue or torrent
+search. Discover/Search use the separate Cinemeta metadata adapter; My Kodi
+library remains accessible under Collections. Sources can list existing
+Real-Debrid download-history video entries (60 per page) and resolve an HTTPS
+link the user is authorized to access. It does not add magnets, select torrent
+files, scrape indexes, buy subscriptions, or modify account settings.
+
+## Prerequisites and sign-in
+
+1. No app registration or API key is required for the default flow. The add-on
+   uses **X245A4XAIBGVM**, the client ID explicitly published for open-source apps
+   in [Real-Debrid's official API documentation](https://api.real-debrid.com/).
+   This public identifier is not an account credential. The shared application
+   does not have a custom Aperture name; review the application shown by RD.
+2. The shared application's documented scopes are unrestrict, torrents, downloads
+   and user. This build only uses downloads and explicitly chosen link resolution;
+   the grant is broader than those operations. Read the consent screen before
+   approving. Shared-client rate limits may be stricter than service-wide limits.
+   A custom application client ID remains an optional Movies setting for those
+   needing a custom name/scopes. Never enter an API key, password or client secret
+   in that public-ID setting. Empty/old settings fall back to the official ID.
+3. Choose Sources > Connect Real-Debrid. Read and approve the on-device disclosure
+   of account access and local credential storage. Go to
+   https://real-debrid.com/device yourself, enter the displayed short-lived code,
+   and review/approve the application. An assistant-driven real grant still
+   requires the user's action-time approval. No live grant, device-code request,
+   token exchange or account read was performed to implement this default.
+4. Polling runs only while that sign-in dialog is active, with the returned
+   interval (at least five seconds), expiry, Cancel and Kodi shutdown handling.
+   Closing/cancelling does not save newly issued credentials. If you approved on
+   the website just before cancellation, revoke that grant on Real-Debrid too.
+
+The implementation follows Real-Debrid's open-source device flow and its
+provider-specific refresh grant, documented at https://api.real-debrid.com/.
+The account must have whatever entitlements Real-Debrid requires for the selected
+link. This connector neither buys nor upgrades them. Rate limits stop the current
+action; revoked/expired access prompts reconnection rather than retrying forever.
+
+## Privacy and storage
+
+No API key entry is required. A successful device flow stores the user-bound
+client credentials and refresh/access tokens in a dedicated owner-only (0700)
+profile directory, with atomic 0600 credential files. POSIX support is required;
+unsupported permissions/platforms fail closed. This is **not encrypted storage**
+and not a system keychain. Other programs running as the same OS user, root and
+profile backups can read it. Keep the profile private and exclude its credentials
+from shared backups. No changes to existing filesystem permissions are made.
+
+An exclusive process lock prevents concurrent login, refresh and disconnect.
+Secrets are not put in add-on settings, plugin navigation URLs or application
+logs. Authenticated API requests use TLS and reject redirects. Error messages
+are fixed and do not include response bodies, link strings or credentials.
+Directory caching on disk is disabled. Resolved playback URLs must reach Kodi's
+player in memory, and **Kodi or other player components may log them**. Avoid
+debug logging and redact any Kodi logs before sharing them.
+
+Disconnect removes this profile's saved credentials only. To revoke ongoing
+server-side access, remove the application in the Real-Debrid account's application
+management page. Local disconnect does not claim to revoke the refresh grant.
+
+## Playback and boundaries
+
+Existing downloads are identified in plugin routes by account entry ID and page,
+not by a signed URL. Clicking re-reads that page and resolves only a matching
+current entry; if the page shifted, reopen it. Existing links may expire: failure
+is left to Kodi playback and the user can explicitly resolve the original link
+again. The connector does not silently regenerate links or consume extra traffic.
+
+Manual link resolution displays a confirmation before sending the entered link
+to Real-Debrid. It can consume account traffic and add a download-history entry.
+Remote-traffic mode is disabled. Only HTTPS web links are accepted. No entered
+link is fetched directly by the add-on; Real-Debrid resolves it. Returned playback
+links reject embedded credentials, literal IP hosts, nonstandard ports, control
+characters and Kodi header injection. As with any player, a trusted provider's
+playback URLs are passed to Kodi; there is no custom media proxy.
+
+## Verification status
+
+Unit tests mock every API call and exercise OAuth waiting/expiry/cancel,
+credential permissions and locking, refresh/revocation, redacted HTTP failures,
+redirect refusal, safe routes, download paging and explicit user choices. No
+real account sign-in, provider entitlement, link availability, live playback,
+physical remote or audible output has been verified. Existing Movies native UI
+CI is separate and does not prove the RD dialogs or live provider path.
+
+## Linking catalogue titles to existing downloads
+
+A catalogue card's context menu offers **Check my Real-Debrid downloads (filename
+IMDb ID)**. This explicitly reads one page of the connected account's existing
+downloads and compares filenames locally against the card's IMDb identifier. No
+library filenames, links or account data are sent to Cinemeta or another search
+provider. More downloads retains the same filter; pages are not fetched in the
+background. Connection is still a separate, explicit Sources action.
+
+A match requires a video filename containing that exact standalone IMDb ID and
+no conflicting IMDb ID. Filename evidence is not proof of file contents, rights,
+or playback availability. Title/year guesses and fuzzy matching are deliberately
+excluded. Many ordinary filenames contain no IMDb ID and will not match; a blank
+page is not a claim that the movie is unavailable. Use Sources to browse those
+downloads manually or resolve an explicitly supplied, authorized HTTPS link.
+Playback revalidates the selected download ID on its current account page and
+uses the existing resolver. No torrent search, add-on stream scraper, magnet
+submission, or automatic source acquisition has been added.

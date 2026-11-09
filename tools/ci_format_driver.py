@@ -23,7 +23,8 @@ def view_is(actual, mode):
     return (actual.get("format_view") == mode
             and actual.get("shelf_visible") is shelf
             and actual.get("list_visible") is (not shelf)
-            and str(actual.get("focus")) == ("64" if shelf else "63"))
+            and str(actual.get("focus")) == ("64" if shelf else "63")
+            and (not shelf or actual.get("shelf_focus_complete", True)))
 
 
 def title_direction(mode):
@@ -162,9 +163,40 @@ def return_to_album_shelf(press, wait_for, settle_focus, album_id):
     settle_focus()
 
 
+def open_album_tracks(press, wait_for, settle_focus, find_label, album_id):
+    """Track browsing is explicit; selecting the album itself starts playback."""
+    before = press("c")
+    wait_for("Album browse context", lambda s: s.get("dialog") == 10106, after=before)
+    settle_focus()
+    find_label("Browse tracks", "Down", 12)
+    before = press("Return")
+    wait_for("Explicit album track browsing", lambda s: s.get("window") == 10502
+             and s.get("dialog") == 9999 and route_is(s.get("folder", ""), "album", album_id=album_id), after=before)
+    settle_focus()
+
+
 def successful_recovery_request(requests, started, completed):
     return any(row["path"] == "/api/library" and row["status"] == 200
                and started <= row["time"] <= completed for row in requests)
+
+
+def assert_coverflow_identity(path, position):
+    """Pixel evidence, not labels: every selected sleeve has its own RGB art."""
+    colors = [(220, 45, 45), (45, 210, 65), (45, 70, 225),
+              (220, 190, 40), (190, 45, 210), (40, 200, 210)]
+    with Image.open(path) as image:
+        pixels = list(image.convert("RGB").crop((900, 450, 1020, 570)).getdata())
+    expected = colors[position - 1]
+    matching = sum(max(abs(a - b) for a, b in zip(pixel, expected)) < 30 for pixel in pixels)
+    if matching / max(1, len(pixels)) < 0.9:
+        raise AssertionError("Selected Coverflow artwork does not match album " + str(position))
+
+
+def coverflow_color_fraction(path, box, chroma=40, brightness=60):
+    from PIL import Image
+    pixels = list(Image.open(path).convert('RGB').crop(box).getdata())
+    return sum(max(pixel) - min(pixel) > chroma and max(pixel) > brightness
+               for pixel in pixels) / max(1, len(pixels))
 
 
 def turntable_pixel_change(first, second):
@@ -175,6 +207,30 @@ def turntable_pixel_change(first, second):
         box = (690, 370, 1230, 650)
         delta = ImageChops.difference(a.convert("RGB").crop(box), b.convert("RGB").crop(box))
         return sum(ImageStat.Stat(delta).mean) / 3
+
+
+def assert_no_music_info_overlay(samples, after, pid):
+    """Check every fullscreen-music sample, including modal playback controls."""
+    visible = [s for s in samples if s.get('pid') == pid and s.get('sequence', 0) > after
+               and s.get('window') == 12006]
+    if not visible:
+        raise AssertionError('Missing fullscreen music evidence')
+    if any(s.get('native_seekbar_visible') is not False or s.get('native_topbar_visible') is not False
+           for s in visible):
+        raise AssertionError('Music file-info overlay appeared')
+    return len(visible)
+
+
+def assert_clean_track_load(samples, after, pid):
+    """Catch transient startup banners, not just a clean frame after timeout."""
+    visible = [s for s in samples if s.get('pid') == pid and s.get('sequence', 0) > after
+               and s.get('window') == 12006 and s.get('nowplaying_visible') is True]
+    if not visible or not any(s.get('player_show_info') is True for s in visible):
+        raise AssertionError('Missing evidence of Kodi music ShowInfo pulse during track load')
+    if any(s.get('native_seekbar_visible') is not False or s.get('native_topbar_visible') is not False
+           for s in visible):
+        raise AssertionError('Automatic music file-info overlay appeared during track load')
+    return len(visible)
 
 
 def track_presentation_ready(actual):
@@ -523,9 +579,7 @@ def run(hooks):
         shelf_state = music()
         screenshot("format-01-albums")
         sequence = music()["sequence"]
-        before = press("Return")
-        wait_for("Format album tracks", lambda s: s.get("window") == 10502 and s.get("dialog") == 9999
-                 and route_is(s.get("folder", ""), "album", album_id=config["album_id"]), after=before)
+        open_album_tracks(press, wait_for, settle_focus, find_label, config["album_id"])
         actual = find_title(config["expected_titles"][0], "album", after=sequence, album_id=config["album_id"])
         track_view = settled_music("Native track list, not the horizontal album shelf",
                                    lambda s: route_is(s.get("folder", ""), "album", album_id=config["album_id"])
@@ -559,14 +613,11 @@ def run(hooks):
         checks.append({"check":"native-shelf-list-and-back", "albums":shelf_state,
                        "tracks":track_view, "restored_albums":restored_shelf})
         screenshot("format-02b-back-to-album-shelf")
-        before = press("c")
-        wait_for("Album context menu", lambda s: s.get("dialog") == 10106, after=before)
-        settle_focus()
-        find_label("Play album", "Down", 12)
+        # Normal Select/Enter, not a hidden context-menu action, must play the
+        # complete album and enter the turntable.
         sequence = music()["sequence"]
-        before = press("Return")
-        wait_for("Context menu dismissed", lambda s: s.get("dialog") == 9999, after=before)
-        settle_focus()
+        load_sequence = sequence
+        press("Return")
         actual = wait_music("ordered album playback", lambda s: s.get("player") is not None
                             and s["player"]["properties"].get("speed") == 1
                             and track_id(s["player"]["item"]) == config["expected_ids"][0], after=sequence)
@@ -578,14 +629,24 @@ def run(hooks):
         later = wait_music("native playback clock advances", lambda s: s.get("player") is not None
                            and track_id(s["player"]["item"]) == config["expected_ids"][0]
                            and clock(s) >= initial_clock + 1.5, timeout=20, after=sequence)
-        checks.append({"check":"album-playback", "queue":actual["queue"], "start_seconds":initial_clock, "later_seconds":clock(later)})
+        checks.append({"check":"album-selection-ordered-playback", "queue":actual["queue"], "start_seconds":initial_clock, "later_seconds":clock(later)})
         wait_music("Native turntable opens for explicit album playback",
                    lambda s: s.get("window") == 12006 and s.get("nowplaying_visible") is True
                    and s.get("playing_title") == config["expected_titles"][0])
-        wait_music("Presentation yields to native playback overlay",
-                   lambda s: s.get("native_seekbar_visible") is True
+        wait_music("Record captions read track, album, artist in that order",
+                   lambda s: s.get("turntable_captions") ==
+                   [config["expected_titles"][0], album_title, config["artist"]])
+        wait_music("Secondary bottom-left album tracks match the ordered release",
+                   lambda s: s.get("album_tracks_visible") is True
+                   and [title for title in s.get("album_track_titles", []) if title] == config["expected_titles"])
+        wait_music("Turntable loads without automatic file-info popup",
+                   lambda s: s.get("native_seekbar_visible") is False
+                   and s.get("native_topbar_visible") is False
                    and s.get("presentation_header_visible") is False
-                   and s.get("presentation_footer_visible") is False)
+                   and s.get("presentation_footer_visible") is True)
+        samples = [json.loads(line) for line in (out / "format-states.jsonl").read_text().splitlines()]
+        clean_count = assert_clean_track_load(samples, load_sequence, pid)
+        checks.append({"check":"turntable-no-startup-file-info", "observed_frames":clean_count})
         screenshot("format-03-playback")
         time.sleep(1)
         screenshot("format-03b-record-rotated")
@@ -593,16 +654,17 @@ def run(hooks):
                                         out / "screenshots/format-03b-record-rotated.png")
         if moving < 0.5:
             raise AssertionError("Record artwork did not visibly rotate: " + str(moving))
-        wait_music("Clean turntable after native playback overlay dismisses",
+        wait_music("Turntable remains clean while playing",
                    lambda s: s.get("native_seekbar_visible") is False
-                   and s.get("presentation_header_visible") is True
+                   and s.get("presentation_header_visible") is False
                    and s.get("presentation_footer_visible") is True)
         screenshot("format-03j-clean-turntable")
         sequence = music()["sequence"]
         press("space")
         paused = wait_music("Pause stops actual audio and shows paused status", lambda s: s.get("player")
-                            and s["player"]["properties"].get("speed") == 0 and s.get("paused_visible") is True,
-                            after=sequence)
+                            and s["player"]["properties"].get("speed") == 0 and s.get("paused_visible") is True
+                            and s.get("native_seekbar_visible") is False and s.get("native_topbar_visible") is False
+                            and s.get("presentation_progress_visible") is True, after=sequence)
         screenshot("format-03c-paused")
         time.sleep(1)
         screenshot("format-03d-paused-still")
@@ -610,9 +672,68 @@ def run(hooks):
                                       out / "screenshots/format-03d-paused-still.png")
         if still > 0.15:
             raise AssertionError("Paused record continued moving: " + str(still))
+        # Native seek keys stay untouched. Require Kodi's performed-seek flag
+        # as well as a time jump, so clock advancement cannot pass by itself.
+        seek_start = paused["sequence"]
+        sequence = music()["sequence"]
+        press("space")
+        wait_music("Resume before exercising native seek keys",
+                   lambda s: s.get("player") and s["player"]["properties"].get("speed") == 1,
+                   after=sequence)
+        for key, direction, capture in (("Right", 1, "forward"), ("Left", -1, "back")):
+            start = music()
+            sequence, start_time = start["sequence"], clock(start)
+            press(key)
+            sought = wait_music("Native " + key + " seeks without track-info popup",
+                                lambda s: s.get("player")
+                                and s["player"]["properties"].get("speed") == 1
+                                and track_id(s["player"]["item"]) == config["expected_ids"][0]
+                                and (clock(s) - start_time) * direction >= 2
+                                and s.get("player_has_performed_seek") is True
+                                and s.get("presentation_progress_visible") is True
+                                and s.get("native_seekbar_visible") is False
+                                and s.get("native_topbar_visible") is False, after=sequence)
+            screenshot("format-03-seek-" + capture)
+        sequence = music()["sequence"]
+        press("space")
+        paused = wait_music("Pause after seeking retains only the turntable progress display",
+                            lambda s: s.get("player") and s["player"]["properties"].get("speed") == 0
+                            and s.get("native_seekbar_visible") is False
+                            and s.get("native_topbar_visible") is False
+                            and s.get("presentation_progress_visible") is True, after=sequence)
+        samples = [json.loads(line) for line in (out / "format-states.jsonl").read_text().splitlines()]
+        checks.append({"check":"native-left-right-seek-with-own-progress-no-info",
+                       "observed_frames":assert_no_music_info_overlay(samples, seek_start, pid)})
         before = press("Return")
         wait_for("Native music playback controls", lambda s: s.get("dialog") == 10120, after=before)
+        # Control.IsVisible looks in the top modal dialog, not the underlying
+        # turntable. The screenshot verifies the background progress display.
+        wait_music("Manual controls open without inherited metadata overlays",
+                   lambda s: s.get("native_seekbar_visible") is False
+                   and s.get("native_topbar_visible") is False)
         screenshot("format-03e-native-controls")
+        # Exercise the native pause/resume button, not just dialog visibility.
+        before = press("Return")
+        wait_music("Music OSD resumes audio without metadata popup",
+                   lambda s: s.get("dialog") == 10120 and s.get("player")
+                   and s["player"]["properties"].get("speed") == 1
+                   and s.get("native_seekbar_visible") is False
+                   and s.get("native_topbar_visible") is False)
+        before = press("Return")
+        paused = wait_music("Music OSD pauses audio without metadata popup",
+                            lambda s: s.get("dialog") == 10120 and s.get("player")
+                            and s["player"]["properties"].get("speed") == 0
+                            and s.get("native_seekbar_visible") is False
+                            and s.get("native_topbar_visible") is False)
+        # The bindings apply to Visualisation, never navigation inside MusicOSD.
+        for arrow in ("Down", "Up"):
+            sequence = music()["sequence"]
+            press(arrow)
+            settled_music("OSD arrow leaves current track and paused queue unchanged",
+                          lambda s: s.get("dialog") == 10120 and s.get("player")
+                          and s["player"]["properties"].get("speed") == 0
+                          and track_id(s["player"]["item"]) == config["expected_ids"][0]
+                          and s.get("queue") == paused["queue"], after=sequence)
         before = press("Escape")
         wait_for("Music controls dismiss", lambda s: s.get("dialog") == 9999, after=before)
         before = press("Escape")
@@ -643,38 +764,65 @@ def run(hooks):
                        "playing_pixel_change":moving, "paused_pixel_change":still,
                        "resumed_pixel_change":resumed})
         sequence = music()["sequence"]
-        press("period")
-        actual = wait_music("Skip reaches second track", lambda s: s.get("player") is not None
+        press("Down")
+        actual = wait_music("Down reaches second track", lambda s: s.get("player") is not None
                             and track_id(s["player"]["item"]) == config["expected_ids"][1], after=sequence)
-        checks.append({"check":"skip-next", "player":actual["player"]})
+        settled_music("Next track does not flash file information",
+                      lambda s: s.get("native_seekbar_visible") is False
+                      and s.get("native_topbar_visible") is False, after=actual["sequence"])
+        samples = [json.loads(line) for line in (out / "format-states.jsonl").read_text().splitlines()]
+        assert_clean_track_load(samples, sequence, pid)
+        checks.append({"check":"turntable-down-next", "player":actual["player"]})
         for expected_id in config["expected_ids"][2:]:
             sequence = music()["sequence"]
-            press("period")
-            actual = wait_music("Next native album track", lambda s: s.get("player") is not None
+            press("Down")
+            actual = wait_music("Down reaches next native album track", lambda s: s.get("player") is not None
                                 and track_id(s["player"]["item"]) == expected_id, after=sequence)
         screenshot("format-03f-missing-art-fallback")
-        actual = music()
-        sequence, previous_time = actual["sequence"], clock(actual)
-        press("comma")
-        actual = wait_music("Previous changes track or restarts current track", lambda s: s.get("player") is not None
-                            and (track_id(s["player"]["item"]) == config["expected_ids"][2]
-                                 or (track_id(s["player"]["item"]) == config["expected_ids"][3]
-                                     and clock(s) < previous_time - 0.1)), after=sequence)
-        if track_id(actual["player"]["item"]) == config["expected_ids"][3]:
+        # Native SkipPrevious restarts a song after three seconds. The requested
+        # Up behavior must move back once even after that threshold.
+        actual = wait_music("Final track is mid-playback before testing one-press previous",
+                            lambda s: s.get("player") and clock(s) >= 5
+                            and track_id(s["player"]["item"]) == config["expected_ids"][3])
+        sequence = actual["sequence"]
+        press("Up")
+        actual = wait_music("One Up press returns directly to the previous album track",
+                            lambda s: s.get("player") is not None
+                            and track_id(s["player"]["item"]) == config["expected_ids"][2], after=sequence)
+        if actual["queue"] != paused["queue"]:
+            raise AssertionError("Previous-track action replaced the album queue")
+        for expected_id in reversed(config["expected_ids"][:2]):
             sequence = actual["sequence"]
-            press("comma")
-            actual = wait_music("Previous from restarted track returns to third", lambda s: s.get("player") is not None
-                                and track_id(s["player"]["item"]) == config["expected_ids"][2], after=sequence)
+            press("Up")
+            actual = wait_music("Repeated Up returns toward first album track",
+                                lambda s: s.get("player") and track_id(s["player"]["item"]) == expected_id,
+                                after=sequence)
+        actual = wait_music("First track is mid-playback before checking upper boundary",
+                            lambda s: s.get("player") and clock(s) >= 5
+                            and track_id(s["player"]["item"]) == config["expected_ids"][0])
+        sequence, previous_time = actual["sequence"], clock(actual)
+        press("Up")
+        actual = wait_music("Up on first track restarts without wrapping or stopping",
+                            lambda s: s.get("player")
+                            and track_id(s["player"]["item"]) == config["expected_ids"][0]
+                            and clock(s) < previous_time - 1 and s["queue"] == paused["queue"],
+                            after=sequence)
         checks.append({"check":"turntable-skip-previous-and-missing-art", "player":actual["player"]})
+        samples = [json.loads(line) for line in (out / "format-states.jsonl").read_text().splitlines()]
+        checks.append({"check":"music-info-overlay-absent-through-playback-controls-and-seeking",
+                       "observed_frames":assert_no_music_info_overlay(samples, load_sequence, pid)})
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('ci_shelf_idle', Path(__file__).with_name('ci_shelf_idle.py'))
+        idle_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(idle_module)
+        actual = idle_module.exercise_idle_return(press, wait_music, music, screenshot, checks)
         sequence = actual["sequence"]
         press("x")
         wait_music("Stop synthetic playback", lambda s: s.get("player") is None, after=sequence)
         return_home()
         opened_albums()
         sequence = music()["sequence"]
-        before = press("Return")
-        wait_for("Select track from album", lambda s: s.get("window") == 10502
-                 and route_is(s.get("folder", ""), "album", album_id=config["album_id"]), after=before)
+        open_album_tracks(press, wait_for, settle_focus, find_label, config["album_id"])
         find_title(config["expected_titles"][0], "album", after=sequence, album_id=config["album_id"])
         sequence = music()["sequence"]
         press("Return")
@@ -737,9 +885,118 @@ def run(hooks):
         if not any(row["path"] == "/api/library" and row["status"] == 503 for row in requests):
             raise AssertionError("Offline test did not hit the synthetic server")
         checks.append({"check":"offline-recovery-and-return", "recovered_title":album_title, "state":state()})
+        protected_health(acquire=False)  # Store must be checked against an actually disabled capability.
+        opened_albums()
+        before = press("Down")
+        wait_for("Shelf Store button is remote reachable", lambda s: s.get("focus") == 66, after=before)
+        before = press("Return")
+        wait_for("Store opens without category chooser", lambda s: route_is(s.get("folder", ""), "store"), after=before)
+        actual = wait_view("store", "menu")
+        if not any(word in actual.get("format_notice", "").lower() for word in ("disabled", "unavailable")):
+            raise AssertionError("Store did not disclose protected backend restrictions")
+        if actual.get("player") is not None:
+            raise AssertionError("Opening Store started playback")
+        screenshot("format-05b-store-protected")
+        before = press("BackSpace")
+        wait_for("Store Back returns to shelf", lambda s: route_is(s.get("folder", ""), "albums"), after=before)
+        checks.append({"check":"remote-store-access-and-honest-disabled-backend", "state":actual})
+        return_home()
+        protected_health()
         unified_integration()
         assert_mock_mutations(read_requests(), ["/api/acquire-album", "/api/acquisitions/prioritize",
                                                 "/api/acquisitions/cancel"], config["catalog_id"])
+        # Multiple synthetic releases are required to see real perspective,
+        # centering and edge navigation. The normal fixture has only one album.
+        original_library = library_path.read_bytes()
+        coverflow_library = json.loads(original_library)
+        seed = coverflow_library["albums"][0]
+        coverflow_library["albums"] = [dict(seed, id="coverflow-" + str(i),
+            title="SYNTHETIC QA Coverflow " + str(i), trackIds=["coverflow-track-" + str(i)]) for i in range(1, 7)]
+        coverflow_library["tracks"] = [dict(coverflow_library["tracks"][0], id="coverflow-track-" + str(i)) for i in range(1, 7)]
+        delay_path = runtime / "format-fixture/cover-delay.json"
+        delay_path.write_text("0.6")
+        try:
+            temporary.write_text(json.dumps(coverflow_library))
+            temporary.replace(library_path)
+            return_home()
+            before = press("j")
+            wait_for("Coverflow fixture shelf", lambda s: route_is(s.get("folder", ""), "albums"), after=before)
+            press("l")  # Explicitly refresh the changed synthetic library, bypassing the shelf cache.
+            settled_music("Random entry chooses an actual record", lambda s: s.get("shelf_position") in [str(i) for i in range(1, 7)])
+            baseline_queue = music().get("queue")
+            press("Home")  # Deterministic sweep after verifying randomized entry.
+            settle_focus()
+            for i in range(1, 7):
+                actual = find_title("SYNTHETIC QA Coverflow " + str(i), "albums")
+                if actual.get("shelf_position") != str(i) or actual.get("queue") != baseline_queue or actual.get("player") is not None:
+                    raise AssertionError("Coverflow navigation changed playback or lost order: " + repr(actual))
+                if i in (1, 3, 6):
+                    screenshot("format-06-coverflow-" + str(i))
+                    assert_coverflow_identity(out / ('screenshots/format-06-coverflow-' + str(i) + '.png'), i)
+            for i in (5, 4, 3):
+                sequence = music()["sequence"]
+                press("Left")
+                actual = settled_music("Coverflow reverse focus", lambda s: s.get("focused_title") == "SYNTHETIC QA Coverflow " + str(i), after=sequence)
+            screenshot("format-06-coverflow-reversed")
+            coverflow_image = out / 'screenshots/format-06-coverflow-reversed.png'
+            assert_coverflow_identity(coverflow_image, 3)
+            for side, box in [('left', (240, 370, 690, 700)), ('right', (1230, 370, 1680, 700))]:
+                if coverflow_color_fraction(coverflow_image, box) < 0.10:
+                    raise AssertionError('Synthetic Coverflow ' + side + ' row is missing/offscreen')
+            if coverflow_color_fraction(coverflow_image, (800, 800, 1100, 815), 20, 35) < 0.20:
+                raise AssertionError('Selected sleeve floor reflection is missing or inverted')
+            checks.append({"check":"coverflow-six-albums-forward-backward-no-playback", "state":actual})
+            # Burst across already warmed artwork, reversing before the normal
+            # animation finishes. Assert actual final sleeve pixels and queue.
+            for key in ("Right", "Right", "Left", "Right", "Left", "Left"):
+                press(key)
+            actual = settled_music("Rapid Coverflow reversal settles on album three",
+                lambda s: s.get("focused_title") == "SYNTHETIC QA Coverflow 3")
+            screenshot("format-06-coverflow-rapid-reversal")
+            assert_coverflow_identity(out / 'screenshots/format-06-coverflow-rapid-reversal.png', 3)
+            if actual.get("queue") != baseline_queue or actual.get("player") is not None:
+                raise AssertionError("Rapid Coverflow browse changed playback")
+            checks.append({"check":"distinct-art-delayed-load-and-rapid-reversal", "cover_delay_seconds":0.6})
+            return_home()
+            # A long release must retain every liner-note row and scroll without
+            # exposing playlist editing or interrupting the playing album.
+            long_library = json.loads(original_library)
+            album = long_library['albums'][0]
+            seed_track = long_library['tracks'][0]
+            for i in range(10):
+                identifier = 'SYNTHETIC QA liner note ' + str(i + 5)
+                long_library['tracks'].append(dict(seed_track, id=identifier,
+                    title='SYNTHETIC QA Liner Track ' + str(i + 5), disc=3, track=i + 1))
+                album['trackIds'].append(identifier)
+            temporary.write_text(json.dumps(long_library))
+            temporary.replace(library_path)
+            press('j')
+            wait_view('albums', 'albums')
+            press('l')
+            find_title(album['title'], 'albums')
+            press('Return')
+            actual = wait_music('Entire long album is available in scrolling liner notes',
+                lambda s: s.get('window') == 12006 and s.get('long_album_tracks_visible')
+                and len(s.get('long_album_tracks_text', '').splitlines()) == 14
+                and '> 1.' in s.get('long_album_tracks_text', '')
+                and '14.  SYNTHETIC QA Liner Track 14' in s.get('long_album_tracks_text', ''))
+            screenshot('format-07-long-album-first')
+            last_page = wait_music('Long liner notes reach the final visible page',
+                lambda s: s.get('long_album_pages') not in ('', '0', '1', None)
+                and s.get('long_album_current_page') == s.get('long_album_pages'), timeout=30)
+            time.sleep(2.3)  # Complete the 2200 ms row motion before capture.
+            screenshot('format-07-long-album-scrolled')
+            checks.append({'check':'full-long-album-liner-notes-with-current-marker',
+                           'text':actual['long_album_tracks_text'],
+                           'last_page':last_page['long_album_current_page'],
+                           'pages':last_page['long_album_pages']})
+            press('x')
+            wait_music('Long album test stopped', lambda s: s.get('player') is None)
+            return_home()
+        finally:
+            delay_path.unlink(missing_ok=True)
+            temporary.write_bytes(original_library)
+            temporary.replace(library_path)
         result = {"status":"passed", "label":"SYNTHETIC QA", "checks":checks,
                   "scope":"Real Kodi unified Format root, artists/library search, native album shelf and track list, ordered playback, catalogue preview, cancelled prompts, protected per-action capabilities and malformed/unavailable health restrictions, explicit mock acquisition/priority/cancel, no mutation replay and HTTP-outage recovery",
                   "limitations":["Synthetic loopback server, not the user's Format server", "Mock acquisition queue only; no provider or downloaded media", "Clocked discard sink, not audible hardware output", "No physical Pi acceptance"]}

@@ -363,8 +363,8 @@ class Driver:
         for attempt in range(2):
             self.focus_home(103)
             before = self.key('Return')
-            self.wait('ZIP-installed unified Music root', lambda s: s.get('window') == 10502
-                and s.get('dialog') == 9999 and s.get('folder') == 'plugin://plugin.audio.aperture.format/', after=before)
+            self.wait('ZIP-installed direct Music shelf', lambda s: s.get('window') == 10502
+                and s.get('dialog') == 9999 and s.get('folder') == 'plugin://plugin.audio.aperture.format/?action=albums', after=before)
             if attempt == 0:
                 self.capture('zip-10-installed-format')
             self.settle_focus()
@@ -387,6 +387,16 @@ class Driver:
         self.set_unknown_sources(False)
         self.choose_skin(skin_name, 'skin.aperture', 'zip-08-accepted-aperture')
         self.exit_native()
+        # The direct shelf needs a configured server. Configure only the
+        # disposable profile with the already-running synthetic loopback fixture.
+        ready = json.loads((self.out.parent / 'format-ready.json').read_text())
+        if not ready['url'].startswith('http://127.0.0.1:'):
+            raise AssertionError('ZIP smoke requires the local synthetic Format server')
+        settings = self.target / 'data/userdata/addon_data/plugin.audio.aperture.format/settings.xml'
+        settings.parent.mkdir(parents=True, exist_ok=True)
+        config = ET.Element('settings', version='2')
+        ET.SubElement(config, 'setting', id='server_url').text = ready['url']
+        ET.ElementTree(config).write(settings, encoding='utf-8', xml_declaration=True)
         self.start('skin.aperture')
         self.wait('accepted skin/sources-off persisted after restart', lambda s: setting_matches(s, False) and
             installed_matches(s, self.packages, self.target / 'data'))

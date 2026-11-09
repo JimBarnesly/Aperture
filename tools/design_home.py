@@ -43,7 +43,7 @@ for index,(ident,label) in enumerate(items):
     if ident==103:
         # Music is one integrated Format library, not a local/streaming choice.
         enabled='System.AddonIsEnabled(plugin.audio.aperture.format)'
-        E.SubElement(b,'onclick',{'condition':enabled}).text='ActivateWindow(Music,plugin://plugin.audio.aperture.format/,return)'
+        E.SubElement(b,'onclick',{'condition':enabled}).text='ActivateWindow(Music,plugin://plugin.audio.aperture.format/?action=albums,return)'
         E.SubElement(b,'onclick',{'condition':f'!{enabled}'}).text='ActivateWindow(AddonBrowser)'
         E.SubElement(b,'onclick',{'condition':f'!{enabled}'}).text='Notification(Music needs Format,Install or enable Aperture Format in Add-ons.,8000)'
     elif ident==100:
@@ -75,15 +75,14 @@ def node(parent,typ,**vals):
  for k,v in vals.items():E.SubElement(c,k).text=str(v)
  return c
 b=node(g,'button',left=780,top=872,width=1060,height=148,label='Now playing',font='font13',textcolor='00000000',focusedcolor='00000000',texturefocus='colors/white.png',texturenofocus='colors/white.png',onleft=103,onright=103,onup=103,ondown=103,onback='SetFocus(103)');b.set('id','120');b.find('texturefocus').set('colordiffuse','E02B5868');b.find('texturenofocus').set('colordiffuse','DC14252C')
-# Copy existing destination actions so the bar stays consistent with Home.
-for ident,pred in [('103','Player.HasAudio'),('101','Player.HasVideo + !String.IsEmpty(VideoPlayer.TVShowTitle)'),('100','Player.HasVideo + String.IsEmpty(VideoPlayer.TVShowTitle)')]:
- for action in r.find('.//control[@id="'+ident+'"]').findall('onclick'):
-  x=copy.deepcopy(action);x.set('condition',pred+(' + ['+x.get('condition')+']' if x.get('condition') else ''));b.append(x)
+# Return to the active native player without replacing or restarting media.
+E.SubElement(b,'onclick',condition='Player.HasVideo').text='ActivateWindow(fullscreenvideo)'
+E.SubElement(b,'onclick',condition='Player.HasAudio + !Player.HasVideo').text='ActivateWindow(visualisation)'
 node(g,'label',left=810,top=884,width=760,height=30,font='font13',textcolor='FF9DB2B9',label='NOW PLAYING',visible='!Player.Paused')
 node(g,'label',left=810,top=884,width=760,height=30,font='font13',textcolor='FF9DB2B9',label='PAUSED',visible='Player.Paused')
 node(g,'label',left=810,top=918,width=990,height=44,font='font32',textcolor='FFFFFFFF',label='$INFO[Player.Title]',scroll='true',visible='!String.IsEmpty(Player.Title)')
 node(g,'label',left=810,top=918,width=990,height=44,font='font32',textcolor='FFFFFFFF',label='Current media',visible='String.IsEmpty(Player.Title)')
-for pred,label in [('Player.HasAudio','$INFO[MusicPlayer.Artist,, · ]Open Music  ›'),('Player.HasVideo + !String.IsEmpty(VideoPlayer.TVShowTitle)','$INFO[VideoPlayer.TVShowTitle,, · ]Open TV shows  ›'),('Player.HasVideo + String.IsEmpty(VideoPlayer.TVShowTitle)','Open Movies  ›')]:
+for pred,label in [('Player.HasAudio','$INFO[MusicPlayer.Artist,, · ]Show record  ›'),('Player.HasVideo + !String.IsEmpty(VideoPlayer.TVShowTitle)','$INFO[VideoPlayer.TVShowTitle,, · ]Return to video  ›'),('Player.HasVideo + String.IsEmpty(VideoPlayer.TVShowTitle)','Return to video  ›')]:
  node(g,'label',left=810,top=972,width=770,height=30,font='font13',textcolor='FFDFFBFF',label=label,visible=pred)
 node(g,'label',left=1590,top=972,width=210,height=30,font='font13',textcolor='FF9DB2B9',align='right',label='$INFO[Player.Time]')
 

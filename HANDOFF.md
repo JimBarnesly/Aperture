@@ -1,11 +1,11 @@
 # Aperture integration handoff
 
-Updated: 2026-11-06. Public project status only.
+Updated: 2026-11-09. Public project status only.
 
 ## Current source candidate
 
-[PR17](https://github.com/JimBarnesly/Aperture/pull/17) consolidates the current
-`skin.aperture` implementation on `integration/comprehensive-main`. See
+The latest `integration/latest-preserved-main` candidate adds the complete Music
+Coverflow/library line and Movies/consent PR21–27 to the merged PR17 foundation. See
 [branch reconciliation](docs/main-integration.md) for included commits and the
 retained historical alternatives. Source branches are preserved. Consult the
 latest PR head and its matching workflow results, not an older green revision.
@@ -14,7 +14,8 @@ The combined candidate includes the saved Games carousel, conservative source
 removal guard, Format native turntable and permissions, safe local movie poster
 choices, and notification/Wayland diagnostic coverage. Legacy `skin.apeture`
 packages are a separate historical line and are not interchangeable with this
-skin. Automatic retrieval of missing movie posters is not implemented.
+skin. Online catalogue artwork is available; automatic matching of local files
+to online posters is not implemented.
 
 ## Verification and deployment boundary
 

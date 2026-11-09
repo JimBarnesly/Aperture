@@ -88,7 +88,7 @@ sed -i '/<addon /s/id="skin.estuary"/id="skin.aperture"/; /<addon /s/name="Estua
 if [ "$BASELINE" -eq 0 ]; then
   # Use one complete, matching source checkout, never moving remote fragments.
   [ -f "$SOURCE_DIR/skin/xml/Home.xml" ] || fail 'Use the complete source checkout or install the complete ZIP through Kodi.'
-  HOME_SHA=59c90fcc7f7fb5309f271f7f406c7b2ff8984f650c0e1caa5b5b19ab6887522c
+  HOME_SHA=1cd13e743b826697a83ef666ba7eeb8d793ec1bc0f5910e79d2b15d03159e904
   cp "$SOURCE_DIR/skin/xml/Home.xml" "$STAGE/Home.xml"
   printf '%s  %s\n' "$HOME_SHA" "$STAGE/Home.xml" | sha256sum -c - >/dev/null || fail 'Home.xml integrity check failed'
   [ -d "$SOURCE_DIR/skin/media/aperture" ] || fail 'Matching Aperture artwork missing'
@@ -105,17 +105,29 @@ if [ "$BASELINE" -eq 0 ]; then
   printf '%s  %s\n' "$GAMES_SHA" "$SOURCE_DIR/skin/xml/MyGames.xml" | sha256sum -c - >/dev/null || fail 'MyGames.xml integrity check failed'
   cp "$SOURCE_DIR/skin/xml/MyGames.xml" "$TMP/xml/MyGames.xml"
   [ -f "$SOURCE_DIR/skin/xml/MyVideoNav.xml" ] || fail 'Matching movie browser XML missing'
-  MOVIES_SHA=65c9f400e002bdfe6f2abb2e954276b9a36bea6e1743a17379e462a82a9e5b5f
+  MOVIES_SHA=26090c003f1e55e8d288f28a989792ef1ef40ff4237585be40e18cef98facf99
   printf '%s  %s\n' "$MOVIES_SHA" "$SOURCE_DIR/skin/xml/MyVideoNav.xml" | sha256sum -c - >/dev/null || fail 'MyVideoNav.xml integrity check failed'
   cp "$SOURCE_DIR/skin/xml/MyVideoNav.xml" "$TMP/xml/MyVideoNav.xml"
   [ -f "$SOURCE_DIR/skin/xml/MyMusicNav.xml" ] || fail 'Matching music browser XML missing'
-  MUSIC_SHA=7d7b6dd92b7f2bc92112ad2c58ee279d1abeadd76e244ab629476e78fcf645cd
+  MUSIC_SHA=bb5566a2614dae579314d4ef881a3705bf0bbc050a557442c2b151bc78dce874
   printf '%s  %s\n' "$MUSIC_SHA" "$SOURCE_DIR/skin/xml/MyMusicNav.xml" | sha256sum -c - >/dev/null || fail 'MyMusicNav.xml integrity check failed'
   cp "$SOURCE_DIR/skin/xml/MyMusicNav.xml" "$TMP/xml/MyMusicNav.xml"
   [ -f "$SOURCE_DIR/skin/xml/MusicVisualisation.xml" ] || fail 'Matching now-playing XML missing'
-  VISUALISATION_SHA=1ae3cf154c8c67e8471cb84ec3f656918e33be811f95298df877844d889c0b47
+  VISUALISATION_SHA=5f37aac3e3a041c1c291092b31ab0cc484046637958e07b5e59c3acf79f74813
   printf '%s  %s\n' "$VISUALISATION_SHA" "$SOURCE_DIR/skin/xml/MusicVisualisation.xml" | sha256sum -c - >/dev/null || fail 'MusicVisualisation.xml integrity check failed'
   cp "$SOURCE_DIR/skin/xml/MusicVisualisation.xml" "$TMP/xml/MusicVisualisation.xml"
+  [ -f "$SOURCE_DIR/skin/xml/DialogSeekBar.xml" ] || fail 'Matching playback overlay XML missing'
+  SEEKBAR_SHA=5d1d1625d360d91631c671b9af92cb2db321a802f283fb5ae817184092529201
+  printf '%s  %s\n' "$SEEKBAR_SHA" "$SOURCE_DIR/skin/xml/DialogSeekBar.xml" | sha256sum -c - >/dev/null || fail 'DialogSeekBar.xml integrity check failed'
+  cp "$SOURCE_DIR/skin/xml/DialogSeekBar.xml" "$TMP/xml/DialogSeekBar.xml"
+  [ -f "$SOURCE_DIR/skin/xml/Custom_1109_TopBarOverlay.xml" ] || fail 'Matching Custom_1109_TopBarOverlay.xml missing'
+  TOPBAR_SHA=3657406e3104802c4dff60ba9e7bd65fc49deb670dc207090d778fc3ff48a10b
+  printf '%s  %s\n' "$TOPBAR_SHA" "$SOURCE_DIR/skin/xml/Custom_1109_TopBarOverlay.xml" | sha256sum -c - >/dev/null || fail 'Custom_1109_TopBarOverlay.xml integrity check failed'
+  cp "$SOURCE_DIR/skin/xml/Custom_1109_TopBarOverlay.xml" "$TMP/xml/Custom_1109_TopBarOverlay.xml"
+  [ -f "$SOURCE_DIR/skin/xml/MusicOSD.xml" ] || fail 'Matching MusicOSD.xml missing'
+  MUSIC_OSD_SHA=8cd76a3fe091a9a359d723cd00417d7ddaf3d2d09a87f754593fad2711d54c3c
+  printf '%s  %s\n' "$MUSIC_OSD_SHA" "$SOURCE_DIR/skin/xml/MusicOSD.xml" | sha256sum -c - >/dev/null || fail 'MusicOSD.xml integrity check failed'
+  cp "$SOURCE_DIR/skin/xml/MusicOSD.xml" "$TMP/xml/MusicOSD.xml"
   cp -R "$SOURCE_DIR/skin/media/." "$TMP/media/"
   mkdir -p "$TMP/licenses"
   cp -R "$SOURCE_DIR/skin/licenses/." "$TMP/licenses/"
@@ -147,3 +159,4 @@ printf 'Installed Aperture 4.0.1~rc1: %s\n' "$TARGET"
 [ "$BASELINE" -eq 0 ] || printf 'Diagnostic baseline selected: Home is unchanged Estuary.\n'
 printf 'Start Kodi, enable Aperture in My add-ons, then choose it in Settings > Interface > Skin.\n'
 printf 'Confirm Keep only if the screen and controls work. Estuary is unchanged.\n'
+

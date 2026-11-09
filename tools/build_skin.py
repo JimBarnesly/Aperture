@@ -119,6 +119,9 @@ def assemble(source: Path, output: Path, home: Path, font_roots=()):
         if music.is_file():
             shutil.copy2(music, staged / 'xml/MyMusicNav.xml')
         shutil.copy2(ROOT / 'skin/xml/MusicVisualisation.xml', staged / 'xml/MusicVisualisation.xml')
+        shutil.copy2(ROOT / 'skin/xml/DialogSeekBar.xml', staged / 'xml/DialogSeekBar.xml')
+        shutil.copy2(ROOT / 'skin/xml/Custom_1109_TopBarOverlay.xml', staged / 'xml/Custom_1109_TopBarOverlay.xml')
+        shutil.copy2(ROOT / 'skin/xml/MusicOSD.xml', staged / 'xml/MusicOSD.xml')
         for folder in ('media', 'licenses'):
             extra=ROOT/'skin'/folder
             if extra.is_dir(): shutil.copytree(extra, staged/folder, dirs_exist_ok=True)
@@ -155,7 +158,8 @@ def package_format(source: Path, output: Path):
     addon_id = manifest.get('id')
     if addon_id != 'plugin.audio.aperture.format':
         raise ValueError('Wrong Format add-on ID')
-    ast.parse((source / 'addon.py').read_text(encoding='utf-8'))
+    for script in source.rglob('*.py'):
+        ast.parse(script.read_text(encoding='utf-8'))
     ET.parse(source / 'resources/settings.xml')
     output.parent.mkdir(parents=True, exist_ok=True)
     files = {p.relative_to(source).as_posix(): p.read_bytes() for p in source.rglob('*')

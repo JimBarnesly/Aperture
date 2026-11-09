@@ -53,7 +53,7 @@ if [ -z "$SOURCE" ]; then
   [ "${#REF}" -eq 40 ] || { echo "ERROR: APERTURE_REF must be a full 40-character commit SHA." >&2; exit 1; }
   BASE="https://raw.githubusercontent.com/JimBarnesly/Aperture/$REF/format-kodi"
 fi
-FILES="addon.xml addon.py resources/settings.xml resources/language/resource.language.en_gb/strings.po"
+FILES="addon.xml addon.py shelf_service.py turntable_keymap.py resources/keymaps/aperture-turntable.xml resources/settings.xml resources/language/resource.language.en_gb/strings.po"
 for file in $FILES; do
   mkdir -p "$(dirname "$STAGE/$file")"
   if [ -n "$SOURCE" ]; then
@@ -80,6 +80,9 @@ root = Path(sys.argv[1])
 manifest = ET.parse(root / "addon.xml").getroot()
 assert manifest.tag == "addon" and manifest.get("id") == "plugin.audio.aperture.format"
 ast.parse((root / "addon.py").read_text(encoding="utf-8"))
+ast.parse((root / "shelf_service.py").read_text(encoding="utf-8"))
+ast.parse((root / "turntable_keymap.py").read_text(encoding="utf-8"))
+assert ET.parse(root / "resources/keymaps/aperture-turntable.xml").getroot().tag == "keymap"
 assert ET.parse(root / "resources/settings.xml").find("section").get("id") == manifest.get("id")
 PY
 fi

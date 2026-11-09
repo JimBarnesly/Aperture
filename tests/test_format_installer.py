@@ -52,6 +52,9 @@ class InstallerTest(unittest.TestCase):
         result = self.run_installer()
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertTrue((self.target / "addon.py").is_file())
+        for filename in ('shelf_service.py', 'turntable_keymap.py', 'resources/keymaps/aperture-turntable.xml'):
+            self.assertEqual((self.target / filename).read_bytes(), (ROOT / 'format-kodi' / filename).read_bytes())
+        self.assertFalse((self.profile / 'userdata/keymaps').exists())
         self.assertTrue((self.target / "resources/language/resource.language.en_gb/strings.po").is_file())
         self.assert_cleaned()
 

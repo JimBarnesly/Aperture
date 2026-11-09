@@ -16,6 +16,30 @@ spec.loader.exec_module(driver)
 
 
 class DriverTest(unittest.TestCase):
+    def test_no_music_info_overlay_checks_seek_pause_and_modal_control_frames(self):
+        first = dict(pid=12, sequence=9, window=12006, native_seekbar_visible=False,
+                     native_topbar_visible=False, dialog=9999, presentation_progress_visible=True)
+        modal = dict(first, sequence=10, dialog=10120, nowplaying_visible=False)
+        self.assertEqual(driver.assert_no_music_info_overlay([first, modal], 8, 12), 2)
+        for popup in ('native_seekbar_visible', 'native_topbar_visible'):
+            with self.assertRaisesRegex(AssertionError, 'appeared'):
+                driver.assert_no_music_info_overlay([first, dict(modal, **{popup:True})], 8, 12)
+        for samples in ([], [dict(first, pid=11)], [dict(first, sequence=8)]):
+            with self.assertRaisesRegex(AssertionError, 'Missing'):
+                driver.assert_no_music_info_overlay(samples, 8, 12)
+
+    def test_clean_track_load_checks_transient_history_not_only_last_frame(self):
+        first = dict(pid=12, sequence=9, window=12006, nowplaying_visible=True,
+                     player_show_info=True, native_seekbar_visible=False, native_topbar_visible=False)
+        clean = dict(first, sequence=10, player_show_info=False)
+        self.assertEqual(driver.assert_clean_track_load([first, clean], 8, 12), 2)
+        for popup in ('native_seekbar_visible', 'native_topbar_visible'):
+            with self.assertRaisesRegex(AssertionError, 'appeared'):
+                driver.assert_clean_track_load([dict(first, **{popup:True}), clean], 8, 12)
+        for missing in ([], [clean], [dict(first, pid=11)], [dict(first, sequence=8)]):
+            with self.assertRaisesRegex(AssertionError, 'Missing evidence'):
+                driver.assert_clean_track_load(missing, 8, 12)
+
     def test_stopped_track_returns_to_real_parent_without_reopening_window(self):
         current = {"window":10502, "dialog":9999,
                    "folder":"plugin://plugin.audio.aperture.format/?action=album&album_id=fixture"}
@@ -28,6 +52,22 @@ class DriverTest(unittest.TestCase):
         settle = Mock()
         driver.return_to_album_shelf(press, wait, settle, 'fixture')
         self.assertEqual(settle.call_count, 2)
+
+    def test_track_browsing_uses_explicit_context_action(self):
+        current = {"window":10502, "dialog":9999, "folder":"plugin://plugin.audio.aperture.format/?action=albums"}
+        keys = []
+        def press(key):
+            keys.append(key)
+            current["dialog"] = 10106 if key == "c" else 9999
+            if key == "Return":
+                current["folder"] = "plugin://plugin.audio.aperture.format/?action=album&album_id=fixture"
+            return 10
+        def wait(description, predicate, after):
+            self.assertTrue(predicate(current), description)
+        labels = Mock()
+        driver.open_album_tracks(press, wait, Mock(), labels, "fixture")
+        labels.assert_called_once_with("Browse tracks", "Down", 12)
+        self.assertEqual(keys, ["c", "Return"])
 
     def test_direct_track_navigation_waits_for_actual_playback_and_gui(self):
         actual = {"window":10502, "dialog":9999, "nowplaying_button_visible":True,
@@ -188,14 +228,15 @@ class DriverTest(unittest.TestCase):
                 self.assertTrue(predicate(gui), description + ": " + repr(gui))
                 return gui
             hooks = {"state": lambda: gui, "wait_for": wait_for, "press": press,
-                     "screenshot": Mock(), "find_label": Mock(side_effect=RuntimeError("Album context reached")),
+                     "screenshot": lambda name: (_ for _ in ()).throw(RuntimeError("Album shelf restored")) if name == "format-02b-back-to-album-shelf" else None,
+                     "find_label": Mock(),
                      "settle_focus": settle}
             env = {"APERTURE_SMOKE_OUT": str(out), "KODI_DATA": str(runtime / "data"),
                    "APERTURE_KODI_PID": str(os.getpid())}
-            with patch.dict(os.environ, env), patch.object(driver.time, "sleep", side_effect=publish):
-                with self.assertRaisesRegex(RuntimeError, "Album context reached"):
+            with patch.dict(os.environ, env), patch.object(driver.time, "sleep", side_effect=publish), patch.object(driver, "open_album_tracks", side_effect=lambda *args: press("Return")):
+                with self.assertRaisesRegex(RuntimeError, "Album shelf restored"):
                     driver.run(hooks)
-            self.assertEqual(keys, ["j", "Return", "Down", "BackSpace", "c"])
+            self.assertEqual(keys, ["j", "Return", "Down", "BackSpace"])
             self.assertTrue(driver.route_is(gui["folder"], "albums"))
 
     def test_real_find_title_uses_right_to_leave_album_parent_card(self):

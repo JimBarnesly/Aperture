@@ -23,7 +23,22 @@ fix for the unresolved physical Pi blackout.
   Movies destinations and escape after playback stops. Author native menu CI
   passed before integration.
 
-Main remains unchanged until this final combined candidate passes.
+## Latest additive integration (9 November 2026)
+
+- Music `6218468` includes `806e0be`: direct cached Format library, album-first
+  playback, native Coverflow and stable selected artwork, reflections, turntable
+  liner notes, scoped controls and idle return. These are preserved in full.
+- PR21–27 through `490f821`: Movies discovery, public catalogue metadata,
+  opt-in Real-Debrid support and two complete consent screens, with synthetic
+  native online/cancellation QA. No live provider grant or playback is claimed.
+- PR18 `60324aa`: actual Kodi font-error detection in the native smoke gate.
+- Existing main `9ca1485` retains all earlier Games/cache and integration work.
+
+The separate `build/kodi-rpt3-audio-cleanup` branch is experimental upstream Kodi
+build/provenance tooling, not an Aperture product PR or verified hardware fix.
+It is retained separately, as are historical alternate skin branches. No source
+branch is deleted. This combined candidate must pass its final-head gates before
+main is updated.
 
 ## Retained alternatives
 

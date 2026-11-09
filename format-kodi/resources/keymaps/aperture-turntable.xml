@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Owned by Format for Aperture. Loaded only while skin.aperture is selected. -->
+<keymap>
+  <Visualisation>
+    <keyboard>
+      <up>RunPlugin(plugin://plugin.audio.aperture.format/?action=turntable_previous)</up>
+      <down>SkipNext</down>
+    </keyboard>
+    <remote>
+      <up>RunPlugin(plugin://plugin.audio.aperture.format/?action=turntable_previous)</up>
+      <down>SkipNext</down>
+    </remote>
+  </Visualisation>
+</keymap>
