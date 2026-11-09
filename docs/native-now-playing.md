@@ -38,7 +38,7 @@ retains direct native stream URLs, so automatic queue advances never reopen the
 presentation while the user is browsing. The button is available for any audio.
 
 This ports the standalone visual concept, not its browser runtime. It does not
-implement the web UI's card-to-disc morph or timed return after browsing.
+implement the web UI's card-to-disc morph. Native idle return is described below.
 
 ## Verification
 
@@ -76,7 +76,7 @@ without reordering the library. Returning while audio plays preserves the
 selected record and never steals navigation focus. The player includes a compact, read-only album track
 listing in the bottom-left corner, keeping the record and album artwork dominant.
 This candidate does not port the browser card-to-disc morph. While audio is
-playing, the native shelf returns to the turntable after 30 seconds without
+playing, the native shelf returns to the turntable after 60 seconds without
 input; renewed input resets the timer and newer navigation is respected. Native CI adds a six-release synthetic shelf capture
 and forward/reverse navigation checks; physical Pi and visual parity with the
 standalone Format interface require separate acceptance.
