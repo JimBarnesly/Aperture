@@ -9,7 +9,7 @@ import math
 import os
 import re
 import stat
-import tempfile
+import secrets
 import time
 from contextlib import contextmanager
 from urllib.error import HTTPError, URLError
@@ -117,25 +117,50 @@ class Store:
     def __init__(self, profile):
         self.directory = os.path.join(profile, 'real-debrid-private')
 
+    @contextmanager
+    def _directory_fd(self):
+        if os.name != 'posix' or not all(hasattr(os, flag) for flag in ('O_NOFOLLOW', 'O_DIRECTORY', 'O_NONBLOCK')):
+            raise DebridError('storage')
+        path = self.directory
+        if not os.path.isabs(path) or '\x00' in path or '..' in path.split('/'):
+            raise DebridError('storage')
+        fd = os.open('/', os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            # Anchor every operation to verified directory descriptors. Existing
+            # ancestor permissions belong to the user and must not be changed.
+            for part in filter(None, path.split('/')):
+                try:
+                    os.mkdir(part, 0o700, dir_fd=fd)
+                except FileExistsError:
+                    pass
+                child = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=fd)
+                os.close(fd)
+                fd = child
+            info = os.fstat(fd)
+            if info.st_uid != os.getuid() or info.st_mode & 0o077:
+                raise DebridError('storage')
+            yield fd
+        finally:
+            os.close(fd)
+
     def prepare(self):
-        if os.name != 'posix' or not hasattr(os, 'O_NOFOLLOW'):
-            raise DebridError('storage')
-        os.makedirs(self.directory, mode=0o700, exist_ok=True)
-        info = os.lstat(self.directory)
-        if not stat.S_ISDIR(info.st_mode) or info.st_uid != os.getuid() or info.st_mode & 0o077:
-            raise DebridError('storage')
+        with self._directory_fd():
+            pass
 
     def open_private(self, name, flags):
-        fd = os.open(os.path.join(self.directory, name), flags | os.O_NOFOLLOW, 0o600)
-        info = os.fstat(fd)
-        if not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid() or info.st_mode & 0o077 or info.st_nlink != 1:
+        with self._directory_fd() as directory:
+            fd = os.open(name, flags | os.O_NOFOLLOW | os.O_NONBLOCK, 0o600, dir_fd=directory)
+        try:
+            info = os.fstat(fd)
+            if not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid() or info.st_mode & 0o077 or info.st_nlink != 1:
+                raise DebridError('storage')
+            return fd
+        except BaseException:
             os.close(fd)
-            raise DebridError('storage')
-        return fd
+            raise
 
     @contextmanager
     def locked(self):
-        self.prepare()
         import fcntl
         fd = self.open_private('lock', os.O_CREAT | os.O_RDWR)
         try:
@@ -148,7 +173,6 @@ class Store:
             os.close(fd)
 
     def load(self):
-        self.prepare()
         try:
             fd = self.open_private('credentials.json', os.O_RDONLY)
         except FileNotFoundError:
@@ -165,24 +189,28 @@ class Store:
             raise DebridError('storage') from None
 
     def save(self, credentials):
-        self.prepare()
-        fd, path = tempfile.mkstemp(prefix='.credentials-', dir=self.directory)
-        try:
-            with os.fdopen(fd, 'w') as stream:
-                json.dump(credentials, stream)
-                stream.flush()
-                os.fsync(stream.fileno())
-            os.replace(path, os.path.join(self.directory, 'credentials.json'))
-        finally:
-            if os.path.exists(path):
-                os.unlink(path)
+        with self._directory_fd() as directory:
+            name = '.credentials-' + secrets.token_hex(16)
+            fd = os.open(name, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_NONBLOCK, 0o600, dir_fd=directory)
+            try:
+                with os.fdopen(fd, 'w') as stream:
+                    json.dump(credentials, stream)
+                    stream.flush()
+                    os.fsync(stream.fileno())
+                os.replace(name, 'credentials.json', src_dir_fd=directory, dst_dir_fd=directory)
+                os.fsync(directory)
+            finally:
+                try:
+                    os.unlink(name, dir_fd=directory)
+                except FileNotFoundError:
+                    pass
 
     def clear(self):
-        self.prepare()
-        try:
-            os.unlink(os.path.join(self.directory, 'credentials.json'))
-        except FileNotFoundError:
-            pass
+        with self._directory_fd() as directory:
+            try:
+                os.unlink('credentials.json', dir_fd=directory)
+            except FileNotFoundError:
+                pass
 
 
 class Client:

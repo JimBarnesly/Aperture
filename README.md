@@ -22,6 +22,17 @@ Until the final test report is recorded, treat this branch as work in progress.
 See [integration scope and gates](docs/main-integration.md) for the consolidated
 features, retained alternatives and exact-source verification requirements.
 
+## Optional Torrentio movie sources (development)
+
+Sources → **Set up online playback (Torrentio)** now offers in-app Real-Debrid
+device sign-in (or explicitly consented reuse), with **no manual token copying**.
+Torrentio still receives an access token with broad account capabilities, only
+after separate disclosure consent. Discover opens metadata and visible movie
+actions including **Find streams (Torrentio)**; search and Play remain explicit.
+Advanced private-file import is optional. OAuth compatibility is source-supported,
+not live-proven. See [setup, security boundaries and remaining acceptance](docs/torrentio.md).
+Nothing is deployed by this change.
+
 ## Install the complete ZIPs
 
 Use the complete, tested ZIPs from the candidate kit or matching CI artifact:

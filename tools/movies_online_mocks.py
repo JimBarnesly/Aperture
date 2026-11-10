@@ -1,36 +1,104 @@
-"""Disposable native QA only. No provider traffic, credentials or usable media."""
+"""Disposable native QA only: synthetic credentials and generated local video.
+
+Nothing here is a usable account credential, device code, or public media URL.
+Production modules are untouched; the fixture wires only its disposable copy.
+"""
+import io
 import json
 import os
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, parse_qs
 
 OUT = Path(os.environ['APERTURE_MOVIES_OUT'])
 RUNTIME = Path(os.environ['APERTURE_MOVIES_RUNTIME'])
 assert RUNTIME.name.startswith('aperture-movies-qa.')
+ACCESS_TOKEN = 'QA-ONLY-NOT-A-REAL-ACCESS-TOKEN'
+REFRESH_TOKEN = 'QA-ONLY-NOT-A-REAL-REFRESH-TOKEN'
+PAIR = {'client_id': 'QA-ONLY-CLIENT', 'client_secret': 'QA-ONLY-SECRET'}
+FINAL_URL = 'https://qa-only.download.real-debrid.com/synthetic.mkv'
+RESOLVER = 'https://torrentio.strem.fun/resolve/realdebrid/' + ACCESS_TOKEN + '/' + 'a' * 40 + '/QA-ONLY/undefined/Synthetic.mkv'
+
 
 def record(event):
     with (OUT / 'mock-events.jsonl').open('a') as stream:
         stream.write(json.dumps({'event': event}) + '\n')
 
+
 def catalogue(path):
-    record('catalogue')
+    extras = path.rsplit('/', 1)[-1].removesuffix('.json')
+    record('catalogue-search' if 'search' in parse_qs(extras) else 'catalogue')
     movie = {'id': 'tt1234567', 'type': 'movie', 'name': 'Synthetic Online Horizon',
-             'description': 'Original synthetic catalogue metadata. No playable stream.',
+             'description': 'Original synthetic catalogue metadata. Playback uses locally generated QA video only.',
              'releaseInfo': '2026', 'genres': ['Adventure'], 'imdbRating': '7.5'}
     return {'meta': movie} if path.startswith('/meta/') else {'metas': [movie]}
 
+
 def debrid(method, url, fields=None, token=None):
-    # Only fake device-code and pending replies are supported. Even a mistaken
-    # approval cannot exchange a token, access downloads or resolve a real URL.
     from resources.lib.debrid import DebridError
-    path = urlsplit(url).path
+    parsed = urlsplit(url)
+    if parsed.scheme != 'https' or parsed.netloc != 'api.real-debrid.com':
+        raise AssertionError('Non-fixture RD operation blocked')
+    path = parsed.path
     if method == 'GET' and path == '/oauth/v2/device/code':
         record('fake-device-code')
         return {'device_code': 'FAKE-DEVICE-NOT-VALID', 'user_code': 'QA-ONLY',
                 'interval': 5, 'expires_in': 120,
                 'verification_url': 'https://real-debrid.com/device'}
     if method == 'GET' and path == '/oauth/v2/device/credentials':
+        if (OUT / 'approve-synthetic-device').exists():
+            record('fake-device-approved')
+            return dict(PAIR)
         record('fake-pending')
         raise DebridError('denied')
+    if (method == 'POST' and path == '/oauth/v2/token'
+            and (OUT / 'approve-synthetic-device').exists()
+            and fields == dict(PAIR, code='FAKE-DEVICE-NOT-VALID', grant_type='http://oauth.net/grant_type/device/1.0')):
+        record('fake-token-exchange')
+        return {'access_token': ACCESS_TOKEN, 'refresh_token': REFRESH_TOKEN,
+                'token_type': 'Bearer', 'expires_in': 3600}
     record('unexpected-provider-operation')
     raise AssertionError('Unexpected operation blocked by disposable QA transport')
+
+
+class Response(io.BytesIO):
+    def __init__(self, payload=None, status=200, headers=None):
+        super().__init__(json.dumps(payload).encode() if payload is not None else b'')
+        self.status = status
+        self.headers = headers or {'Content-Type': 'application/json'}
+
+
+def torrentio(url):
+    parsed = urlsplit(url)
+    if parsed.scheme != 'https' or parsed.netloc != 'torrentio.strem.fun' or parsed.query or parsed.fragment:
+        raise AssertionError('Non-fixture Torrentio operation blocked')
+    prefix = '/realdebrid=' + ACCESS_TOKEN + '|debridoptions=nodownloadlinks,nocatalog/'
+    if parsed.path == prefix + 'manifest.json':
+        record('torrentio-manifest')
+        return Response({'id': 'com.stremio.torrentio.addon', 'types': ['movie'], 'resources': ['stream']})
+    if parsed.path == prefix + 'stream/movie/tt1234567.json':
+        record('torrentio-streams')
+        return Response({'streams': [{'name': '[RD+] Torrentio 1080p',
+                                     'title': 'Synthetic QA English H264', 'url': RESOLVER}]})
+    if url == RESOLVER:
+        record('torrentio-resolve')
+        return Response(status=302, headers={'Location': FINAL_URL})
+    raise AssertionError('Unexpected Torrentio operation blocked')
+
+
+def public_addresses(host):
+    # No DNS, even at the final production resolver validation seam.
+    if host != 'qa-only.download.real-debrid.com':
+        raise AssertionError('Non-fixture DNS blocked')
+    return []
+
+
+def playback_file(url):
+    # Only after the real Client.playback validated/refetched/resolved the source.
+    # Kodi's real player then decodes the original video generated by the fixture.
+    if url != FINAL_URL + '|redirect-limit=0':
+        raise AssertionError('Non-fixture playback blocked')
+    path = RUNTIME / 'movies/Amber Horizon.mkv'
+    if not path.is_file() or path.is_symlink():
+        raise AssertionError('Generated QA video missing')
+    record('torrentio-local-handoff')
+    return str(path)

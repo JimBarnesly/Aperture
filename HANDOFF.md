@@ -2,6 +2,24 @@
 
 Updated: 2026-11-09. Public project status only.
 
+## Torrentio development slice (local only)
+
+Review-fix base `086f4d1b521570018e01ee94ef9c0e5e0b2ffd6d` in the isolated
+`Aperture-torrentio` checkout. Native setup now uses the existing RD device flow,
+separate access-token disclosure consent, marker-only persistence and locked
+refresh before check/search/play. No manual token copying is required. Visible
+movie-details actions expose Find streams; `undefined` resolver indices, sanitized
+technical labels, distinct resolver outcomes and corrupt-config recovery are covered.
+See [setup/security and live acceptance gates](docs/torrentio.md),
+[review-fix RED/GREEN evidence](docs/torrentio-review-tdd.md), and the historical
+[first-slice evidence](docs/torrentio-tdd-evidence.md).
+
+No live account/search/playback requests, deployment, device changes, merge or push.
+Official Torrentio source uses bearer authentication, making OAuth access tokens
+source-compatible, not live-proven. Physical playback, remote dialog readability
+and strict HTTPS resolver compatibility remain unverified. Parent independent
+review is still required before deployment.
+
 ## Current source candidate
 
 The latest `integration/latest-preserved-main` candidate adds the complete Music

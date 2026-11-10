@@ -169,6 +169,69 @@ class DebridTests(unittest.TestCase):
         with self.assertRaises(rd.DebridError):
             self.store.load()
 
+    def test_special_private_files_fail_without_blocking(self):
+        import signal
+        import socket
+        self.store.prepare()
+        def timed_out(*args):
+            raise AssertionError('Opening a private special file blocked')
+        previous = signal.signal(signal.SIGALRM, timed_out)
+        self.addCleanup(signal.signal, signal.SIGALRM, previous)
+        for name in ('credentials.json', 'lock'):
+            for kind in ('fifo', 'directory', 'socket'):
+                with self.subTest(name=name, kind=kind):
+                    path = Path(self.store.directory) / name
+                    sock = None
+                    if kind == 'fifo':
+                        os.mkfifo(path, 0o600)
+                    elif kind == 'directory':
+                        path.mkdir(mode=0o700)
+                    else:
+                        sock = socket.socket(socket.AF_UNIX)
+                        sock.bind(str(path))
+                        path.chmod(0o600)
+                    signal.setitimer(signal.ITIMER_REAL, .5)
+                    try:
+                        with self.assertRaises((rd.DebridError, OSError)):
+                            if name == 'credentials.json':
+                                self.store.load()
+                            else:
+                                with self.store.locked():
+                                    self.fail('Special lock accepted')
+                    finally:
+                        signal.setitimer(signal.ITIMER_REAL, 0)
+                        if sock:
+                            sock.close()
+                        path.rmdir() if kind == 'directory' else path.unlink()
+
+    def test_store_rejects_symlinked_ancestors_without_writes(self):
+        target = Path(self.tmp.name) / 'outside'
+        target.mkdir(mode=0o755)
+        link = Path(self.tmp.name) / 'alias'
+        link.symlink_to(target, target_is_directory=True)
+        store = rd.Store(str(link / 'nested'))
+        for action in ('load', 'save', 'clear', 'lock'):
+            with self.subTest(action=action):
+                with self.assertRaises((rd.DebridError, OSError)):
+                    if action == 'lock':
+                        with store.locked():
+                            self.fail('Symlinked ancestor accepted')
+                    elif action == 'save':
+                        store.save(dict(PAIR, **TOKEN, expires_at=2000))
+                    else:
+                        getattr(store, action)()
+                self.assertEqual(list(target.iterdir()), [])
+                self.assertEqual(target.stat().st_mode & 0o777, 0o755)
+
+    def test_existing_ancestor_permissions_are_preserved(self):
+        profile = Path(self.tmp.name) / 'shared-profile'
+        profile.mkdir(mode=0o755)
+        store = rd.Store(str(profile / 'nested'))
+        store.save(dict(PAIR, **TOKEN, expires_at=2000))
+        self.assertEqual(store.load()['access_token'], TOKEN['access_token'])
+        self.assertEqual(profile.stat().st_mode & 0o777, 0o755)
+        self.assertEqual(Path(store.directory).stat().st_mode & 0o777, 0o700)
+
     def test_exclusive_lock(self):
         with self.store.locked():
             with self.assertRaisesRegex(rd.DebridError, 'Another'):

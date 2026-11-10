@@ -245,7 +245,9 @@ def online(query):
         li.setProperty('Aperture.Availability', 'Not checked')
         route = BASE + '?' + urlencode({'action': 'online_details', 'id': movie['id']})
         match_route = BASE + '?' + urlencode({'mode': 'rd', 'imdb': movie['id']})
+        stream_route = BASE + '?' + urlencode({'action': 'torrentio_find', 'id': movie['id']})
         li.addContextMenuItems([('Movie details (Cinemeta)', 'RunPlugin(' + route + ')'),
+                                ('Find streams (Torrentio)', 'RunPlugin(' + stream_route + ')'),
                                 ('Check my Real-Debrid downloads (filename IMDb ID)', 'Container.Update(' + match_route + ')')])
         xbmcplugin.addDirectoryItem(HANDLE, route, li, False)
     if next_start is not None:
@@ -261,6 +263,7 @@ def online(query):
 
 
 def online_details(query):
+    origin = xbmc.getInfoLabel('Container.FolderPath')
     try:
         movie = catalog.details(catalog.value(query, 'id'))
     except catalog.CatalogError:
@@ -270,11 +273,25 @@ def online_details(query):
                             ('IMDb ' + movie['rating']) if movie['rating'] else '']))
     xbmcgui.Dialog().ok(movie['title'], summary + '\n\n' + movie['plot'] +
                        '\n\nMetadata: Cinemeta. Playback availability not checked. This catalogue does not supply streams.')
+    if xbmc.Monitor().abortRequested() or xbmc.getInfoLabel('Container.FolderPath') != origin:
+        return
+    selected = xbmcgui.Dialog().select('Movie actions', ['Find streams (Torrentio)', 'Set up online playback', 'Back to browsing'])
+    if xbmc.Monitor().abortRequested() or xbmc.getInfoLabel('Container.FolderPath') != origin:
+        return
+    if selected == 0:
+        route = BASE + '?' + urlencode({'action': 'torrentio_find', 'id': movie['id']})
+        xbmc.executebuiltin('RunPlugin(' + route + ')')
+    elif selected == 1:
+        xbmc.executebuiltin('RunPlugin(' + BASE + '?action=torrentio_setup)')
 
 
 def main():
     query = parse_qs(sys.argv[2].lstrip('?'))
     action = query.get('action', [''])[0]
+    if action in ('torrentio_setup', 'torrentio_find'):
+        from resources.lib.torrentio_ui import run
+        run(query, poster_profile(), BASE, HANDLE)
+        return
     if action == 'rd_play' or query.get('mode', [''])[0] == 'rd':
         from resources.lib.debrid_ui import run
         run(query, ADDON, poster_profile(), BASE, HANDLE)
