@@ -66,6 +66,49 @@ class HomeTests(unittest.TestCase):
         self.assertEqual(path.read_text(), 'broken-private-data')
         self.assertNotIn('broken-private-data', repr(props))
 
+    def test_overlapping_retry_does_not_publish_old_failure_status(self):
+        props = {'Aperture.Home.refresh': 'old'}
+        retried = []
+        trace = []
+
+        def retry_before_old_fetch_returns():
+            if retried:
+                return
+            retried.append(True)
+            self.run_plugin([], query='?action=home_refresh', properties=props)
+            generation = props['Aperture.Home.refresh']
+            c,e,d,x,b = self.run_plugin([], properties=props,
+                query='?mode=home_row&row=popular&refresh=' + generation,
+                catalog_payload={'metas': [{'id': 'tt1234567', 'name': 'Recovered'}]},
+                http_trace=trace)
+            self.assertEqual([entry[2].kw['label'] for entry in e], ['Recovered'])
+            self.assertEqual((c,d,b), ([],[],[]))
+            self.assertTrue(x[-1]['succeeded'])
+            self.assertEqual(props['Aperture.Home.popular.status'], '')
+
+        c,e,d,x,b = self.run_plugin([], properties=props,
+            query='?mode=home_row&row=popular&refresh=old',
+            catalog_payload={'metas': 'invalid'}, on_fetch=retry_before_old_fetch_returns,
+            http_trace=trace)
+        self.assertEqual(retried, [True])
+        self.assertEqual((c,e,d,b), ([],[],[],[]))
+        self.assertTrue(x[-1]['succeeded'])
+        self.assertEqual(props['Aperture.Home.popular.status'], '',
+                         'Cancelled directory jobs can still finish Python execution')
+        self.assertFalse(any('refresh=' in url for url in trace))
+
+    def test_row_generation_fences_late_start_and_old_success_for_each_row(self):
+        for row in ('continue', 'suggested', 'popular'):
+            with self.subTest(row=row):
+                key = 'Aperture.Home.' + row + '.status'
+                props = {'Aperture.Home.refresh': 'new', key: 'Current row status'}
+                c,e,d,x,b = self.run_plugin([], properties=props,
+                    query='?mode=home_row&row=' + row + '&refresh=old',
+                    catalog_payload={'metas': [{'id': 'tt1234567', 'name': 'Old success'}]})
+                self.assertEqual(props[key], 'Current row status')
+                self.assertEqual((c,d,b), ([],[],[]))
+                self.assertTrue(x[-1]['succeeded'])
+
     def test_home_search_cancel_stale_guard_and_explicit_online_navigation(self):
         for search, windows, expected in [('', [11120], []), ('Private & title', [11120, 10000], []),
                 ('Private & title', [11120], ['ActivateWindow(Videos,plugin://plugin.video.aperture.movies/?mode=online&search=Private+%26+title,return)'])]:
@@ -193,6 +236,59 @@ class HomeTests(unittest.TestCase):
         for ident in ('730', '731', '732'):
             self.assertIn('$INFO[Container(' + ident + ').ListItem.Plot]', labels)
             self.assertTrue(any('Container(' + ident + ').ListItem.Property(Aperture.Year)' in (label or '') for label in labels))
+
+    def test_details_fetch_leaving_custom_home_suppresses_success_and_error_dialogs(self):
+        for payload in ({'meta': {'id': 'tt1234567', 'name': 'Old movie'}},
+                        {'meta': 'invalid'}):
+            with self.subTest(payload=payload):
+                windows, menus, trace = [11120], [], []
+                c,e,d,x,b = self.run_plugin([], query='?action=online_details&id=tt1234567',
+                    folder_paths=[''], window_ids=lambda: windows[0], selection=0,
+                    catalog_payload=payload, on_fetch=lambda: windows.__setitem__(0, 10000),
+                    select_trace=menus, http_trace=trace)
+                self.assertEqual(len(trace), 1)
+                self.assertEqual((c,e,d,x,b,menus), ([],[],[],[],[],[]),
+                                 'Both windows have empty FolderPath; window identity must fence the result')
+
+    def test_details_checks_window_again_after_each_modal(self):
+        for hook in ('on_ok', 'on_select'):
+            with self.subTest(hook=hook):
+                windows, menus = [11120], []
+                c,e,d,x,b = self.run_plugin([], query='?action=online_details&id=tt1234567',
+                    folder_paths=[''], window_ids=lambda: windows[0], selection=0,
+                    catalog_payload={'meta': {'id': 'tt1234567', 'name': 'Movie'}},
+                    select_trace=menus,
+                    on_ok=(lambda: windows.__setitem__(0, 10000)) if hook == 'on_ok' else None,
+                    on_select=(lambda: windows.__setitem__(0, 10000)) if hook == 'on_select' else None)
+                self.assertEqual(len(d), 1)
+                self.assertEqual(len(menus), 0 if hook == 'on_ok' else 1)
+                self.assertEqual((c,e,x,b), ([],[],[],[]))
+
+    def test_new_details_invocation_supersedes_old_fetch_and_modal_actions(self):
+        for phase in ('on_fetch', 'on_ok', 'on_select'):
+            with self.subTest(phase=phase):
+                props, menus, newer = {}, [], []
+
+                def replace():
+                    newer.append(self.run_plugin([], properties=props,
+                        query='?action=online_details&id=tt7654321', folder_paths=[''],
+                        window_ids=[11120], selection=-1,
+                        catalog_payload={'meta': {'id': 'tt7654321', 'name': 'New movie'}}))
+
+                c,e,d,x,b = self.run_plugin([], properties=props,
+                    query='?action=online_details&id=tt1234567', folder_paths=[''],
+                    window_ids=[11120], selection=0, select_trace=menus,
+                    catalog_payload={'meta': {'id': 'tt1234567', 'name': 'Old movie'}},
+                    on_fetch=replace if phase == 'on_fetch' else None,
+                    on_ok=replace if phase == 'on_ok' else None,
+                    on_select=replace if phase == 'on_select' else None)
+                self.assertEqual(len(newer), 1)
+                self.assertEqual(newer[0][2][0][0], 'New movie')
+                self.assertEqual(len(d), 0 if phase == 'on_fetch' else 1)
+                self.assertEqual(len(menus), 1 if phase == 'on_select' else 0)
+                self.assertEqual((c,e,x,b), ([],[],[],[]))
+                self.assertNotIn('tt1234567', repr(props))
+                self.assertNotIn('tt7654321', repr(props))
 
     def test_explicit_details_missing_plot_is_honest_and_series_is_rejected(self):
         trace = []

@@ -81,7 +81,8 @@ loopback and failed only HTTP-fixture connections; rerunning with loopback enabl
 removed that environmental failure. A later full run caught the Home generator
 still emitting the old route; corrected the generator, then reran successfully.
 
-Real complete Estuary-based skin and Movies ZIP assembly passed. Final SHA256:
+Real complete Estuary-based skin and Movies ZIP assembly passed for the original
+home candidate, before the async review fixes below. Historical SHA256:
 
 - Skin: `5768b4589ca2bac890428c2b865a69854f6673ba6e6d9e82539beaf04e617427`
 - Movies: `1aa35fca52b0797c14980cca8f5832d161d36cd79963ba1dff9cc888d3f786dd`
@@ -95,6 +96,69 @@ Public-only probe: Cinemeta top and imdbRating each returned 50 movie records;
 all 50 in each batch contained plot, year and genres. No account/source requests
 were made. Missing metadata remains covered synthetically rather than assumed
 impossible.
+
+## Async review fixes (base `26ad95f`)
+
+Row status publication is now fenced by the refresh generation carried in the
+widget URL, compared immediately before writing the Home property. Do not claim
+ownership by overwriting the generation at job startup: an old queued job can
+start after Retry. Kodi can cancel the directory completion callback while the
+old Python invocation continues; completing that invocation must not overwrite a
+newer row's success or failure status. Directory completion remains native; no
+new source lookup, remote query parameters, history write or modal error is added.
+
+Explicit details capture both the originating window ID and FolderPath. Success
+and error dialogs, the following Movie actions menu and its selected action are
+guarded after every blocking step. An opaque in-memory invocation token prevents
+a newer details request in the same window from being superseded by an old one.
+No movie identity, title or URL is stored in that property.
+
+Review TDD evidence:
+
+- Baseline: **852 tests passed** before edits.
+- Overlapping Retry regression failed with `Cinemeta unavailable` replacing a
+  newer successful row. The new invocation completes inside the old fetch before
+  the old failure is released; this is not a sequential retry test. GREEN after
+  generation gating; full suite **853 passed**.
+- Details fetch transitions **11120 → 10000 with both FolderPaths empty** failed
+  for both success and error responses. Transition after each modal also failed
+  (stale menu or stale Find streams action). Window checks made these GREEN;
+  full suite **855 passed**.
+- Same-window replacement details requests failed at fetch/dialog/action-menu
+  boundaries; invocation fencing made these GREEN; full suite **856 passed**.
+- Additional late-start/old-success coverage exercises all three row names. It
+  fails against the pinned base source and passes against the candidate.
+- Final loopback-only network-namespace run: **72 focused tests passed**;
+  **857 full-suite tests passed** (44.943 seconds), preserving all baseline tests.
+- The modal-transition fake initially exhausted its window-ID iterator before
+  the transition. Replaced it with mutable window state, reran against the pinned
+  base (four expected assertion failures), then GREEN without changing assertions.
+
+Python property comparison plus publication/dialog opening is not an atomic Kodi
+transaction. These checks suppress results stale at each boundary; they cannot
+prove no navigation can happen between the check and the next native API call.
+Native execution is not claimed by the deterministic offline tests.
+
+### Additional exact-head native synthetic acceptance
+
+Keep the existing immediate Back and offline Retry assertions unchanged. In the
+disposable native transport, use explicit request-start/release barriers rather
+than sleeps to exercise these additional cases before deployment:
+
+1. Hold an old catalogue failure, trigger Retry, let the newer row succeed, then
+   release the old failure. Assert the new cards **and** successful inline status
+   remain after the old Python invocation has finished.
+2. Hold a movie-details success, Back from Movies home to main Home, release it,
+   and assert no details dialog, Movie actions menu or source lookup appears.
+   Repeat with a failed metadata response. Verify the transition is 11120 → 10000,
+   not only a FolderPath change, and keep both paths empty for this case.
+3. Supersede details in the same window while its fetch is pending; only the newer
+   request may present UI or dispatch a source action. Repeat replacement while
+   the older details/actions modal is closing.
+
+These added native race cases are a pending acceptance recipe, **not implemented
+or executed native coverage**. Existing native synthetic scripts and assertions
+are unchanged; this task performs no Kodi/profile/account actions.
 
 ## Native acceptance still pending
 

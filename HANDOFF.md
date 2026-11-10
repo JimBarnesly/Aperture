@@ -1,5 +1,19 @@
 # Aperture integration handoff
 
+## Movies async UI review fixes — 2026-11-10T12:36:11Z
+
+Owner: delegated async-fix agent; parent owns integration/review and deployment.
+Base `26ad95f1beca211f4d8fdb133c8cd525e2782fd5`, branch `feat/movies-home`.
+READY for parent review. Row statuses compare the URL refresh generation before
+publishing; details guard success/error dialogs and subsequent menu/actions by
+window, path and opaque invocation identity. Overlapping Retry and 11120 → 10000
+regressions observed RED then GREEN; same-window replacement also covered.
+Final loopback-only namespace: 72 focused and 857 full-suite tests pass.
+No weakened native assertions; native race recipe is documented but pending.
+No push/deploy/live Kodi/account/personal-profile changes. Separate source-choice
+tree untouched. Rollback is the base above; next step is parent review/integration
+and exact-head native synthetic acceptance. See [evidence](docs/movies-home.md).
+
 ## Online-first Movies home — local candidate, 2026-11-10 UTC
 
 Owner: delegated Movies-home agent; parent owns review and any deployment.

@@ -272,19 +272,34 @@ def online(query):
 
 def online_details(query):
     origin = xbmc.getInfoLabel('Container.FolderPath')
+    origin_window = xbmcgui.getCurrentWindowId()
+    import secrets
+    window = xbmcgui.Window(10000)
+    invocation = secrets.token_hex(16)
+    window.setProperty('Aperture.Home.details', invocation)
+
+    def current():
+        return (not xbmc.Monitor().abortRequested()
+                and window.getProperty('Aperture.Home.details') == invocation
+                and xbmcgui.getCurrentWindowId() == origin_window
+                and xbmc.getInfoLabel('Container.FolderPath') == origin)
+
     try:
         movie = catalog.details(catalog.value(query, 'id'))
     except catalog.CatalogError:
-        xbmcgui.Dialog().ok('Movie details', 'Online details are unavailable. Try again later.')
+        if current():
+            xbmcgui.Dialog().ok('Movie details', 'Online details are unavailable. Try again later.')
+        return
+    if not current():
         return
     summary = ' · '.join(filter(None, [movie['year'], ', '.join(movie['genre']),
                             ('IMDb ' + movie['rating']) if movie['rating'] else '']))
     xbmcgui.Dialog().ok(movie['title'], summary + '\n\n' + (movie['plot'] or 'Details unavailable from Cinemeta.') +
                        '\n\nMetadata: Cinemeta. Playback availability not checked. This catalogue does not supply streams.')
-    if xbmc.Monitor().abortRequested() or xbmc.getInfoLabel('Container.FolderPath') != origin:
+    if not current():
         return
     selected = xbmcgui.Dialog().select('Movie actions', ['Find streams (Torrentio)', 'Set up online playback', 'Back to browsing'])
-    if xbmc.Monitor().abortRequested() or xbmc.getInfoLabel('Container.FolderPath') != origin:
+    if not current():
         return
     if selected == 0:
         route = BASE + '?' + urlencode({'action': 'torrentio_find', 'id': movie['id']})
@@ -336,7 +351,7 @@ def history_directory(mode):
     apply_cinema_view()
 
 
-def home_row(row):
+def home_row(row, generation):
     """Skin widgets contain metadata only; sources resolve only on Select."""
     xbmcplugin.setContent(HANDLE, 'movies')
     movies = []
@@ -373,7 +388,11 @@ def home_row(row):
         status = status or ranked['reason']
     if not movies and row != 'continue':
         status = status or 'No catalogue results. Try Search, Retry or Local files.'
-    xbmcgui.Window(10000).setProperty('Aperture.Home.' + row + '.status', status)
+    # Cancelling a Kodi directory job does not stop its Python execution. Only
+    # the URL generation still selected by the skin may publish shared status.
+    window = xbmcgui.Window(10000)
+    if window.getProperty('Aperture.Home.refresh') == generation:
+        window.setProperty('Aperture.Home.' + row + '.status', status)
     for movie in movies[:20]:
         li = xbmcgui.ListItem(label=movie['title'])
         li.setInfo('video', {'title': movie['title'],
@@ -425,7 +444,7 @@ def main():
         apply_cinema_view()
         return
     if not action and query.get('mode', [''])[0] == 'home_row':
-        home_row(catalog.value(query, 'row'))
+        home_row(catalog.value(query, 'row'), catalog.value(query, 'refresh'))
         return
     if action == 'clear_history':
         origin = xbmc.getInfoLabel('Container.FolderPath')

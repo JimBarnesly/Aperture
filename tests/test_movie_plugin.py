@@ -21,10 +21,12 @@ class PluginTests(unittest.TestCase):
         self.temporary=tempfile.TemporaryDirectory()
         self.profile=self.temporary.name
         self.addCleanup(self.temporary.cleanup)
-    def run_plugin(self,sources,query='',default='',files=None,fail=False,vfs_listing=None,vfs_exists=(),vfs_trace=None,folder_paths=None,busy_checks=0,view_trace=None,abort=False,picture="",movies=None,limits=None,search="",selection=-1,genres=None,catalog_payload=None,http_trace=None,categories=None,confirm=False,properties=None,on_wait=None,window_ids=None,catalog_payloads=None):
+    def run_plugin(self,sources,query='',default='',files=None,fail=False,vfs_listing=None,vfs_exists=(),vfs_trace=None,folder_paths=None,busy_checks=0,view_trace=None,abort=False,picture="",movies=None,limits=None,search="",selection=-1,genres=None,catalog_payload=None,http_trace=None,categories=None,confirm=False,properties=None,on_wait=None,window_ids=None,catalog_payloads=None,on_fetch=None,select_trace=None,on_ok=None,on_select=None):
         calls=[]; entries=[]; dialogs=[]; ended=[]; builtins=[]
-        windows = iter(window_ids or [10025]); current_window = [10025]
+        windows = iter([10025] if callable(window_ids) else window_ids or [10025])
+        current_window = [10025]
         def window_id():
+            if callable(window_ids): return window_ids()
             current_window[0] = next(windows, current_window[0])
             return current_window[0]
         properties = properties if properties is not None else {}
@@ -34,6 +36,7 @@ class PluginTests(unittest.TestCase):
         payloads = iter(catalog_payloads) if catalog_payloads is not None else None
         def fetch(request, **kwargs):
             if http_trace is not None: http_trace.append(request.full_url)
+            if on_fetch: on_fetch()
             return io.BytesIO(json.dumps(next(payloads) if payloads is not None else catalog_payload or {'metas': []}).encode())
         vfs_trace = vfs_trace if vfs_trace is not None else []
         def exists(path):
@@ -72,7 +75,14 @@ class PluginTests(unittest.TestCase):
             def __init__(self,*a):vfs_trace.append(('File', a))
             def read(self):return '<sources><video><default>'+default+'</default></video></sources>'
             def close(self):pass
-        dialog=types.SimpleNamespace(yesno=lambda *a:dialogs.append(a) or confirm,ok=lambda *a:dialogs.append(a),notification=lambda *a,**kw:dialogs.append(a),browseSingle=lambda *a:picture,input=lambda *a,**kw:search,select=lambda *a:selection)
+        def ok(*args):
+            dialogs.append(args)
+            if on_ok: on_ok()
+        def select(*args):
+            if select_trace is not None: select_trace.append(args)
+            if on_select: on_select()
+            return selection
+        dialog=types.SimpleNamespace(yesno=lambda *a:dialogs.append(a) or confirm,ok=ok,notification=lambda *a,**kw:dialogs.append(a),browseSingle=lambda *a:picture,input=lambda *a,**kw:search,select=select)
         mods={
             'xbmc':types.SimpleNamespace(executeJSONRPC=rpc,executebuiltin=builtins.append,log=lambda *a:None,LOGERROR=4,getSupportedMedia=lambda kind:'.avi|.mkv|.mp4',Monitor=Monitor,getInfoLabel=folder_path,getCondVisibility=condition),
             'xbmcaddon':types.SimpleNamespace(Addon=lambda:types.SimpleNamespace(getAddonInfo=lambda key:self.profile)),
