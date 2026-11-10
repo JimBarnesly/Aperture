@@ -97,6 +97,7 @@ if [ "$BASELINE" -eq 0 ]; then
   cp "$SOURCE_DIR/skin/xml/DialogButtonMenu.xml" "$TMP/xml/DialogButtonMenu.xml"
   if command -v python3 >/dev/null 2>&1; then
     python3 "$SOURCE_DIR/tools/style_dialogs.py" "$TMP"
+    python3 "$SOURCE_DIR/tools/movie_exit_signal.py" "$TMP"
   else
     printf "Python 3 unavailable: shared dialog palette remains upstream.\n"
   fi

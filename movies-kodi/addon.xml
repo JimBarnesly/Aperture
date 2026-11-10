@@ -2,6 +2,7 @@
 <addon id="plugin.video.aperture.movies" name="Aperture Movies" version="0.4.0" provider-name="JimBarnesly">
  <requires><import addon="xbmc.python" version="3.0.0"/></requires>
  <extension point="xbmc.python.pluginsource" library="addon.py"><provides>video</provides></extension>
+ <extension point="xbmc.service" library="playback_service.py"/>
  <extension point="xbmc.addon.metadata"><summary lang="en_GB">Your movies, centre stage</summary><description lang="en_GB">Browse public Cinemeta movie metadata, search your Kodi library, or browse existing video sources with profile-only local poster choices. Optional Real-Debrid device sign-in for existing account downloads and authorized links. No catalogue scraping or media changes.</description><platform>all</platform><license>GPL-2.0-or-later</license></extension>
 </addon>
 

@@ -39,7 +39,8 @@ class ProviderError(Exception):
             'changed': 'That source is no longer available. Find streams again and choose a source.',
             'resolve': 'Torrentio did not return a supported HTTPS Real-Debrid download. No playback started. Retry later or choose another source.',
         }
-        super().__init__(messages.get(kind, messages['invalid']))
+        self.kind = kind if kind in messages else 'invalid'
+        super().__init__(messages[self.kind])
 
 
 class Config:
@@ -347,6 +348,19 @@ class Store:
         except (OSError, UnicodeError, ValueError):
             raise ProviderError('storage') from None
 
+    def autoplay_preference(self):
+        try:
+            with self._open() as fd:
+                value = read_private(fd, 'autoplay-effects-v1')
+            return {'allow': True, 'decline': False}.get(value)
+        except FileNotFoundError:
+            return None
+        except (OSError, UnicodeError, ValueError):
+            raise ProviderError('storage') from None
+
+    def set_autoplay_preference(self, allowed):
+        self._save('allow' if allowed else 'decline', 'autoplay-effects-v1')
+
     def import_file(self, path):
         try:
             with local_directory(os.path.dirname(path)) as fd:
@@ -358,11 +372,11 @@ class Store:
     def enable_native(self):
         self._save('rd-oauth-v1')
 
-    def _save(self, value):
+    def _save(self, value, target='connection'):
         try:
             with self._open(create=True) as fd:
                 try:
-                    self._validate_target(fd)
+                    self._validate_target(fd, target)
                 except FileNotFoundError:
                     pass
                 name = '.new-' + secrets.token_hex(16)
@@ -372,7 +386,7 @@ class Store:
                         stream.write(value.encode('utf-8'))
                         stream.flush()
                         os.fsync(stream.fileno())
-                    os.replace(name, 'connection', src_dir_fd=fd, dst_dir_fd=fd)
+                    os.replace(name, target, src_dir_fd=fd, dst_dir_fd=fd)
                     os.fsync(fd)
                 finally:
                     try:
@@ -382,9 +396,9 @@ class Store:
         except (OSError, UnicodeError, ValueError):
             raise ProviderError('storage') from None
 
-    def _validate_target(self, fd):
+    def _validate_target(self, fd, target='connection'):
         # Reset/replace checks inode safety without reading or decoding secrets.
-        info = os.stat('connection', dir_fd=fd, follow_symlinks=False)
+        info = os.stat(target, dir_fd=fd, follow_symlinks=False)
         if not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid() or info.st_mode & 0o077 or info.st_nlink != 1:
             raise ProviderError('storage')
 

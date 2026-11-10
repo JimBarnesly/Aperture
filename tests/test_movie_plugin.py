@@ -21,8 +21,15 @@ class PluginTests(unittest.TestCase):
         self.temporary=tempfile.TemporaryDirectory()
         self.profile=self.temporary.name
         self.addCleanup(self.temporary.cleanup)
-    def run_plugin(self,sources,query='',default='',files=None,fail=False,vfs_listing=None,vfs_exists=(),vfs_trace=None,folder_paths=None,busy_checks=0,view_trace=None,abort=False,picture="",movies=None,limits=None,search="",selection=-1,genres=None,catalog_payload=None):
+    def run_plugin(self,sources,query='',default='',files=None,fail=False,vfs_listing=None,vfs_exists=(),vfs_trace=None,folder_paths=None,busy_checks=0,view_trace=None,abort=False,picture="",movies=None,limits=None,search="",selection=-1,genres=None,catalog_payload=None,http_trace=None,categories=None,confirm=False,properties=None,on_wait=None):
         calls=[]; entries=[]; dialogs=[]; ended=[]; builtins=[]
+        properties = properties if properties is not None else {}
+        window = types.SimpleNamespace(getProperty=lambda k:properties.get(k, ''),
+            setProperty=properties.__setitem__, clearProperty=lambda k:properties.pop(k, None))
+        categories = categories if categories is not None else []
+        def fetch(request, **kwargs):
+            if http_trace is not None: http_trace.append(request.full_url)
+            return io.BytesIO(json.dumps(catalog_payload or {'metas': []}).encode())
         vfs_trace = vfs_trace if vfs_trace is not None else []
         def exists(path):
             vfs_trace.append(('exists', path))
@@ -47,6 +54,7 @@ class PluginTests(unittest.TestCase):
             def abortRequested(self): return abort
             def waitForAbort(self,seconds):
                 view_trace.append(('wait',seconds))
+                if on_wait: on_wait(window)
                 return abort
         def rpc(raw):
             r=json.loads(raw);calls.append(r)
@@ -59,19 +67,19 @@ class PluginTests(unittest.TestCase):
             def __init__(self,*a):vfs_trace.append(('File', a))
             def read(self):return '<sources><video><default>'+default+'</default></video></sources>'
             def close(self):pass
-        dialog=types.SimpleNamespace(ok=lambda *a:dialogs.append(a),notification=lambda *a,**kw:dialogs.append(a),browseSingle=lambda *a:picture,input=lambda *a,**kw:search,select=lambda *a:selection)
+        dialog=types.SimpleNamespace(yesno=lambda *a:dialogs.append(a) or confirm,ok=lambda *a:dialogs.append(a),notification=lambda *a,**kw:dialogs.append(a),browseSingle=lambda *a:picture,input=lambda *a,**kw:search,select=lambda *a:selection)
         mods={
             'xbmc':types.SimpleNamespace(executeJSONRPC=rpc,executebuiltin=builtins.append,log=lambda *a:None,LOGERROR=4,getSupportedMedia=lambda kind:'.avi|.mkv|.mp4',Monitor=Monitor,getInfoLabel=folder_path,getCondVisibility=condition),
             'xbmcaddon':types.SimpleNamespace(Addon=lambda:types.SimpleNamespace(getAddonInfo=lambda key:self.profile)),
-            'xbmcgui':types.SimpleNamespace(ListItem=Item,Dialog=lambda:dialog),
-            'xbmcplugin':types.SimpleNamespace(setContent=lambda *a:None,setPluginCategory=lambda *a:None,endOfDirectory=lambda *a,**kw:ended.append(kw),addDirectoryItem=lambda *a:entries.append(a)),
+            'xbmcgui':types.SimpleNamespace(Window=lambda *a:window,ListItem=Item,Dialog=lambda:dialog,getCurrentWindowId=lambda:10025),
+            'xbmcplugin':types.SimpleNamespace(setContent=lambda *a:None,setPluginCategory=lambda *a:categories.append(a),endOfDirectory=lambda *a,**kw:ended.append(kw),addDirectoryItem=lambda *a:entries.append(a)),
             'xbmcvfs':types.SimpleNamespace(translatePath=lambda p:p,File=F,exists=exists,listdir=listdir),
         }
         sys.path.insert(0,str(ROOT/'movies-kodi'))
         saved={k:v for k,v in sys.modules.items() if k=='resources' or k.startswith('resources.')}
         for k in list(saved):sys.modules.pop(k)
         try:
-            with patch('urllib.request.OpenerDirector.open', return_value=io.BytesIO(json.dumps(catalog_payload or {'metas': []}).encode())),patch.dict(sys.modules,mods),patch.object(sys,'argv',['plugin://plugin.video.aperture.movies/','3',query]):
+            with patch('urllib.request.OpenerDirector.open', side_effect=fetch),patch.dict(sys.modules,mods),patch.object(sys,'argv',['plugin://plugin.video.aperture.movies/','3',query]):
                 exec(compile((ROOT/'movies-kodi/addon.py').read_text(), str(ROOT/'movies-kodi/addon.py'), 'exec'), {'__name__':'__main__'})
         finally:
             sys.path.pop(0)
@@ -83,14 +91,23 @@ class PluginTests(unittest.TestCase):
         c,e,d,x,b=self.run_plugin([],query='?mode=online',catalog_payload={'metas':[{'id':'tt1234567','name':'Online Film','poster':'https://example.org/p.jpg','streams':[{'url':'https://example.org/film'}]}]})
         self.assertEqual(c,[])
         self.assertEqual(e[0][2].props['IsPlayable'],'false')
-        self.assertIn('action=online_details',e[0][1])
+        self.assertIn('action=torrentio_auto',e[0][1])
         self.assertNotIn('https://example.org/film',repr(e))
         self.assertIn('start=1',e[-1][1])
-    def test_online_movie_has_explicit_torrentio_action_without_changing_default(self):
+    def test_local_playable_is_tagged_as_movie_for_pause_policy(self):
+        c,e,d,x,b=self.run_plugin([{'file':'/movies/','label':'Movies'}],files=[{'file':'/movies/a.mkv','filetype':'file','label':'A'}])
+        self.assertEqual(getattr(e[0][2], 'media_type', None), 'movie')
+    def test_online_movie_has_manual_chooser_and_automatic_default(self):
         c,e,d,x,b=self.run_plugin([],query='?mode=online',catalog_payload={'metas':[{'id':'tt1234567','name':'Example'}]})
-        self.assertIn(('Find streams (Torrentio)', 'RunPlugin(plugin://plugin.video.aperture.movies/?action=torrentio_find&id=tt1234567)'), e[0][2].context)
-        self.assertIn('action=online_details', e[0][1])
+        self.assertIn(('Choose source', 'RunPlugin(plugin://plugin.video.aperture.movies/?action=torrentio_find&id=tt1234567)'), e[0][2].context)
+        self.assertIn('action=torrentio_auto', e[0][1])
         self.assertEqual(e[0][2].props['IsPlayable'], 'false')
+
+    def test_auto_action_dispatches_without_local_source_access(self):
+        c,e,d,x,b=self.run_plugin([],query='?action=torrentio_auto&id=tt1234567')
+        self.assertEqual(c, [])
+        self.assertIn('Online playback is not connected', repr(d))
+        self.assertEqual((e,x,b), ([],[],[]))
 
     def test_torrentio_action_dispatches_without_local_source_access(self):
         c,e,d,x,b=self.run_plugin([],query='?action=torrentio_find&id=tt1234567')
@@ -114,6 +131,107 @@ class PluginTests(unittest.TestCase):
         c,e,d,x,b=self.run_plugin([],query='?action=online_details&id=tt1234567',catalog_payload={'meta':{'id':'tt1234567','name':'Example','description':'A plot'}})
         self.assertEqual((c,e,b),([],[],[]))
         self.assertIn('Playback availability not checked',repr(d))
+    def test_suggestions_catalogue_failure_is_generic_and_keeps_clear_available(self):
+        trace = []
+        c,e,d,x,b = self.run_plugin([], query='?mode=suggested', catalog_payload={'metas': 'invalid'}, http_trace=trace)
+        self.assertEqual(c, [])
+        self.assertIn('Suggestions unavailable', repr(d))
+        self.assertTrue(any('clear_history' in row[1] for row in e))
+
+    def test_unreadable_history_shows_generic_error_and_clear_recovery(self):
+        directory = Path(self.profile) / 'history-private'
+        directory.mkdir(mode=0o700)
+        path = directory / 'history.json'
+        path.write_text('broken-private-data')
+        path.chmod(0o600)
+        c,e,d,x,b = self.run_plugin([], query='?mode=history')
+        self.assertEqual(c, [])
+        self.assertIn('History unavailable', repr(d))
+        self.assertNotIn('broken-private-data', repr(d))
+        self.assertTrue(any('clear_history' in row[1] for row in e))
+        self.assertEqual(path.read_text(), 'broken-private-data')
+
+    def test_confirmed_clear_waits_for_service_and_refreshes_only_same_directory(self):
+        from test_movie_history_playback import load
+        from test_movie_history import history, MOVIE
+        from unittest.mock import Mock
+        bridge = load()
+        store = history.HistoryStore(Path(self.profile) / 'history-private')
+        store.record_playback(MOVIE, is_playing=True, position_seconds=10, duration_seconds=100, lastplayed=1)
+        def service(window):
+            bridge.HistoryMonitor(store, Mock(), window).update()
+        c,e,d,x,b = self.run_plugin([], query='?action=clear_history', confirm=True,
+                                    on_wait=service, properties={})
+        self.assertEqual(store.records(), [])
+        self.assertEqual((c,e,x), ([],[],[]))
+        self.assertEqual(b, ['Container.Refresh'])
+        c,e,d,x,b = self.run_plugin([], query='?action=clear_history', confirm=True, properties={})
+        self.assertIn('not confirmed', repr(d))
+        self.assertEqual(b, [])
+        c,e,d,x,b = self.run_plugin([], query='?action=clear_history', confirm=True,
+            on_wait=service, properties={}, folder_paths=['plugin://plugin.video.aperture.movies/?mode=history', 'plugin://other/'])
+        self.assertEqual(b, [])
+
+    def test_history_collections_remain_navigable_and_clear_is_confirmed(self):
+        for mode in ('history', 'continue', 'suggested'):
+            c,e,d,x,b = self.run_plugin([], query='?action=collection', selection=3,
+                folder_paths=['plugin://plugin.video.aperture.movies/?mode=' + mode])
+            self.assertEqual(b, ['Container.Update(plugin://plugin.video.aperture.movies/?mode=history)'])
+        c,e,d,x,b = self.run_plugin([], query='?action=clear_history')
+        self.assertEqual((c,e,x,b), ([],[],[],[]))
+        self.assertIn('backups', repr(d))
+
+    def test_suggestions_rank_locally_over_default_public_batch(self):
+        from test_movie_history import history, MOVIE
+        store = history.HistoryStore(Path(self.profile) / 'history-private')
+        for ident in ('tt1234567', 'tt7654321'):
+            store.record_playback(dict(MOVIE, id=ident), is_playing=True, position_seconds=10,
+                                  duration_seconds=100, lastplayed=1)
+        payload = {'metas': [{'id': 'tt1234567', 'name': 'Watched', 'genres': ['Drama']},
+                             {'id': 'tt1111111', 'name': 'Match', 'genres': ['Drama']},
+                             {'id': 'tt2222222', 'name': 'Other', 'genres': ['Horror']}]}
+        trace = []
+        c,e,d,x,b = self.run_plugin([], query='?mode=suggested&genre=Drama&search=private&start=60',
+                                    catalog_payload=payload, http_trace=trace)
+        self.assertEqual(c, [])
+        self.assertEqual(trace, ['https://v3-cinemeta.strem.io/catalog/movie/top/skip=0.json'])
+        films = [entry for entry in e if 'id=' in entry[1]]
+        self.assertEqual([entry[2].kw['label'] for entry in films], ['Match'])
+        self.assertIn('action=torrentio_auto', films[0][1])
+        self.assertEqual(d, [])
+        store.clear()
+        categories = []
+        self.run_plugin([], query='?mode=suggested', catalog_payload=payload, categories=categories)
+        self.assertIn('catalogue suggestions only', repr(categories))
+
+    def test_history_and_continue_list_saved_metadata_with_explicit_resume(self):
+        from test_movie_history import history, MOVIE
+        store = history.HistoryStore(Path(self.profile) / 'history-private')
+        store.record_playback(MOVIE, is_playing=True, position_seconds=42, duration_seconds=100, lastplayed=1)
+        store.record_playback(dict(MOVIE, id='tt7654321', title='Finished'), is_playing=True,
+                              position_seconds=95, duration_seconds=100, lastplayed=2)
+        for mode, count in [('history', 2), ('continue', 1)]:
+            c,e,d,x,b = self.run_plugin([], query='?mode=' + mode)
+            self.assertEqual(c, [], 'History must not query local sources/accounts')
+            films = [entry for entry in e if 'id=' in entry[1]]
+            self.assertEqual(len(films), count)
+            film = next(entry for entry in films if 'tt1234567' in entry[1])
+            self.assertIn('resume=1', film[1])
+            self.assertIn('Play from beginning', repr(film[2].context))
+            self.assertIn('Clear history', repr([entry[2].kw for entry in e]))
+            self.assertNotIn('https://', repr(e))
+            self.assertEqual(d, [])
+            self.assertTrue(x[-1]['succeeded'])
+        self.assertEqual(len(store.records()), 2)
+
+    def test_online_collections_exposes_private_history_sections(self):
+        for selected, mode in ((3, 'history'), (4, 'continue'), (5, 'suggested')):
+            with self.subTest(mode=mode):
+                c,e,d,x,b=self.run_plugin([], query='?action=collection',
+                    folder_paths=['plugin://plugin.video.aperture.movies/?mode=online'], selection=selected)
+                self.assertEqual(b, ['Container.Update(plugin://plugin.video.aperture.movies/?mode=' + mode + ')'])
+                self.assertEqual(c, [])
+
     def test_online_collection_can_open_local_library(self):
         c,e,d,x,b=self.run_plugin([],query='?action=collection',folder_paths=['plugin://plugin.video.aperture.movies/?mode=online'],selection=2)
         self.assertEqual(b,['Container.Update(plugin://plugin.video.aperture.movies/?mode=discover)'])

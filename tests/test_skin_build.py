@@ -35,6 +35,40 @@ class SkinBuildTests(unittest.TestCase):
     def assemble(self):
         return build.assemble(self.source, self.out, ROOT/'skin/xml/Home.xml')
 
+    def test_fullscreen_exit_latch_preserves_native_controls_and_is_session_bound(self):
+        path = self.source / 'xml/VideoFullScreen.xml'
+        path.write_text('<window><onload>Existing()</onload><controls><control type="group" id="1"/></controls></window>')
+        self.assemble()
+        root = ET.parse(self.out / 'xml/VideoFullScreen.xml').getroot()
+        latch = root.find("onunload[@condition]")
+        self.assertIsNotNone(latch, 'Native exit must survive a fullscreen shorter than one service poll')
+        assert latch is not None
+        self.assertEqual(latch.text, 'SetProperty(Aperture.Movies.FullscreenExit,$INFO[VideoPlayer.UniqueID(aperture_session)],home)')
+        self.assertIn('Player.HasVideo', latch.get('condition', ''))
+        self.assertIn('VideoPlayer.Content(movies)', latch.get('condition', ''))
+        self.assertIn('Window.Next(10025)', latch.get('condition', ''))
+        self.assertNotIn('12901', latch.get('condition', ''))
+        self.assertIn('ClearProperty(Aperture.Movies.FullscreenExit,home)', [n.text for n in root.findall('onload')])
+        self.assertEqual(root.findtext('onload'), 'Existing()')
+        self.assertIsNotNone(root.find('./controls/control[@id="1"]'))
+        self.assertIsNone(ET.parse(path).getroot().find('onunload'))
+
+    def test_native_exit_latch_requires_video_movie_session_and_only_browser_targets(self):
+        path = self.source / 'xml/VideoFullScreen.xml'
+        path.write_text('<window><controls/></window>')
+        self.assemble()
+        from movie_exit_signal import apply
+        apply(self.out)  # Reapplying cannot duplicate actions.
+        root = ET.parse(self.out / 'xml/VideoFullScreen.xml').getroot()
+        self.assertEqual(len(root.findall('onunload')), 1)
+        latch = root.find('onunload')
+        assert latch is not None
+        condition = latch.get('condition', '')
+        self.assertEqual(condition, 'Player.HasVideo + VideoPlayer.Content(movies) + '
+                         '!String.IsEmpty(VideoPlayer.UniqueID(aperture_session)) + [' +
+                         ' | '.join('Window.Next(%d)' % n for n in
+                                    (10000, 10001, 10002, 10025, 10500, 10501, 10502, 10800)) + ']')
+
     def test_manifest_upgrade_and_license_preserved(self):
         self.assemble()
         root = ET.parse(self.out/'addon.xml').getroot()

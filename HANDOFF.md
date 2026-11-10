@@ -1,5 +1,69 @@
 # Aperture integration handoff
 
+## PR31 native pause failures — local candidate, 2026-11-10 UTC
+
+Owner: delegated CI-fix agent; parent review/publish owner. Base `c857dee`.
+READY for review, BLOCKED on exact-head native rerun (not pushed).
+Public artifacts prove menus toggled an auto-paused movie back on; online Resume
+spent only 28 ms fullscreen, below the 100 ms service poll. QA now uses explicit
+pause. Rebuilt skin latches native fullscreen exit with the opaque session; Movies
+consumes it with existing movie/browser/ownership gates. Requires skin + Movies,
+not a Movies-only update. Immediate Back acceptance retained and transient/return
+checks expanded. **835 offline tests pass**, real scratch skin ZIP build passes.
+No device/accounts/profiles/deployment changes; existing live revision untouched.
+Native GREEN not claimed (Xvfb/PulseAudio/pactl missing). Parent must review and run
+both workflows before lifting the CI gate. [Evidence and limits](docs/movies-native-ci-fix.md).
+
+## Autoplay lifecycle review — local fixes
+
+Reviewed against history-integrated `7fbcf66ade72cf1ed7c69eedb319062adabcea08`.
+Startup now correlates the existing opaque history session, retains predecessor
+transitions, refuses unowned-error fallback, and checks ownership before every
+stop. Pause state is identity-bound. A separate versioned one-time autoplay
+effects preference covers setup/import and existing-profile migration without
+revoking sharing or removing manual sources. History/resume/clear preserved.
+Full offline suite: **826 passed**, network namespace with loopback only.
+No deployment/push/device/accounts. Native QA updated but not run (missing
+Xvfb/PulseAudio/pactl); native pending-open revocation and atomic player ownership
+remain unproven. Parent review required. [TDD evidence and limits](docs/movies-lifecycle-review.md).
+
+## Private movie history integration — local checkpoint
+
+On `feat/movies-autoplay` above `00c68ef8`, the history core (`974ecc2d`,
+cherry-picked as `899a400`) is wired to session-correlated positive playback
+progress, 20-second persistence, final samples and serialized clear. Discover →
+Collections exposes History / Continue watching / Suggested for you. Explicit
+Resume resolves a fresh source; suggestions rank only a default public batch
+locally. Full offline suite: 806 passed. Native synthetic journey updated but
+not executed: Xvfb/PulseAudio/pactl unavailable. No deployment, push, accounts,
+live Kodi controls or profile changes. Parent review and native tag/StartOffset
+acceptance remain pending. [Behavior, TDD evidence and limitations](docs/movie-history-integration.md).
+
+## Automatic movie selection — local checkpoint
+
+`feat/movies-autoplay`, based on `570f1176`, routes poster Select through
+lookup/ranking/fresh resolution/actual AV-start verification. Manual Choose source
+remains; automatic fallback is bounded to three distinct sources after explicit
+failures only. Setup/status retains sharing and account-effect disclosure, without
+repeated playback prompts. Offline suite: 768 passed. Native synthetic journey
+updated; execution blocked by missing Xvfb/PulseAudio. No deployment/push/accounts/
+live Kodi. See [policy, TDD evidence and remaining gates](docs/movies-autoplay.md).
+History core `974ecc2d` is ready separately; session/UI integration is explicitly
+pending, not partially wired into this checkpoint. Parent review required.
+
+## Movies playback UX — local bounded candidate
+
+Based on deployed Movies source `9d99d02117f025e36325a6c76f4d197ec4abb46a`,
+verified against all 14 installed source files before branching. Branch
+`feat/movies-playback-ux` removes repeated rights wording, retains provider-effect
+consent, and adds a separate movie-video fullscreen-exit pause service. Offline
+regression: 747 tests pass (baseline 734). See
+[exact flow, TDD evidence and acceptance gates](docs/movies-playback-ux.md).
+No deployment, push, Kodi/account actions or protected media changes. Native
+acceptance and parent independent review pending. Automatic best-source play,
+one-time automatic-play effect preference, history and suggestions belong to the
+parent's next integration slice, not this candidate.
+
 Updated: 2026-11-09. Public project status only.
 
 ## Torrentio development slice (local only)

@@ -192,7 +192,24 @@ class DebridUITests(unittest.TestCase):
         self.run_ui({'action': ['rd_play'], 'id': ['ONE'], 'page': ['1']})
         self.gui.ListItem.assert_called_with(path='https://cdn.example/secret')
         self.assertTrue(self.plugin.setResolvedUrl.call_args.args[1])
+        self.gui.ListItem.return_value.getVideoInfoTag.return_value.setMediaType.assert_called_once_with('movie')
         self.xbmc.executebuiltin.assert_not_called()
+
+    def test_direct_link_keeps_account_effect_consent_without_rights_warning(self):
+        self.sign_in()
+        self.dialog.select.return_value = 1
+        self.dialog.input.return_value = 'https://host.example/movie'
+        self.run_ui()
+        self.client.resolve_link.assert_not_called()
+        message = self.dialog.yesno.call_args.args[1]
+        self.assertIn('traffic', message)
+        self.assertIn('history', message)
+        self.assertNotIn('permission', message)
+        self.assertNotIn('authorized', self.dialog.input.call_args.args[0])
+        self.dialog.yesno.return_value = True
+        self.run_ui()
+        self.gui.ListItem.return_value.getVideoInfoTag.return_value.setMediaType.assert_called_once_with('movie')
+        self.assertIs(self.xbmc.Player.return_value.play.call_args.args[1], self.gui.ListItem.return_value)
 
     def test_decline_resolve_no_post(self):
         self.sign_in()

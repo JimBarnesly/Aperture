@@ -108,6 +108,8 @@ def assemble(source: Path, output: Path, home: Path, font_roots=()):
         shutil.copy2(home, staged / 'xml/Home.xml')
         from style_dialogs import apply as style_dialogs
         style_dialogs(staged)
+        from movie_exit_signal import apply as movie_exit_signal
+        movie_exit_signal(staged)
         shutil.copy2(ROOT/'skin/xml/DialogButtonMenu.xml', staged/'xml/DialogButtonMenu.xml')
         games = ROOT / 'skin/xml/MyGames.xml'
         if games.is_file():

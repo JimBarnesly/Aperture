@@ -191,6 +191,8 @@ def torrentio_journey(online_path):
           and 'Online playback' in xbmc.getInfoLabel('Control.GetLabel(1)'))
     text = xbmc.getInfoLabel('Control.GetLabel(9)')
     assert 'not encrypted' in text and 'No P2P' in text
+    for phrase in ('automatically', 'history', 'transfer', 'traffic', 'signed URL', 'Choose source'):
+        assert phrase in text
     capture('torrentio-storage-consent'); consent_choice(True)
     until('Share access with Torrentio', lambda: 'Share access with Torrentio' in xbmc.getInfoLabel('Control.GetLabel(1)'))
     text = xbmc.getInfoLabel('Control.GetLabel(9)')
@@ -208,9 +210,16 @@ def torrentio_journey(online_path):
     # Simulate server approval only, never write credentials or a connection marker.
     # The real wizard/device client must exchange and persist the synthetic grant.
     (OUT/'approve-synthetic-device').touch()
+    until('versioned autoplay consent', lambda: xbmcgui.getCurrentWindowDialogId() == 10100
+          and xbmc.getInfoLabel('Control.GetLabel(1)') == 'Automatic movie playback')
+    for phrase in ('traffic', 'history', 'transfer', 'Choose source'):
+        assert phrase in xbmc.getInfoLabel('Control.GetLabel(9)')
+    assert not any(event.startswith('torrentio-') for event in events())
+    consent_choice(True)
     until('wizard completed', lambda: xbmcgui.getCurrentWindowDialogId() == 12002
           and xbmc.getInfoLabel('Control.GetLabel(1)') == 'Online playback enabled')
     assert connection.read_text() == 'rd-oauth-v1' and credentials.is_file()
+    assert (profile/'torrentio-private/autoplay-effects-v1').read_text() == 'allow'
     assert connection.stat().st_mode & 0o777 == 0o600
     assert credentials.stat().st_mode & 0o777 == 0o600
     assert events().count('fake-token-exchange') == 1
@@ -241,54 +250,112 @@ def torrentio_journey(online_path):
     rpc('Input.Down'); focus('Synthetic Online Horizon')
     capture('torrentio-search-results')
 
-    # Exercise cancel and No before accepting playback. Neither may resolve.
-    for decision in ('cancel-source', 'decline-play', 'play'):
-        focus('Synthetic Online Horizon'); rpc('Input.Select')
-        until('search result details', lambda: xbmcgui.getCurrentWindowDialogId() == 12002)
-        movie_actions('Find streams (Torrentio)')
-        until('stream lookup consent', lambda: xbmcgui.getCurrentWindowDialogId() == 10100
-              and xbmc.getInfoLabel('Control.GetLabel(1)') == 'Find streams with Torrentio?')
-        consent_choice(True)
-        until('Choose a source', lambda: xbmcgui.getCurrentWindowDialogId() == 12000
-              and 'Choose a source' in xbmc.getInfoLabel('Control.GetLabel(1)'))
-        source = xbmc.getInfoLabel('System.CurrentControl')
-        assert source.startswith('1. Real-Debrid') and '1080p' in source
-        assert 'availability unverified' in xbmc.getInfoLabel('Control.GetLabel(1)')
-        capture('torrentio-source-'+decision)
-        assert 'torrentio-resolve' not in events()
-        if decision == 'cancel-source':
-            rpc('Input.Back')
-        else:
-            rpc('Input.Select')
-            until('Play selected source?', lambda: xbmcgui.getCurrentWindowDialogId() == 10100
-                  and xbmc.getInfoLabel('Control.GetLabel(1)') == 'Play selected source?')
-            text = xbmc.getInfoLabel('Control.GetLabel(9)')
-            assert 'queue a transfer' in text and 'permission' in text
-            capture('torrentio-play-consent-'+decision)
-            consent_choice(decision == 'play')
-        if decision != 'play':
-            wait_for_movie_idle('source cancellation preserves search', search_path)
-            assert 'torrentio-resolve' not in events() and not xbmc.Player().isPlaying()
+    # Manual chooser cancellation must never resolve, then Select auto-plays.
+    focus('Synthetic Online Horizon')
+    poster_context_action('Choose source')
+    until('Choose a source', lambda: xbmcgui.getCurrentWindowDialogId() == 12000
+          and 'Choose a source' in xbmc.getInfoLabel('Control.GetLabel(1)'))
+    source = xbmc.getInfoLabel('System.CurrentControl')
+    assert source.startswith('1. Real-Debrid') and '1080p' in source
+    capture('torrentio-source-cancel')
+    assert 'torrentio-resolve' not in events()
+    rpc('Input.Back')
+    wait_for_movie_idle('source cancellation preserves search', search_path)
+    assert 'torrentio-resolve' not in events() and not xbmc.Player().isPlaying()
+    focus('Synthetic Online Horizon')
+    rpc('Input.Select')
+    until('automatic movie selection', lambda: xbmc.Player().isPlayingVideo())
     until('Torrentio native VideoPlayer', lambda: xbmc.Player().isPlayingVideo())
     monitor.waitForAbort(3)
     players = rpc('Player.GetActivePlayers')
     assert any(p['type'] == 'video' for p in players)
+    assert xbmc.Player().getVideoInfoTag().getUniqueID('aperture_session')
     playing = xbmc.Player().getPlayingFile()
     assert Path(playing) == RUNTIME/'movies/Amber Horizon.mkv'
-    assert events().count('torrentio-streams') == 4  # Three lookups + playback refetch.
+    assert events().count('torrentio-streams') == 3  # Manual lookup + automatic lookup + playback refetch.
     assert events().count('torrentio-resolve') == 1
     assert events().count('torrentio-local-handoff') == 1
     capture('torrentio-native-playback')
     from PIL import Image, ImageStat
     rgb = ImageStat.Stat(Image.open(OUT/'torrentio-native-playback.png').convert('RGB')).mean
     assert rgb[1] > 35 and rgb[1] > rgb[0]*1.5 and rgb[1] > rgb[2]*1.3
-    checks.append({'check':'native-torrentio-search-source-cancel-decline-play', 'players':players,
+    checks.append({'check':'native-torrentio-search-manual-cancel-auto-play', 'players':players,
                    'file':playing, 'mean_rgb':rgb, 'synthetic_transport':True, 'real_provider_calls':False})
     rpc('Player.Stop', {'playerid':next(p['playerid'] for p in players if p['type'] == 'video')})
     until('Torrentio playback stopped', lambda: not xbmc.Player().isPlaying())
     wait_for_movie_idle('Torrentio playback returns to search', search_path)
     assert 'unexpected-provider-operation' not in events()
     capture('torrentio-return-search')
+
+
+def history_journey():
+    import xbmcvfs
+    path = Path(xbmcvfs.translatePath('special://profile/addon_data/plugin.video.aperture.movies/history-private/history.json'))
+    def rows():
+        return json.loads(path.read_text())['records'] if path.exists() else {}
+    until('actual playback persisted', lambda: 'tt1234567' in rows())
+    position = rows()['tt1234567']['resume_seconds']
+    assert position > 0
+    assert set(rows()['tt1234567']) == {'id', 'title', 'year', 'genres', 'resume_seconds', 'duration_seconds', 'lastplayed', 'completed'}
+    nav('Collections'); rpc('Input.Select'); select_choice('Continue watching')
+    until('continue watching', lambda: cinematic() and 'mode=continue' in xbmc.getInfoLabel('Container.FolderPath'))
+    rpc('Input.Down'); focus('Synthetic Online Horizon · Resume')
+    before = events().count('torrentio-resolve')
+    rpc('Input.Select')
+    until('explicit history Resume', lambda: xbmc.Player().isPlayingVideo())
+    until('resumed position', lambda: xbmc.Player().getTime() >= position)
+    assert events().count('torrentio-resolve') == before + 1
+    until('fullscreen resume', lambda: xbmcgui.getCurrentWindowId() == 12005)
+    rpc('Input.Back')
+    until('Back pauses movie', lambda: cinematic() and xbmc.getCondVisibility('Player.Paused'))
+    # Keep the immediate Back above: a delay would mask the missed 28 ms exit.
+    session = xbmc.Player().getVideoInfoTag().getUniqueID('aperture_session')
+    xbmc.executebuiltin('ActivateWindow(fullscreenvideo)')
+    until('return fullscreen stays paused', lambda: xbmcgui.getCurrentWindowId() == 12005
+          and xbmc.getCondVisibility('Player.Paused'))
+    monitor.waitForAbort(.5)
+    assert xbmc.getCondVisibility('Player.Paused')
+    rpc('Player.PlayPause', {'playerid': 1, 'play': True})
+    until('explicit play after return', lambda: xbmc.getCondVisibility('Player.Playing'))
+    rpc('Input.ShowOSD')
+    until('video OSD visible', lambda: xbmc.getCondVisibility('Window.IsActive(videoosd)'))
+    monitor.waitForAbort(.5)
+    assert xbmc.getCondVisibility('Player.Playing')
+    rpc('Input.Back')
+    until('OSD dismissed without pause', lambda: xbmcgui.getCurrentWindowId() == 12005
+          and not xbmc.getCondVisibility('Window.IsActive(videoosd)')
+          and xbmc.getCondVisibility('Player.Playing'))
+    rpc('Player.Seek', {'playerid': 1, 'value': {'step': 'smallforward'}})
+    until('seek keeps video playing', lambda: xbmcgui.getCurrentWindowId() == 12005
+          and xbmc.getCondVisibility('Player.Playing'))
+    monitor.waitForAbort(.5)
+    assert xbmc.getCondVisibility('Player.Playing')
+    assert xbmc.Player().getVideoInfoTag().getUniqueID('aperture_session') == session
+    rpc('Input.Back')
+    until('Back pauses after controls', lambda: cinematic() and xbmc.getCondVisibility('Player.Paused'))
+    nav('Collections'); rpc('Input.Select'); select_choice('History')
+    until('history directory', lambda: cinematic() and 'mode=history' in xbmc.getInfoLabel('Container.FolderPath'))
+    rpc('Input.Down'); focus('Clear history'); rpc('Input.Select')
+    until('clear confirmation', lambda: xbmcgui.getCurrentWindowDialogId() == 10100)
+    consent_choice(False)
+    until('clear declined', cinematic)
+    assert rows()
+    focus('Clear history'); rpc('Input.Select')
+    until('clear confirmation again', lambda: xbmcgui.getCurrentWindowDialogId() == 10100)
+    consent_choice(True)
+    until('history cleared', lambda: cinematic() and not rows())
+    assert xbmc.Player().isPlayingVideo() and xbmc.getCondVisibility('Player.Paused')
+    monitor.waitForAbort(22)
+    assert not rows(), 'Active session must not repopulate cleared history'
+    rpc('Player.Stop', {'playerid': 1})
+    until('resumed video stopped', lambda: not xbmc.Player().isPlaying())
+    assert not rows()
+    nav('Collections'); rpc('Input.Select'); select_choice('Suggested for you')
+    until('local suggestion fallback', lambda: cinematic() and 'mode=suggested' in xbmc.getInfoLabel('Container.FolderPath'))
+    assert 'catalogue suggestions only' in xbmc.getInfoLabel('Container.PluginCategory')
+    capture('history-cleared-suggestions')
+    checks.append({'check': 'history-record-fresh-resolve-resume-back-pause-clear-suggestions',
+                   'synthetic_transport': True, 'cleared_session_stayed_empty': True})
 
 
 try:
@@ -307,7 +374,7 @@ try:
     focus('Synthetic Online Horizon'); capture('online-catalogue')
     online_path=xbmc.getInfoLabel('Container.FolderPath')
     assert xbmc.getInfoLabel('ListItem.Property(IsPlayable)').lower()=='false'
-    rpc('Input.Select')
+    poster_context_action('Movie details (Cinemeta)')
     until('online details',lambda:xbmcgui.getCurrentWindowDialogId()==12002)
     text=xbmc.getInfoLabel('Control.GetLabel(9)')
     assert 'Playback availability not checked' in text
@@ -356,6 +423,7 @@ try:
     assert events() == stopped_events
     checks.append({'check':'RD-fake-device-cancel-after-first-poll','real_provider_calls':False,'credentials_saved':False})
     torrentio_journey(online_path)
+    history_journey()
     nav('Local files'); rpc('Input.Select')
     until('return to local files',lambda:cinematic() and xbmc.getInfoLabel('Container.FolderPath')==local_path)
     rpc('Input.Down')
