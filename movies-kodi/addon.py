@@ -303,7 +303,11 @@ def online_details(query):
     if not current():
         return
     if selected == 0:
-        route = BASE + '?' + urlencode({'action': 'torrentio_sources', 'id': movie['id']})
+        params = {'action': 'torrentio_sources'}
+        if origin_window == 11120:
+            params['home'] = '1'
+        params['id'] = movie['id']
+        route = BASE + '?' + urlencode(params)
         if origin_window == 11120:
             xbmc.executebuiltin('ActivateWindow(Videos,' + route + ',return)')
         else:
@@ -433,6 +437,15 @@ def main():
         import secrets
         xbmcgui.Window(10000).setProperty('Aperture.Home.refresh', secrets.token_hex(8))
         return
+    if action == 'home_source_back':
+        origin = xbmc.getInfoLabel('Container.FolderPath')
+        prefix = BASE + '?action=torrentio_sources&home=1&'
+        if (xbmcgui.getCurrentWindowId() == 10025 and origin.startswith(prefix)
+                and not xbmc.Monitor().abortRequested()
+                and xbmc.getInfoLabel('Container.FolderPath') == origin
+                and xbmcgui.getCurrentWindowId() == 10025):
+            xbmc.executebuiltin('ReplaceWindow(1120)')
+        return
     if action == 'home_sources':
         import re
         origin = xbmcgui.getCurrentWindowId()
@@ -441,7 +454,10 @@ def main():
         if (origin != 11120 or not re.fullmatch(r'tt[0-9]{5,12}', identifier)
                 or resume not in ('0', '1')):
             return
-        params = {'action': 'torrentio_sources', 'id': identifier}
+        # `return` sets Videos' directory root, not its previous window. Kodi
+        # trims an already-visited Videos ID from history; tag this entry so the
+        # skin can return to Movies home without retaining a source Back loop.
+        params = {'action': 'torrentio_sources', 'home': '1', 'id': identifier}
         if resume == '1':
             params['resume'] = '1'
         if not xbmc.Monitor().abortRequested() and xbmcgui.getCurrentWindowId() == origin:

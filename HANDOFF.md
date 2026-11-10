@@ -1,5 +1,19 @@
 # Aperture integration handoff
 
+## PR32 native source Back — 2026-11-10 UTC
+
+Owner: delegated navigation-fix agent; parent owns review/push. Base `ea3276a`.
+READY for review; exact-head native gate remains. Run42820458960 proves Videos
+history collision, not input timing: Kodi truncates11120 when reactivating an
+already-visited10025, and `return` only sets the directory root. Home sources
+now carry a local return marker; scoped inherited-control Back + guarded
+ReplaceWindow returns11120 without a source/home loop. Both assembly paths wired;
+row identity/resume/no-resolution/nonmodal behavior retained. Native focus/row
+assertions strengthened, no expected-return weakening or delays. Regression
+RED→GREEN;886 full offline tests and complete ZIP assembly pass. Native runtime
+unavailable locally; no push/deployment/live Kodi/profile/account actions.
+[Root cause, source references, verification and rollback](docs/movies-source-back.md).
+
 ## PR32 native home keyboard CI — local candidate, 2026-11-10 UTC
 
 Owner: delegated CI-fix agent; parent owns review/push. Base `add9d428`.

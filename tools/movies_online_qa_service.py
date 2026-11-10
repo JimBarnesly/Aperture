@@ -496,6 +496,10 @@ def home_source_journey():
         rpc('Input.Back')
         until('home-source-directory-cancel', lambda: xbmcgui.getCurrentWindowId() == 11120
               and not xbmc.getCondVisibility('System.HasVisibleModalDialog'))
+        assert xbmc.getCondVisibility('Control.HasFocus(%d)' % button)
+        until('source return row settled', lambda: not xbmc.getCondVisibility('Container(%d).IsUpdating' % row))
+        assert xbmc.getInfoLabel('Container(%d).ListItem.Property(Aperture.MovieID)' % row) == identifier
+        assert xbmc.getInfoLabel('Container(%d).ListItem.Property(Aperture.SourceResume)' % row) == ('1' if row == 730 else '0')
         assert events().count('torrentio-resolve') == before
         assert not xbmc.Player().isPlaying()
     checks.append({'check': 'home-source-directory-cancel', 'no_resolution_on_cancel': True})

@@ -133,6 +133,11 @@ if [ "$BASELINE" -eq 0 ]; then
   MUSIC_OSD_SHA=8cd76a3fe091a9a359d723cd00417d7ddaf3d2d09a87f754593fad2711d54c3c
   printf '%s  %s\n' "$MUSIC_OSD_SHA" "$SOURCE_DIR/skin/xml/MusicOSD.xml" | sha256sum -c - >/dev/null || fail 'MusicOSD.xml integrity check failed'
   cp "$SOURCE_DIR/skin/xml/MusicOSD.xml" "$TMP/xml/MusicOSD.xml"
+  if command -v python3 >/dev/null 2>&1; then
+    python3 "$SOURCE_DIR/tools/movie_source_return.py" "$TMP"
+  else
+    printf 'Python 3 unavailable: Movies source-return integration unavailable; install the complete ZIP.\n'
+  fi
   cp -R "$SOURCE_DIR/skin/media/." "$TMP/media/"
   mkdir -p "$TMP/licenses"
   cp -R "$SOURCE_DIR/skin/licenses/." "$TMP/licenses/"

@@ -133,7 +133,7 @@ class HomeTests(unittest.TestCase):
                 trace = []
                 c,e,d,x,b = self.run_plugin([], query='?action=home_sources&id=' + ident + '&resume=' + resume,
                     window_ids=windows, abort=abort, http_trace=trace)
-                route = 'plugin://plugin.video.aperture.movies/?action=torrentio_sources&id=tt1234567'
+                route = 'plugin://plugin.video.aperture.movies/?action=torrentio_sources&home=1&id=tt1234567'
                 if resume == '1': route += '&resume=1'
                 self.assertEqual(b, ['ActivateWindow(Videos,' + route + ',return)'] if allowed else [])
                 self.assertEqual((c,e,d,x,trace), ([],[],[],[],[]),
@@ -353,7 +353,7 @@ class HomeTests(unittest.TestCase):
         c,e,d,x,b = self.run_plugin([], query='?action=online_details&id=tt1234567',
             window_ids=[11120], folder_paths=[''], selection=0, http_trace=trace, select_trace=menus,
             catalog_payload={'meta': {'id': 'tt1234567', 'name': 'Movie'}})
-        self.assertEqual(b, ['ActivateWindow(Videos,plugin://plugin.video.aperture.movies/?action=torrentio_sources&id=tt1234567,return)'])
+        self.assertEqual(b, ['ActivateWindow(Videos,plugin://plugin.video.aperture.movies/?action=torrentio_sources&home=1&id=tt1234567,return)'])
         self.assertEqual(menus[0][1][0], 'Choose source')
         self.assertEqual((c,e,x), ([],[],[]))
         self.assertEqual(len(trace), 1)

@@ -56,7 +56,8 @@ class TorrentioUITests(unittest.TestCase):
         source = t.Source('private-url', 'Example 1998 · 1080p · content unknown', 'one')
         self.client.streams.return_value = [source]
         self.gui.DialogProgress.reset_mock()
-        self.run_ui({'action': ['torrentio_sources'], 'id': ['tt1234567'], 'resume': ['1']})
+        self.run_ui({'action': ['torrentio_sources'], 'home': ['1'], 'id': ['tt1234567'], 'resume': ['1']})
+        self.client.streams.assert_called_once_with('tt1234567')
         self.dialog.select.assert_not_called()
         self.gui.DialogProgress.assert_not_called()
         self.client.playback.assert_not_called()
