@@ -66,7 +66,7 @@ def run(query, profile, base, handle):
             identifier = query.get('id', [''])[0]
             if not isinstance(identifier, str) or not re.fullmatch(r'tt[0-9]{7,10}', identifier):
                 raise ProviderError()
-            if not consent('Find streams with Torrentio?', 'Send this movie ID and your saved RD token to Torrentio? No P2P. Results do not prove rights, availability or cache status. Only use content you may access.'):
+            if not current():
                 return
             with connected_client() as client:
                 entries = client.streams(identifier)
@@ -78,12 +78,14 @@ def run(query, profile, base, handle):
             selected = dialog.select('Choose a source · availability unverified', [str(i + 1) + '. ' + entry.label for i, entry in enumerate(entries)])
             if selected < 0 or selected >= len(entries) or not current():
                 return
-            if not consent('Play selected source?', 'Torrentio may add RD history or queue a transfer and use traffic. Kodi may log the final signed URL. Only play content you have permission to access. Continue?'):
+            if not consent('Play selected source?', 'Torrentio may add RD history or queue a transfer and use traffic. Kodi may log the final signed URL. Continue?'):
                 return
             with connected_client() as client:
                 path = client.playback(identifier, entries[selected].id, cancelled=lambda: not current())
             if current():
-                xbmc.Player().play(path)
+                item = xbmcgui.ListItem(path=path)
+                item.getVideoInfoTag().setMediaType('movie')
+                xbmc.Player().play(path, item)
             return
         if action != 'torrentio_setup':
             raise ProviderError()

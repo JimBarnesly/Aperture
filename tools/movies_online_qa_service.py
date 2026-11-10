@@ -246,9 +246,7 @@ def torrentio_journey(online_path):
         focus('Synthetic Online Horizon'); rpc('Input.Select')
         until('search result details', lambda: xbmcgui.getCurrentWindowDialogId() == 12002)
         movie_actions('Find streams (Torrentio)')
-        until('stream lookup consent', lambda: xbmcgui.getCurrentWindowDialogId() == 10100
-              and xbmc.getInfoLabel('Control.GetLabel(1)') == 'Find streams with Torrentio?')
-        consent_choice(True)
+
         until('Choose a source', lambda: xbmcgui.getCurrentWindowDialogId() == 12000
               and 'Choose a source' in xbmc.getInfoLabel('Control.GetLabel(1)'))
         source = xbmc.getInfoLabel('System.CurrentControl')
@@ -263,7 +261,7 @@ def torrentio_journey(online_path):
             until('Play selected source?', lambda: xbmcgui.getCurrentWindowDialogId() == 10100
                   and xbmc.getInfoLabel('Control.GetLabel(1)') == 'Play selected source?')
             text = xbmc.getInfoLabel('Control.GetLabel(9)')
-            assert 'queue a transfer' in text and 'permission' in text
+            assert 'queue a transfer' in text and 'traffic' in text and 'permission' not in text
             capture('torrentio-play-consent-'+decision)
             consent_choice(decision == 'play')
         if decision != 'play':

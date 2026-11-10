@@ -339,24 +339,38 @@ class TorrentioUITests(unittest.TestCase):
         self.assertEqual(self.client.mock_calls, [])
         self.assertNotIn(TOKEN, repr(self.dialog.mock_calls))
 
-    def test_find_requires_consent_and_explicit_selection_then_refetches(self):
+    def test_configured_find_needs_no_repeat_sharing_consent(self):
         self.connect()
         source = Mock(id='a' * 64, label='Real-Debrid · 1080p')
         self.client.streams.return_value = [source]
         query = {'action': ['torrentio_find'], 'id': ['tt1234567']}
         self.run_ui(query)
-        self.client.streams.assert_not_called()
-        self.dialog.yesno.return_value = True
-        self.run_ui(query)
         self.client.streams.assert_called_once_with('tt1234567')
-        self.client.playback.assert_not_called()
+        self.client.playback.assert_not_called()  # Cancel in source picker
+        self.dialog.yesno.assert_not_called()
+        self.dialog.yesno.return_value = True
         self.dialog.select.return_value = 0
         self.client.playback.return_value = 'https://seed.download.real-debrid.com/file.mkv|redirect-limit=0'
         self.run_ui(query)
         self.assertEqual(self.client.playback.call_args.args, ('tt1234567', 'a' * 64))
         self.assertIn('cancelled', self.client.playback.call_args.kwargs)
         self.xbmc.Player.return_value.play.assert_called_once()
+        self.gui.ListItem.return_value.getVideoInfoTag.return_value.setMediaType.assert_called_once_with('movie')
+        self.assertIs(self.xbmc.Player.return_value.play.call_args.args[1], self.gui.ListItem.return_value)
         self.assertNotIn(TOKEN, repr(self.xbmc.mock_calls))
+
+    def test_play_retains_account_effect_confirmation_without_rights_warning(self):
+        self.connect()
+        self.client.streams.return_value = [Mock(id='a' * 64, label='Real-Debrid')]
+        self.dialog.select.return_value = 0
+        self.run_ui({'action': ['torrentio_find'], 'id': ['tt1234567']})
+        self.client.playback.assert_not_called()
+        self.dialog.yesno.assert_called_once()
+        message = self.dialog.yesno.call_args.args[1]
+        for text in ('history', 'transfer', 'traffic', 'signed URL'):
+            self.assertIn(text, message)
+        for text in ('permission', 'rights', 'Only play', 'Only use'):
+            self.assertNotIn(text, message)
 
     def test_stale_navigation_or_cancel_prevents_network(self):
         self.connect()

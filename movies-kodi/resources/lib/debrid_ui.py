@@ -23,6 +23,7 @@ def run(query, addon, profile, base, handle):
                 page = int(query.get('page', ['1'])[0])
                 path = client.playback(item_id, page)
                 item = xbmcgui.ListItem(path=path)
+                item.getVideoInfoTag().setMediaType('movie')
                 xbmcplugin.setResolvedUrl(handle, True, item)
                 return
             if directory:
@@ -67,7 +68,7 @@ def run(query, addon, profile, base, handle):
                 raise DebridError('invalid')
             origin = xbmc.getInfoLabel('Container.FolderPath')
             connected = store.load() is not None
-            choices = (['Browse existing downloads', 'Play a link I am authorized to use', 'Disconnect from this profile']
+            choices = (['Browse existing downloads', 'Play an HTTPS link', 'Disconnect from this profile']
                        if connected else ['Connect Real-Debrid', 'Application client ID (optional override)'])
             choices.append('Set up online playback (Torrentio)')
             selected = dialog.select('Movie sources: Real-Debrid' + (' connected' if connected else ' not connected'), choices)
@@ -78,13 +79,15 @@ def run(query, addon, profile, base, handle):
             elif connected and selected == 0:
                 navigate = True
             elif connected and selected == 1:
-                link = dialog.input('HTTPS link you are authorized to play')
-                if not link or not dialog.yesno('Resolve with Real-Debrid?', 'Send this link to Real-Debrid and play it? This can use your account traffic and add a download-history entry. Only use content you have permission to access.'):
+                link = dialog.input('HTTPS link to play')
+                if not link or not dialog.yesno('Resolve with Real-Debrid?', 'Send this link to Real-Debrid and play it? This can use your account traffic and add a download-history entry.'):
                     return
                 if xbmc.getInfoLabel('Container.FolderPath') != origin:
                     return
                 path = client.resolve_link(link.strip())
-                xbmc.Player().play(path)
+                item = xbmcgui.ListItem(path=path)
+                item.getVideoInfoTag().setMediaType('movie')
+                xbmc.Player().play(path, item)
             elif connected and selected == 2:
                 if dialog.yesno('Disconnect Real-Debrid?', 'Remove saved credentials from this Kodi profile? To revoke the server-side grant too, remove the authorized application in your Real-Debrid account applications.'):
                     store.clear()

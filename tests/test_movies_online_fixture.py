@@ -91,6 +91,11 @@ class OnlineTransportTests(unittest.TestCase):
 
 
 class OnlineHarnessTests(unittest.TestCase):
+    def test_native_journey_no_longer_waits_for_removed_rights_prompt(self):
+        source = (ROOT / 'tools/movies_online_qa_service.py').read_text()
+        self.assertNotIn('Find streams with Torrentio?', source)
+        self.assertIn("'permission' not in text", source)
+
     def test_native_journey_requires_wizard_search_source_and_real_player(self):
         tree = ast.parse((ROOT / 'tools/movies_online_qa_service.py').read_text())
         functions = {n.name: n for n in tree.body if isinstance(n, ast.FunctionDef)}

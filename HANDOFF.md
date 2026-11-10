@@ -1,5 +1,18 @@
 # Aperture integration handoff
 
+## Movies playback UX — local bounded candidate
+
+Based on deployed Movies source `9d99d02117f025e36325a6c76f4d197ec4abb46a`,
+verified against all 14 installed source files before branching. Branch
+`feat/movies-playback-ux` removes repeated rights wording, retains provider-effect
+consent, and adds a separate movie-video fullscreen-exit pause service. Offline
+regression: 747 tests pass (baseline 734). See
+[exact flow, TDD evidence and acceptance gates](docs/movies-playback-ux.md).
+No deployment, push, Kodi/account actions or protected media changes. Native
+acceptance and parent independent review pending. Automatic best-source play,
+one-time automatic-play effect preference, history and suggestions belong to the
+parent's next integration slice, not this candidate.
+
 Updated: 2026-11-09. Public project status only.
 
 ## Torrentio development slice (local only)

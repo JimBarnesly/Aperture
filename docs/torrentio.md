@@ -14,8 +14,10 @@
    An existing RD sign-in is reused **only after both consent screens**.
 4. Open Discover and select a movie. Read its metadata, then choose the visible
    **Find streams (Torrentio)** action. The context-menu shortcut remains available.
-   Confirm search, choose a source, then separately confirm Play. Merely browsing
-   metadata never starts a Torrentio request.
+   With provider opt-in saved, Find streams starts lookup without a repeated
+   rights/sharing warning. Choose a source, then confirm the account-effect Play
+   prompt (history, transfers, traffic and possible signed-URL logs, not a rights
+   declaration). Merely browsing metadata never starts a Torrentio request.
 
 This is **not token-free**: only manual credential copying is eliminated. Native
 setup saves the marker `rd-oauth-v1` in `torrentio-private/connection`, not another
@@ -70,7 +72,7 @@ file 0600), without a provider request. Original files and backups are not delet
   rotating credential**. Before resolution, sources are re-fetched using the
   current token; selection survives rotation but a changed identity requires a
   new selection. No secret routes, disk source caches or logged raw errors.
-- Play warns that Torrentio's resolver GET may add history, queue transfers and
+- The retained Play confirmation warns that Torrentio's resolver GET may add history, queue transfers and
   consume traffic. Exactly one resolver request is made; there is no automatic
   mutation retry or polling of queued transfers. Known downloading/access/limit/
   archive/size/opening/removal/unavailable/error-video outcomes produce distinct

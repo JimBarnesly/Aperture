@@ -373,6 +373,7 @@ def main():
                 for label, action in [('Choose local poster...', 'choose_poster'),
                                       ('Use automatic poster', 'reset_poster')]])
             li.setInfo('video', {k: item[k] for k in ('title','year','plot','genre','rating','playcount') if item.get(k) is not None})
+            li.getVideoInfoTag().setMediaType('movie')
             if item.get('runtime'):
                 li.getVideoInfoTag().setDuration(int(item['runtime']))
             li.setProperty('IsPlayable', 'true')

@@ -86,6 +86,9 @@ class PluginTests(unittest.TestCase):
         self.assertIn('action=online_details',e[0][1])
         self.assertNotIn('https://example.org/film',repr(e))
         self.assertIn('start=1',e[-1][1])
+    def test_local_playable_is_tagged_as_movie_for_pause_policy(self):
+        c,e,d,x,b=self.run_plugin([{'file':'/movies/','label':'Movies'}],files=[{'file':'/movies/a.mkv','filetype':'file','label':'A'}])
+        self.assertEqual(getattr(e[0][2], 'media_type', None), 'movie')
     def test_online_movie_has_explicit_torrentio_action_without_changing_default(self):
         c,e,d,x,b=self.run_plugin([],query='?mode=online',catalog_payload={'metas':[{'id':'tt1234567','name':'Example'}]})
         self.assertIn(('Find streams (Torrentio)', 'RunPlugin(plugin://plugin.video.aperture.movies/?action=torrentio_find&id=tt1234567)'), e[0][2].context)
