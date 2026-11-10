@@ -70,8 +70,18 @@ private storage and the remaining live-provider acceptance requirements.
 
 [Cinemeta's official public manifest](https://v3-cinemeta.strem.io/manifest.json)
 advertises movie catalogue and metadata resources, not streams. Requests use
-fixed HTTPS endpoints with an 8-second socket timeout, a 2 MiB response limit,
-no redirects, no credentials and no cookies. Searches send only explicitly
+fixed HTTPS endpoints with an 8-second socket timeout per connection (not a
+whole-operation deadline), a 2 MiB JSON response limit, no credentials and no
+cookies. One HTTP 307 hop is allowed only from
+`https://v3-cinemeta.strem.io/catalog/movie/{collection}/skip={offset}[&genre={genre}].json`
+to `https://cinemeta-catalogs.strem.io/{collection}` plus the **identical** original
+path. Collections are `top` and `imdbRating`, offsets are canonical integers
+0–10000, and genres come from the existing fixed list. Raw Location must match
+exactly: no arbitrary host/path, relative URL, credentials, explicit port, query,
+fragment, control/header injection, second hop or other redirect status. Redirect
+bodies are closed without reading; only fresh Accept/User-Agent headers are sent.
+Search and details currently return directly from the original host and their
+redirects remain refused. Searches send only explicitly
 entered search text and selected filters; details send the selected IMDb ID.
 Kodi can fetch returned artwork from images.metahub.space or image.tmdb.org.
 No local filenames, source paths, library entries or watch history are uploaded.
@@ -85,8 +95,11 @@ changes existing local poster choices. Provider failures are redacted.
 ### Verification
 
 Focused tests cover catalogue query encoding/bounds, malformed/oversized data,
-redirect refusal, artwork host restrictions, details identity, paging, cancellation,
-stale navigation and metadata-only cards. A live public read-only search for
+strict one-hop catalogue redirects, rejected redirect/header/path attacks,
+artwork host restrictions, details identity, paging, cancellation,
+stale navigation and metadata-only cards. See the
+[Cinemeta redirect RED/GREEN and public verification](cinemeta-redirect-tdd.md)
+for the 2026-11-10 fix. A live public read-only search for
 Metropolis returned 19 records and the matching tt0017136 details/poster on
 2026-11-08. This proves the service/schema at that time, not future uptime.
 The online screens still need native Kodi/controller visual acceptance; existing

@@ -14,16 +14,43 @@ COLLECTIONS = (('top', 'Popular online'), ('imdbRating', 'Featured online'))
 class CatalogError(Exception):
     pass
 
-class NoRedirect(HTTPRedirectHandler):
+class CatalogRedirect(HTTPRedirectHandler):
+    """Allow one observed 307 route; all other redirects fail closed."""
     def redirect_request(self, *args, **kwargs):
         raise CatalogError('Catalogue redirect refused')
 
+    def http_error_302(self, req, fp, code, msg, headers):
+        fp.close()
+        raise CatalogError('Catalogue redirect refused')
+
+    http_error_301 = http_error_303 = http_error_308 = http_error_302
+
+    def http_error_307(self, req, fp, code, msg, headers):
+        # Validate the raw Location, before urllib can normalize it. Never drain
+        # a redirect body: it is untrusted and could exceed the response limit.
+        fp.close()
+        route = re.fullmatch(
+            re.escape(ORIGIN) + r'(/catalog/movie/(top|imdbRating)/'
+            r'skip=(0|[1-9][0-9]{0,4})(?:&genre=([A-Za-z-]+))?\.json)',
+            req.full_url)
+        if (not route or int(route[3]) > 10000
+                or (route[4] is not None and route[4] not in GENRES)
+                or req.get_method() != 'GET'):
+            raise CatalogError('Catalogue redirect refused')
+        target = 'https://cinemeta-catalogs.strem.io/' + route[2] + route[1]
+        if headers.get_all('Location') != [target]:
+            raise CatalogError('Catalogue redirect refused')
+        redirected = Request(target, headers={
+            'Accept': 'application/json', 'User-Agent': 'ApertureMovies/0.4'})
+        # Only the original host matches above: a second hop/loop cannot pass.
+        return self.parent.open(redirected, timeout=req.timeout)
+
 
 def fetch(path):
-    """Fixed HTTPS origin, no cookies/credentials, bounded time and response size."""
+    """Fixed HTTPS routes, no credentials, 8s socket timeout and 2 MiB limit."""
     try:
         request = Request(ORIGIN + path, headers={'Accept': 'application/json', 'User-Agent': 'ApertureMovies/0.4'})
-        with build_opener(NoRedirect).open(request, timeout=8) as response:
+        with build_opener(CatalogRedirect).open(request, timeout=8) as response:
             data = response.read(MAX_BYTES + 1)
         if len(data) > MAX_BYTES:
             raise ValueError('Oversized response')
