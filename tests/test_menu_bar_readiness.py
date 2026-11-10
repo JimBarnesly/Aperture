@@ -5,6 +5,23 @@ from types import SimpleNamespace
 import unittest
 
 class MenuBarReadiness(unittest.TestCase):
+ def test_pause_setup_is_idempotent_for_movie_already_paused_on_home(self):
+  source=Path(__file__).resolve().parents[1]/'tools/menus_qa_service.py'
+  tree=ast.parse(source.read_text())
+  loop=next(n for n in tree.body if isinstance(n,ast.Try))
+  loop=next(n for n in loop.body if isinstance(n,ast.For) and ast.unparse(n.target)=='(kind, title)')
+  pause=next(n for n in loop.body if isinstance(n,ast.Expr) and isinstance(n.value,ast.Call)
+             and (ast.unparse(n.value.func)=='player.pause' or (ast.unparse(n.value.func)=='rpc' and isinstance(n.value.args[0],ast.Constant) and n.value.args[0].value=='Player.PlayPause')))
+  for initially_paused in (False,True):
+   state={'paused':initially_paused}
+   def rpc(method,params):
+    self.assertEqual(method,'Player.PlayPause')
+    self.assertEqual(params,{'playerid':1,'play':False})
+    state['paused']=not params['play']
+   def toggle():state['paused']=not state['paused']
+   exec(compile(ast.Module(body=[pause],type_ignores=[]),str(source),'exec'),
+        {'rpc':rpc,'kind':'video','player':SimpleNamespace(pause=toggle)})
+   self.assertTrue(state['paused'],'QA pause must not resume an auto-paused movie')
  def run_helper(self, blocked=lambda t:False, moves=True, focus_delay=0):
   source=Path(__file__).resolve().parents[1]/'tools/menus_qa_service.py'
   tree=ast.parse(source.read_text())

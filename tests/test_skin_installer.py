@@ -39,6 +39,13 @@ class SkinInstallerTests(unittest.TestCase):
         (self.target/'addon.xml').write_text('<addon id="skin.aperture" version="4.0.0"/>')
         (self.target/'keep.txt').write_text('old skin')
 
+    def test_installer_wires_short_fullscreen_exit_without_replacing_controls(self):
+        (self.skin/'xml/VideoFullScreen.xml').write_text('<window><controls><control id="99" type="group"/></controls></window>')
+        r=self.run_install();self.assertEqual(r.returncode,0,r.stderr)
+        root=ET.parse(self.target/'xml/VideoFullScreen.xml').getroot()
+        self.assertIsNotNone(root.find('onunload'), 'Source installs need the same native exit latch as ZIP builds')
+        self.assertIsNotNone(root.find('./controls/control[@id="99"]'))
+
     def test_installs_versioned_complete_skin(self):
         r=self.run_install();self.assertEqual(r.returncode,0,r.stderr)
         self.assertEqual(ET.parse(self.target/'addon.xml').getroot().get('version'),'4.0.1~rc1')

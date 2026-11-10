@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 class MoviePlaybackServiceTests(unittest.TestCase):
     def setUp(self):
         self.xbmc, self.gui = Mock(), Mock()
+        self.gui.Window.return_value.getProperty.return_value = ''
         self.window = 12005  # Fullscreen video, not the topmost dialog.
         self.video, self.movie, self.playing = True, True, True
         self.gui.getCurrentWindowId.side_effect = lambda: self.window
@@ -32,6 +33,51 @@ class MoviePlaybackServiceTests(unittest.TestCase):
         factory = patch.object(self.service, 'history_monitor')
         factory.start()
         self.addCleanup(factory.stop)
+
+    def test_native_exit_signal_pauses_even_when_fullscreen_falls_between_polls(self):
+        # CI: fullscreen init 11:08:05.259, deinit .287, polls every 100 ms.
+        home = self.gui.Window.return_value
+        home.getProperty.return_value = 'resume-session'
+        tag = self.xbmc.Player.return_value.getVideoInfoTag.return_value
+        tag.getUniqueID.return_value = 'resume-session'
+        self.window = 10025
+        self.guard.update()
+        self.xbmc.executeJSONRPC.assert_called_once()
+        home.clearProperty.assert_called_once_with('Aperture.Movies.FullscreenExit')
+
+    def test_native_exit_signal_is_consumed_without_pausing_replacement_or_transient(self):
+        for token, current, window, playing in (
+                ('old-session', 'new-session', 10025, True),
+                ('same-session', 'same-session', 12901, True),
+                ('same-session', 'same-session', 10025, False)):
+            with self.subTest(token=token, window=window, playing=playing):
+                self.gui.Window.return_value.getProperty.return_value = token
+                self.xbmc.Player.return_value.getVideoInfoTag.return_value.getUniqueID.return_value = current
+                self.window, self.playing = window, playing
+                self.guard.update()
+        self.xbmc.executeJSONRPC.assert_not_called()
+        self.assertEqual(self.gui.Window.return_value.clearProperty.call_count, 3)
+
+    def test_native_exit_signal_is_one_shot_even_if_pause_state_lags(self):
+        home = self.gui.Window.return_value
+        home.getProperty.side_effect = ['session', '']
+        self.xbmc.Player.return_value.getVideoInfoTag.return_value.getUniqueID.return_value = 'session'
+        self.window = 10025
+        self.guard.update()
+        self.guard.update()
+        self.xbmc.executeJSONRPC.assert_called_once()
+
+    def test_exit_arriving_mid_sample_is_retained_until_browser_sample(self):
+        home = self.gui.Window.return_value
+        home.getProperty.return_value = 'session'
+        self.xbmc.Player.return_value.getVideoInfoTag.return_value.getUniqueID.return_value = 'session'
+        # Native unload can publish after the service already read window 12005.
+        self.guard.update()
+        home.clearProperty.assert_not_called()
+        self.window = 10025
+        self.guard.update()
+        home.clearProperty.assert_called_once_with('Aperture.Movies.FullscreenExit')
+        self.xbmc.executeJSONRPC.assert_called_once()
 
     def test_owner_change_during_pause_decision_does_not_pause_replacement(self):
         tag = self.xbmc.Player.return_value.getVideoInfoTag.return_value

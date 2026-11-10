@@ -1,5 +1,19 @@
 # Aperture integration handoff
 
+## PR31 native pause failures — local candidate, 2026-11-10 UTC
+
+Owner: delegated CI-fix agent; parent review/publish owner. Base `c857dee`.
+READY for review, BLOCKED on exact-head native rerun (not pushed).
+Public artifacts prove menus toggled an auto-paused movie back on; online Resume
+spent only 28 ms fullscreen, below the 100 ms service poll. QA now uses explicit
+pause. Rebuilt skin latches native fullscreen exit with the opaque session; Movies
+consumes it with existing movie/browser/ownership gates. Requires skin + Movies,
+not a Movies-only update. Immediate Back acceptance retained and transient/return
+checks expanded. **835 offline tests pass**, real scratch skin ZIP build passes.
+No device/accounts/profiles/deployment changes; existing live revision untouched.
+Native GREEN not claimed (Xvfb/PulseAudio/pactl missing). Parent must review and run
+both workflows before lifting the CI gate. [Evidence and limits](docs/movies-native-ci-fix.md).
+
 ## Autoplay lifecycle review — local fixes
 
 Reviewed against history-integrated `7fbcf66ade72cf1ed7c69eedb319062adabcea08`.

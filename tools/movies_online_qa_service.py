@@ -308,6 +308,31 @@ def history_journey():
     until('fullscreen resume', lambda: xbmcgui.getCurrentWindowId() == 12005)
     rpc('Input.Back')
     until('Back pauses movie', lambda: cinematic() and xbmc.getCondVisibility('Player.Paused'))
+    # Keep the immediate Back above: a delay would mask the missed 28 ms exit.
+    session = xbmc.Player().getVideoInfoTag().getUniqueID('aperture_session')
+    xbmc.executebuiltin('ActivateWindow(fullscreenvideo)')
+    until('return fullscreen stays paused', lambda: xbmcgui.getCurrentWindowId() == 12005
+          and xbmc.getCondVisibility('Player.Paused'))
+    monitor.waitForAbort(.5)
+    assert xbmc.getCondVisibility('Player.Paused')
+    rpc('Player.PlayPause', {'playerid': 1, 'play': True})
+    until('explicit play after return', lambda: xbmc.getCondVisibility('Player.Playing'))
+    rpc('Input.ShowOSD')
+    until('video OSD visible', lambda: xbmc.getCondVisibility('Window.IsActive(videoosd)'))
+    monitor.waitForAbort(.5)
+    assert xbmc.getCondVisibility('Player.Playing')
+    rpc('Input.Back')
+    until('OSD dismissed without pause', lambda: xbmcgui.getCurrentWindowId() == 12005
+          and not xbmc.getCondVisibility('Window.IsActive(videoosd)')
+          and xbmc.getCondVisibility('Player.Playing'))
+    rpc('Player.Seek', {'playerid': 1, 'value': 'smallforward'})
+    until('seek keeps video playing', lambda: xbmcgui.getCurrentWindowId() == 12005
+          and xbmc.getCondVisibility('Player.Playing'))
+    monitor.waitForAbort(.5)
+    assert xbmc.getCondVisibility('Player.Playing')
+    assert xbmc.Player().getVideoInfoTag().getUniqueID('aperture_session') == session
+    rpc('Input.Back')
+    until('Back pauses after controls', lambda: cinematic() and xbmc.getCondVisibility('Player.Paused'))
     nav('Collections'); rpc('Input.Select'); select_choice('History')
     until('history directory', lambda: cinematic() and 'mode=history' in xbmc.getInfoLabel('Container.FolderPath'))
     rpc('Input.Down'); focus('Clear history'); rpc('Input.Select')

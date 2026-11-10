@@ -28,7 +28,16 @@ class MoviePauseOnExit:
         if not identity or identity != self.identity:
             self.was_fullscreen = False
         self.identity = identity
-        if (self.was_fullscreen and browsing and eligible
+        # The skin latches a short fullscreen exit with the opaque session ID.
+        # Consume once on exit even when ineligible/replaced. If unload races
+        # the initial window read, retain its signal for the browser sample.
+        home = xbmcgui.Window(10000)
+        exit_session = home.getProperty('Aperture.Movies.FullscreenExit')
+        if exit_session and not fullscreen:
+            home.clearProperty('Aperture.Movies.FullscreenExit')
+        exited = bool(exit_session and eligible and
+                      exit_session == self.player.getVideoInfoTag().getUniqueID('aperture_session'))
+        if ((self.was_fullscreen or exited) and browsing and eligible
                 and self.playback_identity() == identity):
             # Explicit false is idempotent; never toggle a paused player to play.
             xbmc.executeJSONRPC(json.dumps({

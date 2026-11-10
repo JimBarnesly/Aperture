@@ -96,6 +96,18 @@ class OnlineHarnessTests(unittest.TestCase):
         self.assertIn('240s', source, 'Online journey now includes a 22-second stale-write observation')
         self.assertIn('{1..2400}', source)
 
+    def test_history_acceptance_keeps_immediate_back_and_checks_transient_controls(self):
+        tree = ast.parse((ROOT / 'tools/movies_online_qa_service.py').read_text())
+        journey = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == 'history_journey')
+        source = ast.unparse(journey)
+        for evidence in ('Input.ShowOSD', 'Player.Seek', 'return fullscreen stays paused',
+                         'OSD dismissed without pause', 'Back pauses after controls'):
+            self.assertIn(evidence, source)
+        # Never hide the sub-poll exit by waiting after fullscreen becomes ready.
+        statements = journey.body
+        ready = next(i for i, n in enumerate(statements) if "until('fullscreen resume'" in ast.unparse(n))
+        self.assertEqual(ast.unparse(statements[ready + 1]), "rpc('Input.Back')")
+
     def test_native_history_journey_checks_record_resume_pause_clear_and_suggestions(self):
         tree = ast.parse((ROOT / 'tools/movies_online_qa_service.py').read_text())
         functions = {n.name: n for n in tree.body if isinstance(n, ast.FunctionDef)}

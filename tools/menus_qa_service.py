@@ -71,7 +71,8 @@ try:
   until('player title',lambda:xbmc.getInfoLabel('Player.Title')==title)
   focus_home_bar(home,bar_visible)
   shot('home-bar-'+kind)
-  player.pause();until('paused',lambda:xbmc.getCondVisibility('Player.Paused'))
+  # Movies may already be paused by leaving fullscreen; never toggle back on.
+  rpc('Player.PlayPause',{'playerid':0 if kind=='audio' else 1,'play':False});until('paused',lambda:xbmc.getCondVisibility('Player.Paused'))
   if not bar_visible():raise RuntimeError('Paused bar disappeared')
   shot('home-bar-'+kind+'-paused')
   rpc('Input.Select')
