@@ -1,5 +1,20 @@
 # Aperture integration handoff
 
+## PR32 native home keyboard CI — local candidate, 2026-11-10 UTC
+
+Owner: delegated CI-fix agent; parent owns review/push. Base `add9d428`.
+READY for review; native exact-head rerun pending. Run42818993595 artifacts prove
+Search opened once, then Kodi ignored the second Select during keyboard close.
+Removed `System.HasModalDialog` made QA's cancellation barrier pass early.
+Online QA now uses `System.HasVisibleModalDialog` and checks restored Search focus;
+same predicate corrected in native source-directory checks and settled navigation.
+Two regressions observed RED→GREEN;10 focused and880 full offline tests pass
+(loopback-only namespace). Product handlers/routes audited and unchanged: privacy,
+async identity/generation, source-choice/resume/history and immediate Back retained.
+No delay/retry/check weakening, push, deployment, live Kodi or account access.
+Native tools absent; parent must rerun exact-head CI before lifting gate.
+[Evidence, scope audit and rollback](docs/movies-home-ci-fix.md).
+
 ## Integrated home / manual sources — local candidate, 2026-11-10 UTC
 
 Owner: delegated async/integration agent; parent owns review/deployment.

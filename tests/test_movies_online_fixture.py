@@ -2,6 +2,7 @@
 import ast
 from pathlib import Path
 from types import SimpleNamespace
+from typing import Any
 import unittest
 from unittest.mock import Mock
 
@@ -91,6 +92,82 @@ class OnlineTransportTests(unittest.TestCase):
 
 
 class OnlineHarnessTests(unittest.TestCase):
+    def test_online_navigation_rejects_visible_closing_modals(self):
+        ns: dict[str, Any] = dict(xbmcgui=SimpleNamespace(getCurrentWindowId=lambda: 10025),
+                  xbmc=SimpleNamespace(getCondVisibility=lambda condition:
+                                       condition == 'System.HasVisibleModalDialog'))
+        exec(service_functions('settled'), ns)
+        self.assertFalse(ns['settled'](), 'Closing dialogs still consume input in Omega')
+        tree = ast.parse((ROOT / 'tools/movies_online_qa_service.py').read_text())
+        conditions = [n.args[0].value for n in ast.walk(tree)
+                      if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
+                      and n.func.attr == 'getCondVisibility' and n.args
+                      and isinstance(n.args[0], ast.Constant)]
+        self.assertNotIn('System.HasModalDialog', conditions,
+                         'Every online/home transition must use a supported Kodi condition')
+
+    def test_home_search_reopens_only_after_keyboard_close_and_focus_restore(self):
+        # Replay native run 42818993595: the removed HasModalDialog is false
+        # while the keyboard still owns input during its closing animation.
+        state: dict[str, Any] = dict(window=10000, keyboard=False, closing=False, now=0,
+                                    opens=0, cancels=0, focus='Movies')
+        inputs = []
+
+        class FinishedSearchChecks(Exception):
+            pass
+
+        def rpc(action):
+            inputs.append(action)
+            if state['closing']:
+                self.fail('Kodi ignores input while the modal closing animation runs')
+            if action == 'Input.Select':
+                if state['window'] == 10000:
+                    state.update(window=11120, focus='Search')
+                else:
+                    self.assertEqual(state['focus'], 'Search')
+                    state.update(keyboard=True, focus='Keyboard')
+                    state['opens'] += 1
+            elif action == 'Input.Back':
+                state.update(keyboard=False, closing=True)
+                state['cancels'] += 1
+            elif action == 'Input.Down':
+                self.assertEqual(state['focus'], 'Search')
+                raise FinishedSearchChecks()
+
+        def condition(expression):
+            return {
+                'Window.IsActive(virtualkeyboard)': state['keyboard'],
+                'System.HasVisibleModalDialog': state['keyboard'] or state['closing'],
+                'Control.HasFocus(720)': state['focus'] == 'Search',
+                # Unsupported Omega conditions, including HasModalDialog, are false.
+            }.get(expression, False)
+
+        def wait(_):
+            state['now'] += .15
+            if state['closing']:
+                state.update(closing=False, focus='Search')
+            return False
+
+        def label(key):
+            return {'System.CurrentControl': state['focus'],
+                    'Container(730).NumItems': '0',
+                    'Container(731).NumItems': '1',
+                    'Container(732).NumItems': '1'}.get(key, '')
+
+        ns = dict(rpc=rpc, capture=Mock(), json=__import__('json'),
+                  time=SimpleNamespace(monotonic=lambda: state['now']),
+                  monitor=SimpleNamespace(waitForAbort=wait),
+                  xbmc=SimpleNamespace(getInfoLabel=label, getCondVisibility=condition,
+                                       executebuiltin=Mock()),
+                  xbmcgui=SimpleNamespace(getCurrentWindowId=lambda: state['window'],
+                                         getCurrentWindowDialogId=lambda: 9999))
+        exec(service_functions('until', 'movies_home_journey'), ns)
+        with self.assertRaises(FinishedSearchChecks):
+            ns['movies_home_journey']()
+        self.assertEqual((state['opens'], state['cancels']), (2, 2))
+        self.assertEqual(inputs, ['Input.Select', 'Input.Select', 'Input.Back',
+                                  'Input.Select', 'Input.Back', 'Input.Down'])
+
     def test_home_source_journey_uses_row_buttons_and_native_directory(self):
         tree = ast.parse((ROOT / 'tools/movies_online_qa_service.py').read_text())
         functions = {n.name: n for n in tree.body if isinstance(n, ast.FunctionDef)}

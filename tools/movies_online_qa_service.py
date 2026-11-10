@@ -47,7 +47,7 @@ def capture(name):
 
 
 def settled():
-    return xbmcgui.getCurrentWindowId()==10025 and not xbmc.getCondVisibility('System.HasModalDialog')
+    return xbmcgui.getCurrentWindowId()==10025 and not xbmc.getCondVisibility('System.HasVisibleModalDialog')
 
 
 def cinematic():
@@ -386,8 +386,11 @@ def movies_home_journey():
         rpc('Input.Select')
         until('home search keyboard', lambda: xbmc.getCondVisibility('Window.IsActive(virtualkeyboard)'))
         rpc('Input.Back')
+        # Omega removed System.HasModalDialog. Visible includes the closing
+        # animation, when HandleAction still consumes (ignores) the next key.
         until('home-search-cancel', lambda: xbmcgui.getCurrentWindowId() == 11120
-              and not xbmc.getCondVisibility('System.HasModalDialog'))
+              and not xbmc.getCondVisibility('System.HasVisibleModalDialog')
+              and xbmc.getCondVisibility('Control.HasFocus(720)'))
     rpc('Input.Down')
     until('empty continue skipped', lambda: xbmc.getCondVisibility('Control.HasFocus(731)'))
     rpc('Input.Down')
@@ -487,12 +490,12 @@ def home_source_journey():
         assert ('resume=1' in path) == (row == 730)
         assert xbmc.getInfoLabel('Container.Content') == 'files'
         assert not xbmc.getCondVisibility('Control.IsVisible(61)')
-        assert not xbmc.getCondVisibility('System.HasModalDialog')
+        assert not xbmc.getCondVisibility('System.HasVisibleModalDialog')
         assert events().count('torrentio-resolve') == before
         capture('home-source-directory-%d' % row)
         rpc('Input.Back')
         until('home-source-directory-cancel', lambda: xbmcgui.getCurrentWindowId() == 11120
-              and not xbmc.getCondVisibility('System.HasModalDialog'))
+              and not xbmc.getCondVisibility('System.HasVisibleModalDialog'))
         assert events().count('torrentio-resolve') == before
         assert not xbmc.Player().isPlaying()
     checks.append({'check': 'home-source-directory-cancel', 'no_resolution_on_cancel': True})
