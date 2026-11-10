@@ -325,7 +325,7 @@ def history_journey():
     until('OSD dismissed without pause', lambda: xbmcgui.getCurrentWindowId() == 12005
           and not xbmc.getCondVisibility('Window.IsActive(videoosd)')
           and xbmc.getCondVisibility('Player.Playing'))
-    rpc('Player.Seek', {'playerid': 1, 'value': 'smallforward'})
+    rpc('Player.Seek', {'playerid': 1, 'value': {'step': 'smallforward'}})
     until('seek keeps video playing', lambda: xbmcgui.getCurrentWindowId() == 12005
           and xbmc.getCondVisibility('Player.Playing'))
     monitor.waitForAbort(.5)
