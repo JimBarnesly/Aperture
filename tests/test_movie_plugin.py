@@ -9,7 +9,7 @@ class Item:
     def setArt(self,a):self.art=a
     def addContextMenuItems(self,a):self.context=a
     def setProperty(self,k,v):self.props[k]=v
-    def setInfo(self,*a):pass
+    def setInfo(self,kind,info):self.info=info
     def getVideoInfoTag(self):return self
     def setDuration(self,x):pass
     def setDbId(self,x):self.dbid=x
@@ -21,15 +21,20 @@ class PluginTests(unittest.TestCase):
         self.temporary=tempfile.TemporaryDirectory()
         self.profile=self.temporary.name
         self.addCleanup(self.temporary.cleanup)
-    def run_plugin(self,sources,query='',default='',files=None,fail=False,vfs_listing=None,vfs_exists=(),vfs_trace=None,folder_paths=None,busy_checks=0,view_trace=None,abort=False,picture="",movies=None,limits=None,search="",selection=-1,genres=None,catalog_payload=None,http_trace=None,categories=None,confirm=False,properties=None,on_wait=None):
+    def run_plugin(self,sources,query='',default='',files=None,fail=False,vfs_listing=None,vfs_exists=(),vfs_trace=None,folder_paths=None,busy_checks=0,view_trace=None,abort=False,picture="",movies=None,limits=None,search="",selection=-1,genres=None,catalog_payload=None,http_trace=None,categories=None,confirm=False,properties=None,on_wait=None,window_ids=None,catalog_payloads=None):
         calls=[]; entries=[]; dialogs=[]; ended=[]; builtins=[]
+        windows = iter(window_ids or [10025]); current_window = [10025]
+        def window_id():
+            current_window[0] = next(windows, current_window[0])
+            return current_window[0]
         properties = properties if properties is not None else {}
         window = types.SimpleNamespace(getProperty=lambda k:properties.get(k, ''),
             setProperty=properties.__setitem__, clearProperty=lambda k:properties.pop(k, None))
         categories = categories if categories is not None else []
+        payloads = iter(catalog_payloads) if catalog_payloads is not None else None
         def fetch(request, **kwargs):
             if http_trace is not None: http_trace.append(request.full_url)
-            return io.BytesIO(json.dumps(catalog_payload or {'metas': []}).encode())
+            return io.BytesIO(json.dumps(next(payloads) if payloads is not None else catalog_payload or {'metas': []}).encode())
         vfs_trace = vfs_trace if vfs_trace is not None else []
         def exists(path):
             vfs_trace.append(('exists', path))
@@ -71,7 +76,7 @@ class PluginTests(unittest.TestCase):
         mods={
             'xbmc':types.SimpleNamespace(executeJSONRPC=rpc,executebuiltin=builtins.append,log=lambda *a:None,LOGERROR=4,getSupportedMedia=lambda kind:'.avi|.mkv|.mp4',Monitor=Monitor,getInfoLabel=folder_path,getCondVisibility=condition),
             'xbmcaddon':types.SimpleNamespace(Addon=lambda:types.SimpleNamespace(getAddonInfo=lambda key:self.profile)),
-            'xbmcgui':types.SimpleNamespace(Window=lambda *a:window,ListItem=Item,Dialog=lambda:dialog,getCurrentWindowId=lambda:10025),
+            'xbmcgui':types.SimpleNamespace(Window=lambda *a:window,ListItem=Item,Dialog=lambda:dialog,getCurrentWindowId=window_id),
             'xbmcplugin':types.SimpleNamespace(setContent=lambda *a:None,setPluginCategory=lambda *a:categories.append(a),endOfDirectory=lambda *a,**kw:ended.append(kw),addDirectoryItem=lambda *a:entries.append(a)),
             'xbmcvfs':types.SimpleNamespace(translatePath=lambda p:p,File=F,exists=exists,listdir=listdir),
         }

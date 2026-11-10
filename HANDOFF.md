@@ -1,5 +1,22 @@
 # Aperture integration handoff
 
+## Online-first Movies home — local candidate, 2026-11-10 UTC
+
+Owner: delegated Movies-home agent; parent owns review and any deployment.
+Base `9d4858102e9d297a3a98815539b64ad06ab15b92`, branch `feat/movies-home`.
+READY for review; native acceptance BLOCKED (Xvfb/PulseAudio/pactl absent).
+Home Movies opens native three-row online home, not local folders. Search,
+local Continue watching, locally ranked suggestions, public Popular/Featured,
+inline recovery and secondary Local files/Sources retained. Focused real
+synopsis/year/genres plus explicit metadata-only details; no guessed identity,
+TV relabelling or focus-triggered source lookup. Existing auto-source/resume and
+pause-on-Back extended to custom home. Matching skin + Movies required.
+852 full offline tests pass; complete skin/Movies package build passes.
+Native synthetic and ZIP journeys updated, not executed here. No push, deployment,
+live Kodi controls, account calls, personal profile/media/settings changes.
+Public-only Cinemeta probe: each default batch returned 50, all with plot/year/genres.
+See [behavior, TDD evidence and pending gates](docs/movies-home.md).
+
 ## PR31 native pause failures — local candidate, 2026-11-10 UTC
 
 Owner: delegated CI-fix agent; parent review/publish owner. Base `c857dee`.

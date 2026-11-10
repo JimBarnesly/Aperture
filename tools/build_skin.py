@@ -114,6 +114,7 @@ def assemble(source: Path, output: Path, home: Path, font_roots=()):
         games = ROOT / 'skin/xml/MyGames.xml'
         if games.is_file():
             shutil.copy2(games, staged / 'xml/MyGames.xml')
+        shutil.copy2(ROOT / 'skin/xml/Custom_1120_MoviesHome.xml', staged / 'xml/Custom_1120_MoviesHome.xml')
         movies = ROOT / 'skin/xml/MyVideoNav.xml'
         if movies.is_file():
             shutil.copy2(movies, staged / 'xml/MyVideoNav.xml')

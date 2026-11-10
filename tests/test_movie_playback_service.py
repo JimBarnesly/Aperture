@@ -34,6 +34,28 @@ class MoviePlaybackServiceTests(unittest.TestCase):
         factory.start()
         self.addCleanup(factory.stop)
 
+    def test_movies_home_is_a_pause_destination_including_native_latch(self):
+        import tempfile
+        import xml.etree.ElementTree as ET
+        import importlib.util
+        self.guard.update()
+        self.window = 11120
+        self.guard.update()
+        self.xbmc.executeJSONRPC.assert_called_once()
+        self.xbmc.executeJSONRPC.reset_mock()
+        self.guard.was_fullscreen = False
+        self.gui.Window.return_value.getProperty.return_value = 'session'
+        self.xbmc.Player.return_value.getVideoInfoTag.return_value.getUniqueID.return_value = 'session'
+        self.guard.update()
+        self.xbmc.executeJSONRPC.assert_called_once()
+        spec = importlib.util.spec_from_file_location('home_exit_signal', ROOT / 'tools/movie_exit_signal.py')
+        module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / 'xml/VideoFullScreen.xml'; path.parent.mkdir()
+            path.write_text('<window><controls/></window>')
+            module.apply(tmp)
+            self.assertIn('Window.Next(11120)', ET.parse(path).find('onunload').get('condition'))
+
     def test_native_exit_signal_pauses_even_when_fullscreen_falls_between_polls(self):
         # CI: fullscreen init 11:08:05.259, deinit .287, polls every 100 ms.
         home = self.gui.Window.return_value

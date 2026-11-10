@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<window id="1120">
+  <defaultcontrol>720</defaultcontrol>
+  <onload>RunPlugin(plugin://plugin.video.aperture.movies/?action=home_refresh)</onload>
+  <backgroundcolor>FF091317</backgroundcolor>
+  <controls>
+    <control type="image"><width>1920</width><height>1080</height><texture>aperture/movies/horizon.jpg</texture></control>
+    <control type="image"><width>1920</width><height>1080</height><texture>aperture/movies/scrim.png</texture></control>
+    <control type="label"><left>70</left><top>35</top><width>1400</width><height>60</height><font>font60</font><label>Movies</label><textcolor>FFE8F2F3</textcolor></control>
+    <control type="label"><left>70</left><top>100</top><width>1780</width><height>35</height><font>font20_title</font><label>Discover with Cinemeta · Availability checked only when you select a movie</label><textcolor>FFB7C9CA</textcolor></control>
+
+<control type="button" id="720"><left>70</left><top>155</top><width>240</width><height>55</height><font>font27</font><label>Search</label><textcolor>FFB7C9CA</textcolor><focusedcolor>FF091317</focusedcolor><texturefocus>aperture/movies/accent.png</texturefocus><texturenofocus>aperture/movies/scrim.png</texturenofocus><onleft>726</onleft><onright>721</onright><onup>732</onup><ondown>730</ondown><onback>PreviousMenu</onback><onclick>RunPlugin(plugin://plugin.video.aperture.movies/?action=home_search)</onclick>
+</control>
+<control type="button" id="721"><left>323</left><top>155</top><width>240</width><height>55</height><font>font27</font><label>Browse all</label><textcolor>FFB7C9CA</textcolor><focusedcolor>FF091317</focusedcolor><texturefocus>aperture/movies/accent.png</texturefocus><texturenofocus>aperture/movies/scrim.png</texturenofocus><onleft>720</onleft><onright>722</onright><onup>732</onup><ondown>730</ondown><onback>PreviousMenu</onback><onclick>ActivateWindow(Videos,plugin://plugin.video.aperture.movies/?mode=online,return)</onclick>
+</control>
+<control type="button" id="722"><left>576</left><top>155</top><width>240</width><height>55</height><font>font27</font><label>History</label><textcolor>FFB7C9CA</textcolor><focusedcolor>FF091317</focusedcolor><texturefocus>aperture/movies/accent.png</texturefocus><texturenofocus>aperture/movies/scrim.png</texturenofocus><onleft>721</onleft><onright>723</onright><onup>732</onup><ondown>730</ondown><onback>PreviousMenu</onback><onclick>ActivateWindow(Videos,plugin://plugin.video.aperture.movies/?mode=history,return)</onclick>
+</control>
+<control type="button" id="723"><left>829</left><top>155</top><width>240</width><height>55</height><font>font27</font><label>Local files</label><textcolor>FFB7C9CA</textcolor><focusedcolor>FF091317</focusedcolor><texturefocus>aperture/movies/accent.png</texturefocus><texturenofocus>aperture/movies/scrim.png</texturenofocus><onleft>722</onleft><onright>724</onright><onup>732</onup><ondown>730</ondown><onback>PreviousMenu</onback><onclick>ActivateWindow(Videos,plugin://plugin.video.aperture.movies/?mode=local,return)</onclick>
+</control>
+<control type="button" id="724"><left>1082</left><top>155</top><width>240</width><height>55</height><font>font27</font><label>Sources / settings</label><textcolor>FFB7C9CA</textcolor><focusedcolor>FF091317</focusedcolor><texturefocus>aperture/movies/accent.png</texturefocus><texturenofocus>aperture/movies/scrim.png</texturenofocus><onleft>723</onleft><onright>725</onright><onup>732</onup><ondown>730</ondown><onback>PreviousMenu</onback><onclick>ActivateWindow(Videos,plugin://plugin.video.aperture.movies/?mode=sources,return)</onclick>
+</control>
+<control type="button" id="725"><left>1335</left><top>155</top><width>240</width><height>55</height><font>font27</font><label>Retry</label><textcolor>FFB7C9CA</textcolor><focusedcolor>FF091317</focusedcolor><texturefocus>aperture/movies/accent.png</texturefocus><texturenofocus>aperture/movies/scrim.png</texturenofocus><onleft>724</onleft><onright>726</onright><onup>732</onup><ondown>730</ondown><onback>PreviousMenu</onback><onclick>RunPlugin(plugin://plugin.video.aperture.movies/?action=home_refresh)</onclick>
+</control>
+<control type="button" id="726"><left>1588</left><top>155</top><width>240</width><height>55</height><font>font27</font><label>Home</label><textcolor>FFB7C9CA</textcolor><focusedcolor>FF091317</focusedcolor><texturefocus>aperture/movies/accent.png</texturefocus><texturenofocus>aperture/movies/scrim.png</texturenofocus><onleft>725</onleft><onright>720</onright><onup>732</onup><ondown>730</ondown><onback>PreviousMenu</onback><onclick>PreviousMenu</onclick>
+</control>
+<control type="label"><left>70</left><top>230</top><width>410</width><height>38</height><font>font27</font><label>Continue watching</label><textcolor>FFE8F2F3</textcolor></control>
+ <control type="label"><left>490</left><top>230</top><width>1360</width><height>38</height><font>font20_title</font><label>$INFO[Window(Home).Property(Aperture.Home.continue.status)]</label><textcolor>FFB7C9CA</textcolor><scroll>true</scroll></control>
+ <control type="label"><left>70</left><top>320</top><width>1700</width><height>45</height><font>font27</font><label>Loading… If this row stays empty, try Retry or Local files.</label><visible>Container(730).IsUpdating</visible></control>
+ <control type="group"><visible>Control.HasFocus(730)</visible>
+ <control type="label"><left>1240</left><top>272</top><width>610</width><height>36</height><font>font27</font><label>$INFO[Container(730).ListItem.Label]</label><textcolor>FFE8F2F3</textcolor></control>
+ <control type="label"><left>1240</left><top>308</top><width>610</width><height>30</height><font>font20_title</font><label>Movie · $INFO[Container(730).ListItem.Property(Aperture.Year)]$INFO[Container(730).ListItem.Genre, · ]</label><textcolor>FFA8E5DD</textcolor></control>
+ <control type="textbox"><left>1240</left><top>342</top><width>610</width><height>135</height><font>font20_title</font><label>$INFO[Container(730).ListItem.Plot]</label><textcolor>FFB7C9CA</textcolor><autoscroll>false</autoscroll></control></control>
+<control type="list" id="730"><left>70</left><top>272</top><width>1140</width><height>210</height><orientation>horizontal</orientation><scrolltime>180</scrolltime><enable>Integer.IsGreater(Container(730).NumItems,0)</enable><onleft>730</onleft><onright>730</onright><onup>720</onup><ondown>731</ondown><onback>PreviousMenu</onback>
+
+<itemlayout width="160" height="210">
+<control type="image"><left>5</left><top>5</top><width>140</width><height>167</height><texture fallback="aperture/movies/poster.jpg">$INFO[ListItem.Art(poster)]</texture><aspectratio>keep</aspectratio></control>
+ <control type="label"><left>5</left><top>174</top><width>140</width><height>33</height><font>font20_title</font><label>$INFO[ListItem.Label]</label>
+<textcolor>FFE8F2F3</textcolor></control></itemlayout>
+<focusedlayout width="160" height="210">
+<control type="image"><left>0</left><top>0</top><width>150</width><height>210</height><texture>aperture/movies/accent.png</texture></control>
+<control type="image"><left>5</left><top>5</top><width>140</width><height>167</height><texture fallback="aperture/movies/poster.jpg">$INFO[ListItem.Art(poster)]</texture><aspectratio>keep</aspectratio></control>
+ <control type="label"><left>5</left><top>174</top><width>140</width><height>33</height><font>font20_title</font><label>$INFO[ListItem.Label]</label>
+<textcolor>FF091317</textcolor></control></focusedlayout>
+<onclick>RunPlugin($INFO[Container(730).ListItem.FileNameAndPath])</onclick><content target="videos">plugin://plugin.video.aperture.movies/?mode=home_row&amp;row=continue&amp;refresh=$INFO[Window(Home).Property(Aperture.Home.refresh)]</content></control>
+<control type="label"><left>70</left><top>490</top><width>410</width><height>38</height><font>font27</font><label>Suggested for you</label><textcolor>FFE8F2F3</textcolor></control>
+ <control type="label"><left>490</left><top>490</top><width>1360</width><height>38</height><font>font20_title</font><label>$INFO[Window(Home).Property(Aperture.Home.suggested.status)]</label><textcolor>FFB7C9CA</textcolor><scroll>true</scroll></control>
+ <control type="label"><left>70</left><top>580</top><width>1700</width><height>45</height><font>font27</font><label>Loading… If this row stays empty, try Retry or Local files.</label><visible>Container(731).IsUpdating</visible></control>
+ <control type="group"><visible>Control.HasFocus(731)</visible>
+ <control type="label"><left>1240</left><top>532</top><width>610</width><height>36</height><font>font27</font><label>$INFO[Container(731).ListItem.Label]</label><textcolor>FFE8F2F3</textcolor></control>
+ <control type="label"><left>1240</left><top>568</top><width>610</width><height>30</height><font>font20_title</font><label>Movie · $INFO[Container(731).ListItem.Property(Aperture.Year)]$INFO[Container(731).ListItem.Genre, · ]</label><textcolor>FFA8E5DD</textcolor></control>
+ <control type="textbox"><left>1240</left><top>602</top><width>610</width><height>135</height><font>font20_title</font><label>$INFO[Container(731).ListItem.Plot]</label><textcolor>FFB7C9CA</textcolor><autoscroll>false</autoscroll></control></control>
+<control type="list" id="731"><left>70</left><top>532</top><width>1140</width><height>210</height><orientation>horizontal</orientation><scrolltime>180</scrolltime><enable>Integer.IsGreater(Container(731).NumItems,0)</enable><onleft>731</onleft><onright>731</onright><onup>730</onup><ondown>732</ondown><onback>PreviousMenu</onback>
+
+<itemlayout width="160" height="210">
+<control type="image"><left>5</left><top>5</top><width>140</width><height>167</height><texture fallback="aperture/movies/poster.jpg">$INFO[ListItem.Art(poster)]</texture><aspectratio>keep</aspectratio></control>
+ <control type="label"><left>5</left><top>174</top><width>140</width><height>33</height><font>font20_title</font><label>$INFO[ListItem.Label]</label>
+<textcolor>FFE8F2F3</textcolor></control></itemlayout>
+<focusedlayout width="160" height="210">
+<control type="image"><left>0</left><top>0</top><width>150</width><height>210</height><texture>aperture/movies/accent.png</texture></control>
+<control type="image"><left>5</left><top>5</top><width>140</width><height>167</height><texture fallback="aperture/movies/poster.jpg">$INFO[ListItem.Art(poster)]</texture><aspectratio>keep</aspectratio></control>
+ <control type="label"><left>5</left><top>174</top><width>140</width><height>33</height><font>font20_title</font><label>$INFO[ListItem.Label]</label>
+<textcolor>FF091317</textcolor></control></focusedlayout>
+<onclick>RunPlugin($INFO[Container(731).ListItem.FileNameAndPath])</onclick><content target="videos">plugin://plugin.video.aperture.movies/?mode=home_row&amp;row=suggested&amp;refresh=$INFO[Window(Home).Property(Aperture.Home.refresh)]</content></control>
+<control type="label"><left>70</left><top>750</top><width>410</width><height>38</height><font>font27</font><label>Popular / Featured</label><textcolor>FFE8F2F3</textcolor></control>
+ <control type="label"><left>490</left><top>750</top><width>1360</width><height>38</height><font>font20_title</font><label>$INFO[Window(Home).Property(Aperture.Home.popular.status)]</label><textcolor>FFB7C9CA</textcolor><scroll>true</scroll></control>
+ <control type="label"><left>70</left><top>840</top><width>1700</width><height>45</height><font>font27</font><label>Loading… If this row stays empty, try Retry or Local files.</label><visible>Container(732).IsUpdating</visible></control>
+ <control type="group"><visible>Control.HasFocus(732)</visible>
+ <control type="label"><left>1240</left><top>792</top><width>610</width><height>36</height><font>font27</font><label>$INFO[Container(732).ListItem.Label]</label><textcolor>FFE8F2F3</textcolor></control>
+ <control type="label"><left>1240</left><top>828</top><width>610</width><height>30</height><font>font20_title</font><label>Movie · $INFO[Container(732).ListItem.Property(Aperture.Year)]$INFO[Container(732).ListItem.Genre, · ]</label><textcolor>FFA8E5DD</textcolor></control>
+ <control type="textbox"><left>1240</left><top>862</top><width>610</width><height>135</height><font>font20_title</font><label>$INFO[Container(732).ListItem.Plot]</label><textcolor>FFB7C9CA</textcolor><autoscroll>false</autoscroll></control></control>
+<control type="list" id="732"><left>70</left><top>792</top><width>1140</width><height>210</height><orientation>horizontal</orientation><scrolltime>180</scrolltime><enable>Integer.IsGreater(Container(732).NumItems,0)</enable><onleft>732</onleft><onright>732</onright><onup>731</onup><ondown>720</ondown><onback>PreviousMenu</onback>
+
+<itemlayout width="160" height="210">
+<control type="image"><left>5</left><top>5</top><width>140</width><height>167</height><texture fallback="aperture/movies/poster.jpg">$INFO[ListItem.Art(poster)]</texture><aspectratio>keep</aspectratio></control>
+ <control type="label"><left>5</left><top>174</top><width>140</width><height>33</height><font>font20_title</font><label>$INFO[ListItem.Label]</label>
+<textcolor>FFE8F2F3</textcolor></control></itemlayout>
+<focusedlayout width="160" height="210">
+<control type="image"><left>0</left><top>0</top><width>150</width><height>210</height><texture>aperture/movies/accent.png</texture></control>
+<control type="image"><left>5</left><top>5</top><width>140</width><height>167</height><texture fallback="aperture/movies/poster.jpg">$INFO[ListItem.Art(poster)]</texture><aspectratio>keep</aspectratio></control>
+ <control type="label"><left>5</left><top>174</top><width>140</width><height>33</height><font>font20_title</font><label>$INFO[ListItem.Label]</label>
+<textcolor>FF091317</textcolor></control></focusedlayout>
+<onclick>RunPlugin($INFO[Container(732).ListItem.FileNameAndPath])</onclick><content target="videos">plugin://plugin.video.aperture.movies/?mode=home_row&amp;row=popular&amp;refresh=$INFO[Window(Home).Property(Aperture.Home.refresh)]</content></control>
+<control type="label"><left>70</left><top>1025</top><width>1780</width><height>35</height><font>font20_title</font><label>Left / Right browse · Up / Down change rows · Select play / resume · Context menu choose source · Back return</label><textcolor>FFB7C9CA</textcolor></control></controls></window>

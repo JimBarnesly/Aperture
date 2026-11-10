@@ -67,7 +67,7 @@ class SkinBuildTests(unittest.TestCase):
         self.assertEqual(condition, 'Player.HasVideo + VideoPlayer.Content(movies) + '
                          '!String.IsEmpty(VideoPlayer.UniqueID(aperture_session)) + [' +
                          ' | '.join('Window.Next(%d)' % n for n in
-                                    (10000, 10001, 10002, 10025, 10500, 10501, 10502, 10800)) + ']')
+                                    (10000, 10001, 10002, 10025, 10500, 10501, 10502, 10800, 11120)) + ']')
 
     def test_manifest_upgrade_and_license_preserved(self):
         self.assemble()

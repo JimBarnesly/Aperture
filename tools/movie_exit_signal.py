@@ -4,7 +4,7 @@ import sys
 import xml.etree.ElementTree as ET
 
 PROPERTY = 'Aperture.Movies.FullscreenExit'
-BROWSERS = (10000, 10001, 10002, 10025, 10500, 10501, 10502, 10800)
+BROWSERS = (10000, 10001, 10002, 10025, 10500, 10501, 10502, 10800, 11120)
 
 
 def apply(skin):

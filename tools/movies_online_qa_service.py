@@ -358,12 +358,100 @@ def history_journey():
                    'synthetic_transport': True, 'cleared_session_stayed_empty': True})
 
 
+def home_focus(label):
+    # Horizontal header is reachable from every row via its Up chain.
+    for _ in range(5):
+        if xbmc.getInfoLabel('System.CurrentControl') in ('Search', 'Browse all', 'History', 'Local files', 'Sources / settings', 'Retry', 'Home'):
+            break
+        rpc('Input.Up'); monitor.waitForAbort(.15)
+    for _ in range(7):
+        if xbmc.getInfoLabel('System.CurrentControl') == label:
+            return
+        rpc('Input.Right'); monitor.waitForAbort(.15)
+    raise RuntimeError('Home header unreachable: ' + label)
+
+
+def movies_home_journey():
+    # Exercise the real Home Movies button, not a direct window shortcut.
+    xbmc.executebuiltin('SetFocus(100)')
+    until('Home Movies focus', lambda: xbmc.getInfoLabel('System.CurrentControl') == 'Movies')
+    rpc('Input.Select')
+    until('Movies home Search', lambda: xbmcgui.getCurrentWindowId() == 11120
+          and xbmc.getInfoLabel('System.CurrentControl') == 'Search')
+    until('home metadata rows', lambda: xbmc.getInfoLabel('Container(731).NumItems') == '1'
+          and xbmc.getInfoLabel('Container(732).NumItems') == '1')
+    assert xbmc.getInfoLabel('Container(730).NumItems') == '0'
+    capture('home-empty-continue')
+    for _ in range(2):
+        rpc('Input.Select')
+        until('home search keyboard', lambda: xbmc.getCondVisibility('Window.IsActive(virtualkeyboard)'))
+        rpc('Input.Back')
+        until('home-search-cancel', lambda: xbmcgui.getCurrentWindowId() == 11120
+              and not xbmc.getCondVisibility('System.HasModalDialog'))
+    rpc('Input.Down')
+    until('empty continue skipped', lambda: xbmc.getCondVisibility('Control.HasFocus(731)'))
+    rpc('Input.Down')
+    until('popular focus', lambda: xbmc.getCondVisibility('Control.HasFocus(732)'))
+    rpc('Input.Up')
+    until('suggestions focus restored', lambda: xbmc.getCondVisibility('Control.HasFocus(731)'))
+    assert 'Original synthetic catalogue metadata' in xbmc.getInfoLabel('Container(731).ListItem.Plot')
+    assert xbmc.getInfoLabel('Container(731).ListItem.Property(Aperture.Year)') == '2026'
+    assert 'Adventure' in xbmc.getInfoLabel('Container(731).ListItem.Genre')
+    capture('home-focused-metadata')
+    checks.append({'check': 'home-focused-metadata', 'provider_supplied': True})
+    assert not any(event.startswith(('torrentio-', 'fake-')) for event in events())
+    checks.append({'check': 'home-rows-no-source-lookup'})
+    home_focus('Local files'); rpc('Input.Select')
+    until('home local fallback', cinematic)
+    focus('Amber Horizon'); capture('home-local-fallback')
+    rpc('Input.Back')
+    until('local Back to Movies home', lambda: xbmcgui.getCurrentWindowId() == 11120)
+    (OUT / 'catalogue-offline').touch()
+    home_focus('Retry'); rpc('Input.Select')
+    until('home catalogue failure visible', lambda: 'unavailable' in xbmcgui.Window(10000).getProperty('Aperture.Home.popular.status'))
+    home_focus('Local files'); rpc('Input.Select')
+    until('offline fallback remains available', cinematic)
+    rpc('Input.Back')
+    until('offline fallback Back', lambda: xbmcgui.getCurrentWindowId() == 11120)
+    (OUT / 'catalogue-offline').unlink()
+    home_focus('Retry'); rpc('Input.Select')
+    until('home-offline-retry', lambda: xbmc.getInfoLabel('Container(732).NumItems') == '1'
+          and 'unavailable' not in xbmcgui.Window(10000).getProperty('Aperture.Home.popular.status'))
+    capture('home-offline-retry')
+    rpc('Input.Back')
+    until('Movies home Back restores main Movies', lambda: xbmcgui.getCurrentWindowId() == 10000
+          and xbmc.getInfoLabel('System.CurrentControl') == 'Movies')
+    checks.append({'check': 'home-search-cancel-local-fallback-retry-back'})
+
+
+def home_resume_journey():
+    xbmc.executebuiltin('ActivateWindow(1120)')
+    until('home resume row', lambda: xbmcgui.getCurrentWindowId() == 11120
+          and xbmc.getInfoLabel('Container(730).NumItems') == '1')
+    home_focus('Search'); rpc('Input.Down')
+    until('continue row focused', lambda: xbmc.getCondVisibility('Control.HasFocus(730)'))
+    before = events().count('torrentio-resolve')
+    rpc('Input.Select')
+    until('home resume fullscreen', lambda: xbmcgui.getCurrentWindowId() == 12005 and xbmc.Player().isPlayingVideo())
+    rpc('Input.Back')
+    until('home-resume-back-pauses', lambda: xbmcgui.getCurrentWindowId() == 11120
+          and xbmc.getCondVisibility('Player.Paused'))
+    assert events().count('torrentio-resolve') == before + 1
+    capture('home-resume-back-pauses')
+    rpc('Player.Stop', {'playerid': 1})
+    until('home resume stopped', lambda: not xbmc.Player().isPlaying())
+    home_focus('Browse all'); rpc('Input.Select')
+    until('browse after home resume', cinematic)
+    checks.append({'check': 'home-resume-back-pauses', 'fresh_source': True})
+
+
 try:
     until('Home',lambda:xbmcgui.getCurrentWindowId()==10000)
     version=rpc('Application.GetProperties',{'properties':['version']})['version']
     assert (version['major'],version['minor'])==(21,3)
     rpc('Addons.SetAddonEnabled',{'addonid':'plugin.video.aperture.movies','enabled':True})
     until('plugin enabled',lambda:xbmc.getCondVisibility('System.AddonIsEnabled(plugin.video.aperture.movies)'))
+    movies_home_journey()
     xbmc.executebuiltin('ActivateWindow(Videos,'+ROOT+',return)')
     until('local cinematic view',cinematic)
     focus('Amber Horizon')
@@ -423,6 +511,7 @@ try:
     assert events() == stopped_events
     checks.append({'check':'RD-fake-device-cancel-after-first-poll','real_provider_calls':False,'credentials_saved':False})
     torrentio_journey(online_path)
+    home_resume_journey()
     history_journey()
     nav('Local files'); rpc('Input.Select')
     until('return to local files',lambda:cinematic() and xbmc.getInfoLabel('Container.FolderPath')==local_path)

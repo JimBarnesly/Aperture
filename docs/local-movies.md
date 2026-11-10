@@ -1,6 +1,6 @@
 # Local movie browser
 
-Aperture Movies opens the configured Kodi default video source, or the only video source, without an extra source chooser. If several sources exist and none is marked default, choose one explicitly; it never guesses a drive. Set a source as default through Kodi's native Files context menu. Existing Sources remains available on Home.
+Home → Movies now opens the [online-first native home](movies-home.md). Its secondary Local files action opens the configured Kodi default video source, or the only video source, without an extra source chooser. If several sources exist and none is marked default, choose one explicitly; it never guesses a drive. Set a source as default through Kodi's native Files context menu. Existing Sources remains available on Home.
 
 The browser reads one folder at a time, not a recursive whole-drive scan. A source pointing at the disk root will still show its subfolders: point the Kodi source at the actual movie folder if you want films immediately. Nothing changes source definitions, media files, mount policy or library metadata.
 
@@ -57,12 +57,13 @@ Search/collection/genre cancellation does not navigate. Paging retains filters;
 Cinemeta supplies no total, so the last More page can legitimately be empty.
 
 Online cards show provider-supplied posters and synopsis. Select a card for
-metadata details (year, genres, IMDb rating where provided and synopsis).
-These cards are not playable and **availability is not checked**. Metadata is
-not proof that a stream exists or that the user has access to it. There is no
-stream resolver, torrent search, account signup, API key or Real-Debrid connection
-in this catalogue adapter. The separate Real-Debrid connector can coexist via
-Sources; neither adapter guesses a match between a catalogue film and a download.
+automatic ranked playback through the existing source integration. Use the context menu for metadata details (year, genres, IMDb rating where provided and synopsis), or Choose source.
+These metadata cards have no direct media URL and **availability is not checked**
+until explicit selection. Metadata is not proof that a stream exists or that the
+user has access to it. The catalogue adapter supplies no streams; the separate
+[automatic playback integration](movies-autoplay.md) performs source lookup and
+resolution after selection. Sources provides account setup with its existing
+consent gates; no adapter guesses a match to a local file or account download.
 See [Real-Debrid setup and privacy](real-debrid.md) for the default public client ID, optional override, sign-in,
 private storage and the remaining live-provider acceptance requirements.
 

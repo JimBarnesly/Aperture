@@ -304,7 +304,8 @@
         <width>275</width>
         <height>35</height>
         <font>font20_title</font>
-        <label>KODI LIBRARY / FILES</label>
+        <label>$INFO[Container.PluginCategory]</label>
+        <scroll>true</scroll>
         <textcolor>FF9BD5D0</textcolor>
       </control>
       <control type="button" id="710">

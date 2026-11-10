@@ -25,6 +25,9 @@ def record(event):
 
 
 def catalogue(path):
+    if (OUT / "catalogue-offline").exists():
+        from resources.lib.catalog import CatalogError
+        raise CatalogError("Synthetic offline catalogue")
     extras = path.rsplit('/', 1)[-1].removesuffix('.json')
     record('catalogue-search' if 'search' in parse_qs(extras) else 'catalogue')
     movie = {'id': 'tt1234567', 'type': 'movie', 'name': 'Synthetic Online Horizon',

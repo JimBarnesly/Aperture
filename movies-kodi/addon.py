@@ -242,7 +242,10 @@ def online(query):
     xbmcplugin.setPluginCategory(HANDLE, heading + ' · Cinemeta')
     for movie in movies:
         li = xbmcgui.ListItem(label=movie['title'])
-        li.setInfo('video', {'title': movie['title'], 'plot': movie['plot'], 'genre': movie['genre']})
+        info = {'title': movie['title'], 'plot': movie['plot'] or 'Details unavailable. Open Movie details (Cinemeta) from the context menu.', 'genre': movie['genre']}
+        if len(movie['year']) == 4 and movie['year'].isascii() and movie['year'].isdigit():
+            info['year'] = int(movie['year'])
+        li.setInfo('video', info)
         li.setArt({'poster': movie['poster'], 'thumb': movie['poster'], 'fanart': movie['fanart'], 'icon': 'DefaultVideo.png'})
         li.setProperty('IsPlayable', 'false')
         li.setProperty('Aperture.MovieFolder', 'false')
@@ -276,7 +279,7 @@ def online_details(query):
         return
     summary = ' · '.join(filter(None, [movie['year'], ', '.join(movie['genre']),
                             ('IMDb ' + movie['rating']) if movie['rating'] else '']))
-    xbmcgui.Dialog().ok(movie['title'], summary + '\n\n' + movie['plot'] +
+    xbmcgui.Dialog().ok(movie['title'], summary + '\n\n' + (movie['plot'] or 'Details unavailable from Cinemeta.') +
                        '\n\nMetadata: Cinemeta. Playback availability not checked. This catalogue does not supply streams.')
     if xbmc.Monitor().abortRequested() or xbmc.getInfoLabel('Container.FolderPath') != origin:
         return
@@ -333,9 +336,97 @@ def history_directory(mode):
     apply_cinema_view()
 
 
+def home_row(row):
+    """Skin widgets contain metadata only; sources resolve only on Select."""
+    xbmcplugin.setContent(HANDLE, 'movies')
+    movies = []
+    seen = set()
+    import os
+    from resources.lib.movie_history import HistoryError, HistoryStore
+    status = ''
+    try:
+        history = (HistoryStore(os.path.join(poster_profile(), 'history-private')).records()
+                   if row in ('continue', 'suggested') else [])
+    except HistoryError:
+        history = []
+        status = 'History unavailable. Open History to clear invalid data; local files remain available.'
+    if row == 'continue':
+        movies = [movie for movie in history if movie.get('resume_seconds', 0) > 0]
+        status = status or ('' if movies else 'Nothing to resume yet. History starts with playback on this device.')
+    collections = {'continue': (), 'suggested': ('top',), 'popular': ('top', 'imdbRating')}
+    for collection in collections.get(row, ()):
+        try:
+            batch, _, _ = catalog.browse({'collection': [collection]})
+        except catalog.CatalogError:
+            status = 'Cinemeta unavailable. Retry, Search or use Local files.'
+            continue
+        for index, movie in enumerate(batch):
+            if movie['id'] not in seen:
+                # Interleave both public collections before the visible limit.
+                movies.insert(min(index * 2 + (collection == 'imdbRating'), len(movies)), movie)
+                seen.add(movie['id'])
+    if row == 'suggested':
+        from resources.lib.movie_recommendations import recommend
+        ranked = recommend(movies, history)
+        by_id = {movie['id']: movie for movie in movies}
+        movies = [by_id[movie['id']] for movie in ranked['items']]
+        status = status or ranked['reason']
+    if not movies and row != 'continue':
+        status = status or 'No catalogue results. Try Search, Retry or Local files.'
+    xbmcgui.Window(10000).setProperty('Aperture.Home.' + row + '.status', status)
+    for movie in movies[:20]:
+        li = xbmcgui.ListItem(label=movie['title'])
+        li.setInfo('video', {'title': movie['title'],
+                             'plot': movie.get('plot') or 'Details unavailable in this row. Open Movie details (Cinemeta) from the context menu.',
+                             'genre': movie.get('genre', movie.get('genres', []))})
+        li.setProperty('Aperture.Year', str(movie.get('year', '')))
+        li.setArt({'poster': movie.get('poster', ''), 'thumb': movie.get('poster', ''),
+                   'fanart': movie.get('fanart', ''), 'icon': 'DefaultVideo.png'})
+        li.setProperty('IsPlayable', 'false')
+        li.setProperty('Aperture.Availability', 'Not checked')
+        route = BASE + '?' + urlencode({'action': 'torrentio_auto', 'id': movie['id']})
+        choose = BASE + '?' + urlencode({'action': 'torrentio_find', 'id': movie['id']})
+        details = BASE + '?' + urlencode({'action': 'online_details', 'id': movie['id']})
+        li.addContextMenuItems([('Movie details (Cinemeta)', 'RunPlugin(' + details + ')'),
+                                ('Choose source', 'RunPlugin(' + choose + ')'),
+                                ('Play from beginning', 'RunPlugin(' + route + ')')])
+        if row == 'continue':
+            route += '&resume=1'
+        xbmcplugin.addDirectoryItem(HANDLE, route, li, False)
+    end()
+
+
 def main():
     query = parse_qs(sys.argv[2].lstrip('?'))
     action = query.get('action', [''])[0]
+    if action == 'home_refresh':
+        import secrets
+        xbmcgui.Window(10000).setProperty('Aperture.Home.refresh', secrets.token_hex(8))
+        return
+    if action == 'home_search':
+        origin = xbmcgui.getCurrentWindowId()
+        if origin != 11120:
+            return
+        value = xbmcgui.Dialog().input('Search online movies (Cinemeta)')
+        if (value and value.strip() and xbmcgui.getCurrentWindowId() == origin
+                and not xbmc.Monitor().abortRequested()):
+            route = BASE + '?' + urlencode({'mode': 'online', 'search': value.strip()[:200]})
+            xbmc.executebuiltin('ActivateWindow(Videos,' + route + ',return)')
+        return
+    if not action and query.get('mode', [''])[0] == 'sources':
+        xbmcplugin.setContent(HANDLE, 'files')
+        for label, params, folder in [('Sources / account settings', {'action': 'providers'}, False),
+                                      ('My Kodi library', {'mode': 'discover'}, True)]:
+            li = xbmcgui.ListItem(label=label)
+            li.setProperty('Aperture.MovieFolder', 'true')
+            li.setArt({'icon': 'DefaultFolder.png'})
+            xbmcplugin.addDirectoryItem(HANDLE, BASE + '?' + urlencode(params), li, folder)
+        end()
+        apply_cinema_view()
+        return
+    if not action and query.get('mode', [''])[0] == 'home_row':
+        home_row(catalog.value(query, 'row'))
+        return
     if action == 'clear_history':
         origin = xbmc.getInfoLabel('Container.FolderPath')
         if not xbmcgui.Dialog().yesno('Clear history?',
