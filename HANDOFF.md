@@ -1,5 +1,19 @@
 # Aperture integration handoff
 
+## PR32 native SIGSEGV — 2026-11-10 UTC
+
+Owner: delegated crash investigator; parent owns review/push. Base `b773579`.
+BLOCKED on native faulting stack; no speculative product fix. Run42826398013
+online artifact has real SIGSEGV but no core/backtrace. Full log advances through
+both scoped source Back returns and immediate home-resume Back/pause, then dies
+after Stop → Browse all while native row jobs overlap. Exactly two source-Back
+handler launches; repeated rows agree with native OnPlay/OnStop invalidation,
+not demonstrated recursion. VDPAU warning also occurs in passing default case.
+Diagnostic-only next-run child GDB + atomic QA progress prepared, no rerun/push.
+RED→GREEN capture tests include a real tiny C SIGSEGV;890 offline tests pass.
+No product/skin edits, live Kodi/profile/account/device actions or deployment.
+[Evidence, hypotheses, capture limits and gate](docs/movies-native-segfault.md).
+
 ## PR32 native source Back — 2026-11-10 UTC
 
 Owner: delegated navigation-fix agent; parent owns review/push. Base `ea3276a`.

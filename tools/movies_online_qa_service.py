@@ -26,7 +26,21 @@ def rpc(method, params=None):
     return response['result']
 
 
+def checkpoint(description, status):
+    # One bounded atomic snapshot, not a growing poll log or profile dump.
+    state = {'stage': description, 'status': status, 'checks': checks,
+             'window': xbmcgui.getCurrentWindowId(),
+             'dialog': xbmcgui.getCurrentWindowDialogId(),
+             'control': xbmc.getInfoLabel('System.CurrentControl'),
+             'folder': xbmc.getInfoLabel('Container.FolderPath'),
+             'updating': xbmc.getCondVisibility('Container.IsUpdating')}
+    temporary = OUT / 'progress.json.tmp'
+    temporary.write_text(json.dumps(state, indent=2) + '\n')
+    temporary.replace(OUT / 'progress.json')
+
+
 def until(description,predicate,timeout=35):
+    checkpoint(description, 'waiting')
     deadline=time.monotonic()+timeout
     while time.monotonic()<deadline:
         if predicate():

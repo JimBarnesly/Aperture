@@ -92,6 +92,34 @@ class OnlineTransportTests(unittest.TestCase):
 
 
 class OnlineHarnessTests(unittest.TestCase):
+    def test_until_persists_pending_stage_before_native_predicate(self):
+        import json
+        import tempfile
+        import time
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp)
+            ns: dict[str, Any] = dict(OUT=out, json=json, time=time, checks=[{'check': 'prior-stage'}],
+                      xbmcgui=SimpleNamespace(getCurrentWindowId=lambda: 11120,
+                                              getCurrentWindowDialogId=lambda: 0),
+                      xbmc=SimpleNamespace(getInfoLabel=lambda key: 'synthetic',
+                          getCondVisibility=lambda key: False,
+                          Window=lambda key: None),
+                      monitor=SimpleNamespace(waitForAbort=lambda seconds: False))
+            exec(service_functions('until', 'checkpoint'), ns)
+            def native_fault():
+                self.assertTrue((out / 'progress.json').exists(),
+                                'Native crash loses pending stage and completed assertions')
+                progress = json.loads((out / 'progress.json').read_text())
+                self.assertEqual(progress['stage'], 'browse after home resume')
+                self.assertEqual(progress['status'], 'waiting')
+                self.assertEqual(progress['window'], 11120)
+                self.assertEqual(progress['checks'], [{'check': 'prior-stage'}])
+                raise RuntimeError('simulated native boundary')
+            with self.assertRaisesRegex(RuntimeError, 'simulated native boundary'):
+                ns['until']('browse after home resume', native_fault)
+            ns['until']('completed-stage', lambda: True)
+            self.assertEqual(json.loads((out / 'progress.json').read_text())['stage'], 'completed-stage')
+
     def test_online_navigation_rejects_visible_closing_modals(self):
         ns: dict[str, Any] = dict(xbmcgui=SimpleNamespace(getCurrentWindowId=lambda: 10025),
                   xbmc=SimpleNamespace(getCondVisibility=lambda condition:
@@ -154,7 +182,7 @@ class OnlineHarnessTests(unittest.TestCase):
                     'Container(731).NumItems': '1',
                     'Container(732).NumItems': '1'}.get(key, '')
 
-        ns = dict(rpc=rpc, capture=Mock(), json=__import__('json'),
+        ns = dict(rpc=rpc, capture=Mock(), checkpoint=Mock(), json=__import__('json'),
                   time=SimpleNamespace(monotonic=lambda: state['now']),
                   monitor=SimpleNamespace(waitForAbort=wait),
                   xbmc=SimpleNamespace(getInfoLabel=label, getCondVisibility=condition,

@@ -21,11 +21,16 @@ jobs:
     env:
       DEBIAN_FRONTEND: noninteractive
       APERTURE_MOVIES_SCENARIO: ${{ matrix.sources }}
+      # Diagnostic-only until the native SIGSEGV has a faulting stack.
+      APERTURE_MOVIES_NATIVE_DEBUG: ${{ matrix.sources == 'online' && '1' || '0' }}
     steps:
       - name: Install signed distribution Kodi and synthetic fixture tools
         run: |
           apt-get update
           apt-get install --yes --no-install-recommends ca-certificates git python3 python3-pil ffmpeg kodi kodi-bin kodi-data xvfb xauth x11-utils libgl1-mesa-dri fonts-noto-core fonts-noto-mono fonts-roboto-unhinted pulseaudio pulseaudio-utils
+      - name: Install native capture tools for isolated online case
+        if: matrix.sources == 'online'
+        run: apt-get install --yes --no-install-recommends gdb binutils
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
