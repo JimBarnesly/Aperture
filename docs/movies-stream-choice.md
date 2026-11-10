@@ -31,6 +31,49 @@ Read committed `26ad95f1beca211f4d8fdb133c8cd525e2782fd5` XML/docs only; did not
 4. Replace footer's context-menu source instruction with single-press/D-pad guidance. Keep default poster autoplay and optional context actions.
 5. Reconcile small addon.py/test overlaps and regenerate install.sh MOVIES_SHA after MyVideoNav merge. Preserve the home worker's11120 pause/latch browser target. Existing movie_exit_signal.apply now also patches OSD; retain both behaviors.
 
+## Integrated online-first home follow-up
+
+Source checkpoint `15cd3e2e4cc72a903b72da60f2f3cdcba28402f2` was fetched locally
+and cherry-picked as `5a36a8440b3929a4c2f3d8c806e55ba5d2dc98c2`, above async
+fix `211207fb1467d687702901f2af4d6019623aa530`. Conflicts preserved the
+window/invocation guards, new Choose source directory action, both handoffs and
+regenerated MyVideoNav integrity hash. Post-cherry-pick full suite: 873 passed.
+
+Home now has persistent adjacent buttons740/741/742 for rows730/731/732.
+Row-edge Left/Right reaches its button; Left/Right returns to that same row.
+Buttons form an Up/Down chain back to Search, stay visible while focused and are
+disabled only without explicit valid identity. Their metadata panels remain
+visible while the button has focus. Synopsis area is shorter to leave room;
+full details remain available. Default poster Select still auto-plays/resumes.
+
+Each item publishes validated `Aperture.MovieID` plus `Aperture.SourceResume`
+(`1` only for Continue, `0` for public rows). Buttons pass explicit row properties
+to `home_sources`; the shim rejects malformed/non-ASCII IMDb IDs and invalid
+resume values, requires origin11120, and rechecks window/abort immediately before
+`ActivateWindow(Videos,<sources>,return)`. It performs no lookup or directory
+completion itself. Home details' Choose source also activates Videos, while
+Videos details retain Container.Update. Source directory/pick, OSD Change source,
+trailer filtering, consent and history remain the cherry-picked implementation.
+Both installer skin hashes match the integrated XML.
+Final loopback-only network-namespace verification: **878 full-suite tests pass**
+and **33 focused home/native-harness tests pass**. No baseline tests removed.
+
+Strict RED/GREEN integration tests cover shim validation/no lookup, per-row
+identity/resume, persistent visible button graph, home details navigation and
+native harness wiring. Native synthetic journey now checks public row/button
+focus with no source requests, plus Continue/Popular single-press source-directory
+entry, explicit resume and Back without resolution. The one-film fixture has no
+suggested candidates after that film is watched, so its suggested button is
+asserted disabled then; its focus behavior is checked before playback. Existing
+immediate Back, legacy chooser cancellation and history assertions are retained.
+
+Native scripts were updated, not executed: Xvfb, pulseaudio and pactl were checked
+and are absent. No live Kodi/profile/account calls were made. Full integrated
+skin assembly succeeded; skin ZIP SHA256
+`d9a990022bb7eace228fb4d443410070450968e4b5cf16bccc85aee95988ed0e`.
+Exact-head native/physical acceptance remains required; offline tests do not prove
+held-OK behavior, D-pad rendering or actual source replacement.
+
 ## Executed verification and pending acceptance
 
 Strict vertical RED→GREEN cycles were run for source rejection, legitimate title/unknown retention, feature priority, sanitized dual-field extraction, long/no-year release hints, directory listing/pick, no progress modal, error completion, explicit identity routing, resume intent, OSD controls, owned current-source navigation and all-extras explanation. Final isolated suite:

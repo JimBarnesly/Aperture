@@ -91,6 +91,21 @@ class OnlineTransportTests(unittest.TestCase):
 
 
 class OnlineHarnessTests(unittest.TestCase):
+    def test_home_source_journey_uses_row_buttons_and_native_directory(self):
+        tree = ast.parse((ROOT / 'tools/movies_online_qa_service.py').read_text())
+        functions = {n.name: n for n in tree.body if isinstance(n, ast.FunctionDef)}
+        self.assertIn('home_source_journey', functions)
+        source = ast.unparse(functions['home_source_journey'])
+        for evidence in ('730', '731', '732', '740', '741', '742', 'Input.Right',
+                         'Input.Select', 'Input.Back', 'torrentio_sources', 'resume=1',
+                         'torrentio-resolve', 'home-source-directory-cancel'):
+            self.assertIn(evidence, source)
+        for bypass in ('RunPlugin(', 'SetFocus(', 'Container.Update(', 'Player.Open'):
+            self.assertNotIn(bypass, source)
+        calls = [n for n in ast.walk(tree) if isinstance(n, ast.Call)
+                 and isinstance(n.func, ast.Name) and n.func.id == 'home_source_journey']
+        self.assertEqual(len(calls), 1)
+
     def test_online_harness_budget_includes_history_wait(self):
         source = (ROOT / 'tools/movies_smoke.sh').read_text()
         self.assertIn('240s', source, 'Online journey now includes a 22-second stale-write observation')
@@ -151,7 +166,7 @@ class OnlineHarnessTests(unittest.TestCase):
 
     def test_details_assert_actions_before_return_to_browsing(self):
         state = {'dialog': 12002, 'choice': 0}
-        choices = ['Find streams (Torrentio)', 'Set up online playback', 'Back to browsing']
+        choices = ['Choose source', 'Set up online playback', 'Back to browsing']
         inputs = []
         def rpc(action):
             inputs.append(action)

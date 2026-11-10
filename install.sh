@@ -105,7 +105,7 @@ if [ "$BASELINE" -eq 0 ]; then
   GAMES_SHA=0338a9eac75c4b3200ec050df0cd66d21f7bec9557293066aa7a5c9419dfeb5b
   printf '%s  %s\n' "$GAMES_SHA" "$SOURCE_DIR/skin/xml/MyGames.xml" | sha256sum -c - >/dev/null || fail 'MyGames.xml integrity check failed'
   cp "$SOURCE_DIR/skin/xml/MyGames.xml" "$TMP/xml/MyGames.xml"
-  MOVIES_HOME_SHA=b0651c19921a7ef6f8df8d19e074b5a3f8fd81ed947eb1c31f81b72926992103
+  MOVIES_HOME_SHA=6e88b9604e59b8cf8695a204457637eb9fac771f0a625fce0cb48937aaed748f
   [ -f "$SOURCE_DIR/skin/xml/Custom_1120_MoviesHome.xml" ] || fail 'Matching Movies home missing'
   printf '%s  %s\n' "$MOVIES_HOME_SHA" "$SOURCE_DIR/skin/xml/Custom_1120_MoviesHome.xml" | sha256sum -c - >/dev/null || fail 'Movies home integrity check failed'
   cp "$SOURCE_DIR/skin/xml/Custom_1120_MoviesHome.xml" "$TMP/xml/Custom_1120_MoviesHome.xml"

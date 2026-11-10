@@ -1,5 +1,21 @@
 # Aperture integration handoff
 
+## Integrated home / manual sources — local candidate, 2026-11-10 UTC
+
+Owner: delegated async/integration agent; parent owns review/deployment.
+Async commit `211207fb1467d687702901f2af4d6019623aa530`; source-choice
+`15cd3e2e4cc72a903b72da60f2f3cdcba28402f2` locally cherry-picked as
+`5a36a8440b3929a4c2f3d8c806e55ba5d2dc98c2`. Overlap resolution retains both.
+READY for review: persistent row730–732 Choose source buttons740–742, explicit
+validated identity/resume, origin-checked navigation shim into Videos and correct
+Home details navigation. OSD Change source, extras filtering, consent/history,
+async stale-result guards and immediate Back assertions retained. Both XML
+installer checksums regenerated. 878 full offline tests and 33 focused tests pass;
+complete skin ZIP assembly passes. Native synthetic integration updated, not run:
+Xvfb/PulseAudio/pactl absent. Physical held-OK and native exact-head acceptance
+remain pending. No push/deployment/live Kodi/accounts/personal-profile changes;
+source-choice worktree untouched. See [integration evidence](docs/movies-stream-choice.md).
+
 ## Movies async UI review fixes — 2026-11-10T12:36:11Z
 
 Owner: delegated async-fix agent; parent owns integration/review and deployment.

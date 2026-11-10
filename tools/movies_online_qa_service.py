@@ -148,7 +148,7 @@ def movie_actions(choice):
     rpc('Input.Select')
     until('Movie actions', lambda: xbmcgui.getCurrentWindowDialogId() == 12000
           and xbmc.getInfoLabel('Control.GetLabel(1)') == 'Movie actions')
-    until('Find streams action', lambda: xbmc.getInfoLabel('System.CurrentControl') == 'Find streams (Torrentio)')
+    until('Choose source action', lambda: xbmc.getInfoLabel('System.CurrentControl') == 'Choose source')
     capture('online-movie-actions')
     select_choice(choice)
 
@@ -399,6 +399,18 @@ def movies_home_journey():
     assert 'Adventure' in xbmc.getInfoLabel('Container(731).ListItem.Genre')
     capture('home-focused-metadata')
     checks.append({'check': 'home-focused-metadata', 'provider_supplied': True})
+    for row, button in ((731, 741), (732, 742)):
+        if row == 732:
+            rpc('Input.Down')
+        until('source button row', lambda: xbmc.getCondVisibility('Control.HasFocus(%d)' % row))
+        identifier = xbmc.getInfoLabel('Container(%d).ListItem.Property(Aperture.MovieID)' % row)
+        rpc('Input.Right')
+        until('home-source-button-focus', lambda: xbmc.getCondVisibility('Control.HasFocus(%d)' % button))
+        assert xbmc.getInfoLabel('System.CurrentControl') == 'Choose source'
+        assert xbmc.getInfoLabel('Container(%d).ListItem.Property(Aperture.MovieID)' % row) == identifier
+        capture('home-source-button-%d' % row)
+        rpc('Input.Left')
+        until('source button returns to row', lambda: xbmc.getCondVisibility('Control.HasFocus(%d)' % row))
     assert not any(event.startswith(('torrentio-', 'fake-')) for event in events())
     checks.append({'check': 'home-rows-no-source-lookup'})
     home_focus('Local files'); rpc('Input.Select')
@@ -428,6 +440,7 @@ def home_resume_journey():
     xbmc.executebuiltin('ActivateWindow(1120)')
     until('home resume row', lambda: xbmcgui.getCurrentWindowId() == 11120
           and xbmc.getInfoLabel('Container(730).NumItems') == '1')
+    home_source_journey()
     home_focus('Search'); rpc('Input.Down')
     until('continue row focused', lambda: xbmc.getCondVisibility('Control.HasFocus(730)'))
     before = events().count('torrentio-resolve')
@@ -443,6 +456,46 @@ def home_resume_journey():
     home_focus('Browse all'); rpc('Input.Select')
     until('browse after home resume', cinematic)
     checks.append({'check': 'home-resume-back-pauses', 'fresh_source': True})
+
+
+def home_source_journey():
+    # Actual row-edge D-pad and single Select, never a directory script call.
+    for row, button in ((730, 740), (731, 741), (732, 742)):
+        until('source row settled', lambda: not xbmc.getCondVisibility('Container(%d).IsUpdating' % row))
+        if xbmc.getInfoLabel('Container(%d).NumItems' % row) == '0':
+            assert row == 731, 'Continue and Popular must contain the synthetic movie'
+            assert not xbmc.getCondVisibility('Control.IsEnabled(%d)' % button)
+            continue  # Watched-only fixture has no suggested candidates.
+        home_focus('Search'); rpc('Input.Down')
+        for _ in range(3):
+            if xbmc.getCondVisibility('Control.HasFocus(%d)' % row):
+                break
+            rpc('Input.Down'); monitor.waitForAbort(.15)
+        assert xbmc.getCondVisibility('Control.HasFocus(%d)' % row)
+        identifier = xbmc.getInfoLabel('Container(%d).ListItem.Property(Aperture.MovieID)' % row)
+        assert identifier == 'tt1234567'
+        rpc('Input.Right')
+        until('home row Choose source focus', lambda: xbmc.getCondVisibility('Control.HasFocus(%d)' % button))
+        assert xbmc.getInfoLabel('System.CurrentControl') == 'Choose source'
+        before = events().count('torrentio-resolve')
+        rpc('Input.Select')
+        until('home native source directory', lambda: settled()
+              and 'action=torrentio_sources' in xbmc.getInfoLabel('Container.FolderPath')
+              and not xbmc.getCondVisibility('Container.IsUpdating'))
+        path = xbmc.getInfoLabel('Container.FolderPath')
+        assert 'id=' + identifier in path
+        assert ('resume=1' in path) == (row == 730)
+        assert xbmc.getInfoLabel('Container.Content') == 'files'
+        assert not xbmc.getCondVisibility('Control.IsVisible(61)')
+        assert not xbmc.getCondVisibility('System.HasModalDialog')
+        assert events().count('torrentio-resolve') == before
+        capture('home-source-directory-%d' % row)
+        rpc('Input.Back')
+        until('home-source-directory-cancel', lambda: xbmcgui.getCurrentWindowId() == 11120
+              and not xbmc.getCondVisibility('System.HasModalDialog'))
+        assert events().count('torrentio-resolve') == before
+        assert not xbmc.Player().isPlaying()
+    checks.append({'check': 'home-source-directory-cancel', 'no_resolution_on_cancel': True})
 
 
 try:

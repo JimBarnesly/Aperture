@@ -116,6 +116,29 @@ class HomeTests(unittest.TestCase):
             self.assertEqual(b, expected)
             self.assertEqual((c,e,x), ([],[],[]))
 
+    def test_home_source_shim_validates_identity_resume_and_origin_without_lookup(self):
+        cases = [
+            ('tt1234567', '1', [11120], False, True),
+            ('tt1234567', '0', [11120], False, True),
+            ('tt1234567', '1', [11120, 10000], False, False),
+            ('tt1234567', '1', [10025], False, False),
+            ('tt1234567', '1', [11120], True, False),
+            ('tt1234567%29', '1', [11120], False, False),
+            ('tt１２３４５６７', '1', [11120], False, False),
+            ('', '1', [11120], False, False),
+            ('tt1234567', 'invalid', [11120], False, False),
+        ]
+        for ident, resume, windows, abort, allowed in cases:
+            with self.subTest(ident=ident, resume=resume, windows=windows, abort=abort):
+                trace = []
+                c,e,d,x,b = self.run_plugin([], query='?action=home_sources&id=' + ident + '&resume=' + resume,
+                    window_ids=windows, abort=abort, http_trace=trace)
+                route = 'plugin://plugin.video.aperture.movies/?action=torrentio_sources&id=tt1234567'
+                if resume == '1': route += '&resume=1'
+                self.assertEqual(b, ['ActivateWindow(Videos,' + route + ',return)'] if allowed else [])
+                self.assertEqual((c,e,d,x,trace), ([],[],[],[],[]),
+                                 'RunPlugin has no directory handle and must not perform source lookup')
+
     def test_sources_landing_is_metadata_free_and_explicit_setup_only(self):
         trace = []
         c,e,d,x,b = self.run_plugin([], query='?mode=sources', http_trace=trace)
@@ -153,6 +176,40 @@ class HomeTests(unittest.TestCase):
         self.assertIn('mode=local', controls['723'].findtext('onclick'))
         self.assertEqual(controls['725'].findtext('onclick'), 'RunPlugin(plugin://plugin.video.aperture.movies/?action=home_refresh)')
 
+    def test_home_rows_publish_explicit_source_identity_and_resume(self):
+        from test_movie_history import history, MOVIE
+        store = history.HistoryStore(Path(self.profile) / 'history-private')
+        store.record_playback(MOVIE, is_playing=True, position_seconds=42, duration_seconds=100, lastplayed=1)
+        for row in ('continue', 'suggested', 'popular'):
+            with self.subTest(row=row):
+                _,entries,_,_,_ = self.run_plugin([], query='?mode=home_row&row=' + row,
+                    catalog_payload={'metas': [{'id': 'tt7654321', 'name': 'Movie'}]})
+                self.assertTrue(entries)
+                for entry in entries:
+                    self.assertEqual(entry[2].props.get('Aperture.MovieID'), 'tt1234567' if row == 'continue' else 'tt7654321')
+                    self.assertEqual(entry[2].props.get('Aperture.SourceResume'), '1' if row == 'continue' else '0')
+
+    def test_native_home_source_buttons_latch_each_row_and_are_reachable(self):
+        import xml.etree.ElementTree as ET
+        tree = ET.parse(ROOT / 'skin/xml/Custom_1120_MoviesHome.xml')
+        controls = {c.get('id'): c for c in tree.iter('control') if c.get('id')}
+        for row, button in (('730', '740'), ('731', '741'), ('732', '742')):
+            with self.subTest(row=row):
+                self.assertIn(button, controls)
+                choice = controls[button]
+                self.assertEqual(choice.findtext('label'), 'Choose source')
+                self.assertIsNone(choice.find('visible'), 'Keep visible after focus leaves the row')
+                self.assertEqual(controls[row].findtext('onright'), button)
+                self.assertEqual(choice.findtext('onleft'), row)
+                self.assertEqual(choice.findtext('onright'), row)
+                self.assertEqual(choice.findtext('onback'), 'PreviousMenu')
+                ident = 'Container(' + row + ').ListItem.Property(Aperture.MovieID)'
+                resume = 'Container(' + row + ').ListItem.Property(Aperture.SourceResume)'
+                self.assertEqual(choice.findtext('enable'), '!String.IsEmpty(' + ident + ')')
+                self.assertEqual(choice.findtext('onclick'),
+                    'RunPlugin(plugin://plugin.video.aperture.movies/?action=home_sources&id=$INFO[' + ident + ']&resume=$INFO[' + resume + '])')
+        self.assertNotIn('Context menu choose source', (ROOT / 'skin/xml/Custom_1120_MoviesHome.xml').read_text())
+
     def test_home_assets_and_both_install_paths_are_complete(self):
         import hashlib
         import xml.etree.ElementTree as ET
@@ -189,6 +246,7 @@ class HomeTests(unittest.TestCase):
                        'home-resume-back-pauses', 'home-offline-retry'):
             self.assertIn(marker, source)
         self.assertIn('home-focused-metadata', source)
+        self.assertIn('home-source-button-focus', source)
         mocks = (ROOT / 'tools/movies_online_mocks.py').read_text()
         self.assertIn('catalogue-offline', mocks)
 
@@ -289,6 +347,16 @@ class HomeTests(unittest.TestCase):
                 self.assertEqual((c,e,x,b), ([],[],[],[]))
                 self.assertNotIn('tt1234567', repr(props))
                 self.assertNotIn('tt7654321', repr(props))
+
+    def test_home_details_choose_source_activates_videos_not_custom_container(self):
+        trace, menus = [], []
+        c,e,d,x,b = self.run_plugin([], query='?action=online_details&id=tt1234567',
+            window_ids=[11120], folder_paths=[''], selection=0, http_trace=trace, select_trace=menus,
+            catalog_payload={'meta': {'id': 'tt1234567', 'name': 'Movie'}})
+        self.assertEqual(b, ['ActivateWindow(Videos,plugin://plugin.video.aperture.movies/?action=torrentio_sources&id=tt1234567,return)'])
+        self.assertEqual(menus[0][1][0], 'Choose source')
+        self.assertEqual((c,e,x), ([],[],[]))
+        self.assertEqual(len(trace), 1)
 
     def test_explicit_details_missing_plot_is_honest_and_series_is_rejected(self):
         trace = []

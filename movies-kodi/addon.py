@@ -304,7 +304,10 @@ def online_details(query):
         return
     if selected == 0:
         route = BASE + '?' + urlencode({'action': 'torrentio_sources', 'id': movie['id']})
-        xbmc.executebuiltin('Container.Update(' + route + ')')
+        if origin_window == 11120:
+            xbmc.executebuiltin('ActivateWindow(Videos,' + route + ',return)')
+        else:
+            xbmc.executebuiltin('Container.Update(' + route + ')')
     elif selected == 1:
         xbmc.executebuiltin('RunPlugin(' + BASE + '?action=torrentio_setup)')
 
@@ -404,6 +407,9 @@ def home_row(row, generation):
                              'plot': movie.get('plot') or 'Details unavailable in this row. Open Movie details (Cinemeta) from the context menu.',
                              'genre': movie.get('genre', movie.get('genres', []))})
         li.setProperty('Aperture.Year', str(movie.get('year', '')))
+        from resources.lib.movie_history import valid_id
+        li.setProperty('Aperture.MovieID', movie['id'] if valid_id(movie['id']) else '')
+        li.setProperty('Aperture.SourceResume', '1' if row == 'continue' else '0')
         li.setArt({'poster': movie.get('poster', ''), 'thumb': movie.get('poster', ''),
                    'fanart': movie.get('fanart', ''), 'icon': 'DefaultVideo.png'})
         li.setProperty('IsPlayable', 'false')
@@ -426,6 +432,20 @@ def main():
     if action == 'home_refresh':
         import secrets
         xbmcgui.Window(10000).setProperty('Aperture.Home.refresh', secrets.token_hex(8))
+        return
+    if action == 'home_sources':
+        import re
+        origin = xbmcgui.getCurrentWindowId()
+        identifier = catalog.value(query, 'id')
+        resume = catalog.value(query, 'resume', '0')
+        if (origin != 11120 or not re.fullmatch(r'tt[0-9]{5,12}', identifier)
+                or resume not in ('0', '1')):
+            return
+        params = {'action': 'torrentio_sources', 'id': identifier}
+        if resume == '1':
+            params['resume'] = '1'
+        if not xbmc.Monitor().abortRequested() and xbmcgui.getCurrentWindowId() == origin:
+            xbmc.executebuiltin('ActivateWindow(Videos,' + BASE + '?' + urlencode(params) + ',return)')
         return
     if action == 'home_search':
         origin = xbmcgui.getCurrentWindowId()
