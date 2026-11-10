@@ -31,10 +31,25 @@ class MoviePauseOnExit:
         # An intervening transient dialog/window neither arms nor disarms.
 
 
+def history_monitor():
+    import os
+    import xbmcaddon
+    import xbmcvfs
+    from resources.lib.movie_history import HistoryStore
+    from resources.lib.history_playback import HistoryMonitor
+    profile = xbmcvfs.translatePath(xbmcaddon.Addon().getAddonInfo('profile'))
+    return HistoryMonitor(HistoryStore(os.path.join(profile, 'history-private')),
+                          xbmc.Player(), xbmcgui.Window(10000),
+                          notify=lambda: xbmcgui.Dialog().notification(
+                              'Movies', 'History unavailable; playback is unaffected.'))
+
+
 def run():
     monitor = xbmc.Monitor()
     guard = MoviePauseOnExit()
+    history = history_monitor()
     while not monitor.abortRequested():
+        history.update()
         try:
             guard.update()
         except RuntimeError:
@@ -43,6 +58,7 @@ def run():
             guard = MoviePauseOnExit()
         if monitor.waitForAbort(0.1):
             break
+    history.close()
 
 
 if __name__ == '__main__':

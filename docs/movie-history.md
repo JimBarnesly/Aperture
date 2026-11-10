@@ -1,6 +1,8 @@
 # Private Movies history core (integration handoff)
 
-Isolated library only: **not wired into Kodi, not deployed, no UI changes**.
+Original isolated-library handoff below. For the subsequent local-only Kodi/UI
+integration, see [integration behavior and acceptance gates](movie-history-integration.md).
+The native integration has not been deployed or physically accepted.
 Base: `9d99d02117f025e36325a6c76f4d197ec4abb46a`.
 
 ## Integration API

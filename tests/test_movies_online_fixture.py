@@ -91,6 +91,26 @@ class OnlineTransportTests(unittest.TestCase):
 
 
 class OnlineHarnessTests(unittest.TestCase):
+    def test_online_harness_budget_includes_history_wait(self):
+        source = (ROOT / 'tools/movies_smoke.sh').read_text()
+        self.assertIn('240s', source, 'Online journey now includes a 22-second stale-write observation')
+        self.assertIn('{1..2400}', source)
+
+    def test_native_history_journey_checks_record_resume_pause_clear_and_suggestions(self):
+        tree = ast.parse((ROOT / 'tools/movies_online_qa_service.py').read_text())
+        functions = {n.name: n for n in tree.body if isinstance(n, ast.FunctionDef)}
+        self.assertIn('history_journey', functions, 'Native QA must exercise actual session/history plumbing')
+        journey = ast.unparse(functions['history_journey'])
+        for evidence in ('history-private', 'resume_seconds', 'Continue watching', 'History',
+                         'Suggested for you', 'Clear history', 'Input.Back', 'Player.Paused',
+                         'torrentio-resolve', 'getTime', 'catalogue suggestions only'):
+            self.assertIn(evidence, journey)
+        for bypass in ('RunPlugin(', 'Player.Open', '.play(', 'write_text', 'record_playback'):
+            self.assertNotIn(bypass, journey)
+        calls = [n for n in ast.walk(tree) if isinstance(n, ast.Call)
+                 and isinstance(n.func, ast.Name) and n.func.id == 'history_journey']
+        self.assertEqual(len(calls), 1)
+
     def test_native_journey_no_longer_waits_for_removed_rights_prompt(self):
         source = (ROOT / 'tools/movies_online_qa_service.py').read_text()
         self.assertNotIn('Find streams with Torrentio?', source)

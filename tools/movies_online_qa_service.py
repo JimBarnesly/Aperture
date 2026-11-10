@@ -280,6 +280,51 @@ def torrentio_journey(online_path):
     capture('torrentio-return-search')
 
 
+def history_journey():
+    import xbmcvfs
+    path = Path(xbmcvfs.translatePath('special://profile/addon_data/plugin.video.aperture.movies/history-private/history.json'))
+    def rows():
+        return json.loads(path.read_text())['records'] if path.exists() else {}
+    until('actual playback persisted', lambda: 'tt1234567' in rows())
+    position = rows()['tt1234567']['resume_seconds']
+    assert position > 0
+    assert set(rows()['tt1234567']) == {'id', 'title', 'year', 'genres', 'resume_seconds', 'duration_seconds', 'lastplayed', 'completed'}
+    nav('Collections'); rpc('Input.Select'); select_choice('Continue watching')
+    until('continue watching', lambda: cinematic() and 'mode=continue' in xbmc.getInfoLabel('Container.FolderPath'))
+    rpc('Input.Down'); focus('Synthetic Online Horizon · Resume')
+    before = events().count('torrentio-resolve')
+    rpc('Input.Select')
+    until('explicit history Resume', lambda: xbmc.Player().isPlayingVideo())
+    until('resumed position', lambda: xbmc.Player().getTime() >= position)
+    assert events().count('torrentio-resolve') == before + 1
+    until('fullscreen resume', lambda: xbmcgui.getCurrentWindowId() == 12005)
+    rpc('Input.Back')
+    until('Back pauses movie', lambda: cinematic() and xbmc.getCondVisibility('Player.Paused'))
+    nav('Collections'); rpc('Input.Select'); select_choice('History')
+    until('history directory', lambda: cinematic() and 'mode=history' in xbmc.getInfoLabel('Container.FolderPath'))
+    rpc('Input.Down'); focus('Clear history'); rpc('Input.Select')
+    until('clear confirmation', lambda: xbmcgui.getCurrentWindowDialogId() == 10100)
+    consent_choice(False)
+    until('clear declined', cinematic)
+    assert rows()
+    focus('Clear history'); rpc('Input.Select')
+    until('clear confirmation again', lambda: xbmcgui.getCurrentWindowDialogId() == 10100)
+    consent_choice(True)
+    until('history cleared', lambda: cinematic() and not rows())
+    assert xbmc.Player().isPlayingVideo() and xbmc.getCondVisibility('Player.Paused')
+    monitor.waitForAbort(22)
+    assert not rows(), 'Active session must not repopulate cleared history'
+    rpc('Player.Stop', {'playerid': 1})
+    until('resumed video stopped', lambda: not xbmc.Player().isPlaying())
+    assert not rows()
+    nav('Collections'); rpc('Input.Select'); select_choice('Suggested for you')
+    until('local suggestion fallback', lambda: cinematic() and 'mode=suggested' in xbmc.getInfoLabel('Container.FolderPath'))
+    assert 'catalogue suggestions only' in xbmc.getInfoLabel('Container.PluginCategory')
+    capture('history-cleared-suggestions')
+    checks.append({'check': 'history-record-fresh-resolve-resume-back-pause-clear-suggestions',
+                   'synthetic_transport': True, 'cleared_session_stayed_empty': True})
+
+
 try:
     until('Home',lambda:xbmcgui.getCurrentWindowId()==10000)
     version=rpc('Application.GetProperties',{'properties':['version']})['version']
@@ -345,6 +390,7 @@ try:
     assert events() == stopped_events
     checks.append({'check':'RD-fake-device-cancel-after-first-poll','real_provider_calls':False,'credentials_saved':False})
     torrentio_journey(online_path)
+    history_journey()
     nav('Local files'); rpc('Input.Select')
     until('return to local files',lambda:cinematic() and xbmc.getInfoLabel('Container.FolderPath')==local_path)
     rpc('Input.Down')

@@ -109,7 +109,7 @@ def discovery_action(action):
     if parsed.netloc != urlsplit(BASE).netloc:
         return
     query = parse_qs(parsed.query)
-    if query.get('mode', [''])[0] == 'online' and action != 'providers':
+    if query.get('mode', [''])[0] in ('online', 'history', 'continue', 'suggested') and action != 'providers':
         online_action(action, query, origin)
         return
     _, state, _ = discovery_request(query)
@@ -203,10 +203,14 @@ def online_action(action, query, origin):
             return
         state.update(search=value.strip()[:200], collection='top')
     elif action == 'collection':
-        selected = xbmcgui.Dialog().select('Movie collections', [label for _, label in catalog.COLLECTIONS] + ['My Kodi library'])
-        if selected < 0 or selected > len(catalog.COLLECTIONS):
+        extra = [('discover', 'My Kodi library'), ('history', 'History'),
+                 ('continue', 'Continue watching'), ('suggested', 'Suggested for you')]
+        labels = [label for _, label in catalog.COLLECTIONS] + [label for _, label in extra]
+        selected = xbmcgui.Dialog().select('Movie collections', labels)
+        if selected < 0 or selected >= len(labels):
             return
-        state = ({'mode': 'discover'} if selected == len(catalog.COLLECTIONS)
+        state = ({'mode': extra[selected - len(catalog.COLLECTIONS)][0]}
+                 if selected >= len(catalog.COLLECTIONS)
                  else {'mode': 'online', 'collection': catalog.COLLECTIONS[selected][0]})
     elif action == 'genre':
         selected = xbmcgui.Dialog().select('Online genre', ['All genres'] + list(catalog.GENRES))
@@ -286,9 +290,74 @@ def online_details(query):
         xbmc.executebuiltin('RunPlugin(' + BASE + '?action=torrentio_setup)')
 
 
+def history_directory(mode):
+    import os
+    from resources.lib.movie_history import HistoryError, HistoryStore
+    try:
+        rows = HistoryStore(os.path.join(poster_profile(), 'history-private')).records()
+    except HistoryError:
+        rows = []
+        xbmcgui.Dialog().ok('History unavailable', 'Could not read private history. Clear history can reset invalid data; playback and media are unaffected.')
+    xbmcplugin.setContent(HANDLE, 'movies')
+    heading = 'History' if mode == 'history' else 'Continue watching'
+    if mode == 'suggested':
+        from resources.lib.movie_recommendations import recommend
+        try:
+            candidates, _, _ = catalog.browse({})  # Never derive a remote query from history.
+        except catalog.CatalogError:
+            candidates = []
+            xbmcgui.Dialog().ok('Suggestions unavailable', 'The public catalogue is unavailable. History and Continue watching remain local.')
+        result = recommend(candidates, rows)
+        rows = result['items']
+        heading = 'Suggested for you · ' + result['reason']
+    xbmcplugin.setPluginCategory(HANDLE, heading)
+    for row in rows:
+        resume = row.get('resume_seconds', 0) > 0
+        if mode == 'continue' and not resume:
+            continue
+        route = {'action': 'torrentio_auto', 'id': row['id']}
+        beginning = BASE + '?' + urlencode(route)
+        if resume:
+            route['resume'] = '1'
+        li = xbmcgui.ListItem(label=row['title'] + ('' if mode == 'suggested' else ' · Resume' if resume else ' · Watched'))
+        li.setInfo('video', {'title': row['title'], 'genre': row['genres']})
+        li.setArt({'icon': 'DefaultVideo.png'})
+        li.setProperty('IsPlayable', 'false')
+        li.setProperty('Aperture.MovieFolder', 'false')
+        li.addContextMenuItems([('Play from beginning', 'RunPlugin(' + beginning + ')')])
+        xbmcplugin.addDirectoryItem(HANDLE, BASE + '?' + urlencode(route), li, False)
+    li = xbmcgui.ListItem(label='Clear history')
+    li.setProperty('Aperture.MovieFolder', 'true')
+    xbmcplugin.addDirectoryItem(HANDLE, BASE + '?action=clear_history', li, False)
+    end()
+    apply_cinema_view()
+
+
 def main():
     query = parse_qs(sys.argv[2].lstrip('?'))
     action = query.get('action', [''])[0]
+    if action == 'clear_history':
+        origin = xbmc.getInfoLabel('Container.FolderPath')
+        if not xbmcgui.Dialog().yesno('Clear history?',
+                'Remove local movie history and suggestions? Current playback continues without recording until a new selection. Media and backups are unchanged.'):
+            return
+        from resources.lib.history_playback import request_clear, CLEAR_ACK
+        window = xbmcgui.Window(10000)
+        request = request_clear(window)
+        monitor = xbmc.Monitor()
+        for _ in range(50):
+            if window.getProperty(CLEAR_ACK) == request:
+                if (xbmc.getInfoLabel('Container.FolderPath') == origin
+                        and not xbmc.getCondVisibility('System.HasModalDialog')):
+                    xbmc.executebuiltin('Container.Refresh')
+                return
+            if monitor.waitForAbort(0.1):
+                return
+        xbmcgui.Dialog().ok('History', 'Clear not confirmed. The playback service may be unavailable; try again later.')
+        return
+    if not action and query.get('mode', [''])[0] in ('history', 'continue', 'suggested'):
+        history_directory(query['mode'][0])
+        return
     if action in ('torrentio_setup', 'torrentio_find', 'torrentio_auto'):
         from resources.lib.torrentio_ui import run
         run(query, poster_profile(), BASE, HANDLE)

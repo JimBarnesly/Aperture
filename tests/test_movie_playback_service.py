@@ -27,6 +27,11 @@ class MoviePlaybackServiceTests(unittest.TestCase):
             self.service = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(self.service)
         self.guard = self.service.MoviePauseOnExit()
+        # Service lifecycle tests isolate Kodi's unavailable profile boundary.
+        self.history_factory = self.service.history_monitor
+        factory = patch.object(self.service, 'history_monitor')
+        factory.start()
+        self.addCleanup(factory.stop)
 
     def test_non_movie_or_stopped_player_is_never_paused(self):
         for video, movie, playing in ((False, True, True), (True, False, True),
@@ -75,6 +80,35 @@ class MoviePlaybackServiceTests(unittest.TestCase):
         self.window = 10025
         self.guard.update()
         self.xbmc.executeJSONRPC.assert_not_called()
+
+    def test_service_factory_uses_only_translated_private_history_directory(self):
+        import tempfile
+        import types
+        from test_movie_history import history
+        from test_movie_history_playback import load
+        with tempfile.TemporaryDirectory() as profile:
+            addon = types.SimpleNamespace(getAddonInfo=lambda key: 'special://synthetic-profile')
+            vfs = Mock()
+            vfs.translatePath.return_value = profile
+            with patch.dict(sys.modules, {'xbmcaddon': types.SimpleNamespace(Addon=lambda: addon),
+                    'xbmcvfs': vfs, 'resources.lib.movie_history': history,
+                    'resources.lib.history_playback': load()}):
+                tracker = self.history_factory()
+            self.assertEqual(tracker.store.directory, Path(profile) / 'history-private')
+            self.assertEqual(list(Path(profile).iterdir()), [])
+            vfs.translatePath.assert_called_once_with('special://synthetic-profile')
+            self.assertIs(tracker.player, self.xbmc.Player.return_value)
+            self.gui.Window.assert_called_once_with(10000)
+
+    def test_service_polls_history_in_same_serial_loop_as_pause(self):
+        monitor = self.xbmc.Monitor.return_value
+        monitor.abortRequested.return_value = False
+        monitor.waitForAbort.side_effect = [False, True]
+        self.assertTrue(hasattr(self.service, 'history_monitor'), 'Service must construct real history monitor')
+        with patch.object(self.service, 'history_monitor') as factory:
+            self.service.run()
+        self.assertEqual(factory.return_value.update.call_count, 2)
+        factory.return_value.close.assert_called_once_with()
 
     def test_service_runs_until_abort_without_touching_format(self):
         monitor = self.xbmc.Monitor.return_value

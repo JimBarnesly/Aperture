@@ -5,6 +5,7 @@ from contextlib import contextmanager
 import xbmc
 import xbmcgui
 from resources.lib.movie_autoplay import rank_sources, start_video
+from resources.lib.history_playback import EPOCH, HistoryError, prepare_history
 from resources.lib.torrentio import Client, Config, Store, ProviderError
 from resources.lib.debrid import Client as RDClient, Store as RDStore, DebridError, PUBLIC_CLIENT_ID
 
@@ -68,6 +69,8 @@ def run(query, profile, base, handle):
             if config is None:
                 dialog.ok('Online playback is not connected', 'Open Sources → Set up online playback. Discover remains a metadata catalogue until you connect a source.')
                 return
+            history_window = xbmcgui.Window(10000)
+            history_epoch = history_window.getProperty(EPOCH)
             identifier = query.get('id', [''])[0]
             if not isinstance(identifier, str) or not re.fullmatch(r'tt[0-9]{7,10}', identifier):
                 raise ProviderError()
@@ -103,6 +106,13 @@ def run(query, profile, base, handle):
                     return
                 item = xbmcgui.ListItem(path=path)
                 item.getVideoInfoTag().setMediaType('movie')
+                try:
+                    prepare_history(history_window, item, identifier, profile=profile,
+                                    epoch=history_epoch, resume=query.get('resume') == ['1'])
+                except HistoryError:
+                    dialog.notification('Movies', 'History unavailable; playback is unaffected.')
+                if not current():
+                    return
                 outcome = start_video(xbmc, monitor, path, item, lambda: current(playing=True))
                 if outcome == 'timeout' and current():
                     dialog.ok('Playback did not start', 'Stopped waiting; no automatic retry. Use Choose source from the movie menu.')

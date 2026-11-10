@@ -1,5 +1,17 @@
 # Aperture integration handoff
 
+## Private movie history integration — local checkpoint
+
+On `feat/movies-autoplay` above `00c68ef8`, the history core (`974ecc2d`,
+cherry-picked as `899a400`) is wired to session-correlated positive playback
+progress, 20-second persistence, final samples and serialized clear. Discover →
+Collections exposes History / Continue watching / Suggested for you. Explicit
+Resume resolves a fresh source; suggestions rank only a default public batch
+locally. Full offline suite: 806 passed. Native synthetic journey updated but
+not executed: Xvfb/PulseAudio/pactl unavailable. No deployment, push, accounts,
+live Kodi controls or profile changes. Parent review and native tag/StartOffset
+acceptance remain pending. [Behavior, TDD evidence and limitations](docs/movie-history-integration.md).
+
 ## Automatic movie selection — local checkpoint
 
 `feat/movies-autoplay`, based on `570f1176`, routes poster Select through

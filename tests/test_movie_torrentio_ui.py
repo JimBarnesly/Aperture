@@ -24,7 +24,10 @@ class TorrentioUITests(unittest.TestCase):
         path = ROOT / 'movies-kodi/resources/lib/torrentio_ui.py'
         self.assertTrue(path.exists(), 'Torrentio wizard/UI is missing')
         from test_movie_autoplay import load_policy
-        with patch.dict(sys.modules, {'resources.lib.movie_autoplay': load_policy(), 'xbmc': self.xbmc, 'xbmcgui': self.gui, 'xbmcplugin': self.plugin, 'resources.lib.torrentio': t, 'resources.lib.debrid': rd}):
+        from test_movie_history_playback import load as load_history
+        bridge = load_history()
+        bridge.prepare_history = Mock()
+        with patch.dict(sys.modules, {'resources.lib.history_playback': bridge, 'resources.lib.movie_autoplay': load_policy(), 'xbmc': self.xbmc, 'xbmcgui': self.gui, 'xbmcplugin': self.plugin, 'resources.lib.torrentio': t, 'resources.lib.debrid': rd}):
             spec = importlib.util.spec_from_file_location('torrentio_ui_test', path)
             self.ui = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(self.ui)
@@ -44,6 +47,71 @@ class TorrentioUITests(unittest.TestCase):
         source.chmod(0o600)
         t.Store(self.temp.name).import_file(str(source))
         return str(source)
+
+    def test_real_ui_handoff_records_only_monitor_progress_and_resumes_fresh_url(self):
+        from test_movie_history import history, MOVIE
+        from test_movie_history_playback import load
+        import types
+        bridge = load()
+        self.connect()
+        self.client.streams.return_value = [t.Source('unused', '1080p', 'one')]
+        self.client.playback.return_value = 'https://seed.download.real-debrid.com/new.mkv'
+        props = {}
+        window = types.SimpleNamespace(getProperty=lambda k: props.get(k, ''),
+            setProperty=props.__setitem__, clearProperty=lambda k: props.pop(k, None))
+        self.gui.Window.return_value = window
+        self.ui.prepare_history = bridge.prepare_history
+        item = self.gui.ListItem.return_value
+        player = Mock()
+        player.isPlayingVideo.return_value = True
+        player.getTime.return_value = 14
+        player.getTotalTime.return_value = 100
+        store = history.HistoryStore(Path(self.temp.name) / 'history-private')
+        tracker = bridge.HistoryMonitor(store, player, window)
+        def start(*args):
+            self.assertEqual(store.records(), [])
+            token = item.getVideoInfoTag.return_value.setUniqueID.call_args.args[0]
+            player.getVideoInfoTag.return_value.getUniqueID.return_value = token
+            tracker.update()
+            return 'started'
+        self.ui.start_video.side_effect = start
+        catalog = types.SimpleNamespace(details=lambda identifier: MOVIE, CatalogError=ValueError)
+        with patch.dict(sys.modules, {'resources.lib.catalog': catalog}):
+            self.run_ui({'action': ['torrentio_auto'], 'id': ['tt1234567']})
+        self.assertEqual(store.records()[0]['resume_seconds'], 14)
+        self.client.playback.return_value = 'https://seed.download.real-debrid.com/rotated.mkv'
+        self.ui.start_video.side_effect = None
+        self.ui.start_video.return_value = 'started'
+        self.run_ui({'action': ['torrentio_auto'], 'id': ['tt1234567'], 'resume': ['1']})
+        self.assertEqual(self.client.playback.call_count, 2)
+        self.assertEqual(self.ui.start_video.call_args.args[2], self.client.playback.return_value)
+        item.setProperty.assert_called_once_with('StartOffset', '14')
+        self.assertNotIn('https://', (store.directory / 'history.json').read_text())
+
+    def test_history_failure_does_not_prevent_resolved_playback(self):
+        from test_movie_history import history
+        self.connect()
+        self.client.streams.return_value = [t.Source('unused', '1080p', 'one')]
+        self.client.playback.return_value = 'https://seed.download.real-debrid.com/new.mkv'
+        self.ui.prepare_history.side_effect = history.HistoryError('private path')
+        self.run_ui({'action': ['torrentio_auto'], 'id': ['tt1234567']})
+        self.ui.start_video.assert_called_once()
+        self.assertIn('History unavailable', repr(self.dialog.notification.call_args))
+        self.assertNotIn('private path', repr(self.dialog.mock_calls))
+
+    def test_resolved_item_prepares_history_before_play_without_logging_selection(self):
+        self.connect()
+        self.client.streams.return_value = [t.Source('unused', '1080p', 'one')]
+        self.client.playback.return_value = 'https://seed.download.real-debrid.com/new.mkv'
+        self.assertTrue(hasattr(self.ui, 'prepare_history'), 'Resolved playback needs session handoff')
+        events = []
+        self.ui.prepare_history.side_effect = lambda *a, **kw: events.append(('prepare', a, kw))
+        self.ui.start_video.side_effect = lambda *a: events.append(('play',)) or 'started'
+        self.run_ui({'action': ['torrentio_auto'], 'id': ['tt1234567'], 'resume': ['1']})
+        self.assertEqual([e[0] for e in events], ['prepare', 'play'])
+        self.assertEqual(events[0][1][2], 'tt1234567')
+        self.assertTrue(events[0][2]['resume'])
+        self.assertNotIn('new.mkv', repr(events[0]))
 
     def test_auto_cancel_navigation_or_shutdown_during_resolve_never_retries_or_plays(self):
         self.connect()
