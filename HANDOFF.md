@@ -1,5 +1,18 @@
 # Aperture integration handoff
 
+## Autoplay lifecycle review — local fixes
+
+Reviewed against history-integrated `7fbcf66ade72cf1ed7c69eedb319062adabcea08`.
+Startup now correlates the existing opaque history session, retains predecessor
+transitions, refuses unowned-error fallback, and checks ownership before every
+stop. Pause state is identity-bound. A separate versioned one-time autoplay
+effects preference covers setup/import and existing-profile migration without
+revoking sharing or removing manual sources. History/resume/clear preserved.
+Full offline suite: **826 passed**, network namespace with loopback only.
+No deployment/push/device/accounts. Native QA updated but not run (missing
+Xvfb/PulseAudio/pactl); native pending-open revocation and atomic player ownership
+remain unproven. Parent review required. [TDD evidence and limits](docs/movies-lifecycle-review.md).
+
 ## Private movie history integration — local checkpoint
 
 On `feat/movies-autoplay` above `00c68ef8`, the history core (`974ecc2d`,

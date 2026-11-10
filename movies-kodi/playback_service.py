@@ -8,6 +8,12 @@ import xbmcgui
 class MoviePauseOnExit:
     def __init__(self):
         self.was_fullscreen = False
+        self.identity = None
+        self.player = xbmc.Player()
+
+    def playback_identity(self):
+        return (self.player.getVideoInfoTag().getUniqueID('aperture_session')
+                or self.player.getPlayingFile())
 
     def update(self):
         window = xbmcgui.getCurrentWindowId()
@@ -18,7 +24,12 @@ class MoviePauseOnExit:
         eligible = (xbmc.getCondVisibility('Player.HasVideo')
                     and xbmc.getCondVisibility('VideoPlayer.Content(movies)')
                     and xbmc.getCondVisibility('Player.Playing'))
-        if self.was_fullscreen and browsing and eligible:
+        identity = self.playback_identity() if eligible else None
+        if not identity or identity != self.identity:
+            self.was_fullscreen = False
+        self.identity = identity
+        if (self.was_fullscreen and browsing and eligible
+                and self.playback_identity() == identity):
             # Explicit false is idempotent; never toggle a paused player to play.
             xbmc.executeJSONRPC(json.dumps({
                 'jsonrpc': '2.0', 'id': 1, 'method': 'Player.PlayPause',

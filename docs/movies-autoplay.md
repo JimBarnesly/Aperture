@@ -1,5 +1,10 @@
 # Automatic movie sources — local candidate
 
+> Historical checkpoint below. The history-integrated review revision supersedes
+> its consent and lifecycle claims: see [review fixes and native limits](movies-lifecycle-review.md).
+> Automatic effects now require a separate versioned opt-in for existing profiles;
+> timeout cannot promise cancellation of an unidentifiable native pending open.
+
 Base `570f1176b6a6ed8e0a8a224ec691ac5713ca77dd`; branch
 `feat/movies-autoplay`. No deployment, push, account calls or live Kodi actions.
 

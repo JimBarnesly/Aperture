@@ -1,11 +1,12 @@
 """Consent-first setup, automatic movie playback and manual source selection."""
 import time
 import re
+import secrets
 from contextlib import contextmanager
 import xbmc
 import xbmcgui
 from resources.lib.movie_autoplay import rank_sources, start_video
-from resources.lib.history_playback import EPOCH, HistoryError, prepare_history
+from resources.lib.history_playback import EPOCH, HistoryError, prepare_history, discard_pending
 from resources.lib.torrentio import Client, Config, Store, ProviderError
 from resources.lib.debrid import Client as RDClient, Store as RDStore, DebridError, PUBLIC_CLIENT_ID
 
@@ -29,6 +30,19 @@ def run(query, profile, base, handle):
         return dialog.yesno(title, message) and current()
 
     store = Store(profile)
+
+    def autoplay_consent(change=False):
+        preference = None if change else store.autoplay_preference()
+        if preference is None:
+            preference = dialog.yesno('Automatic movie playback',
+                'Allow selecting a movie to automatically resolve up to 3 sources? '
+                'Resolvers may use account traffic, create provider history and queue a transfer. '
+                'Kodi may log the signed URL. Decline keeps metadata and manual Choose source. '
+                'Change this preference in Sources setup; account sharing is unchanged.')
+            if not current():
+                return False
+            store.set_autoplay_preference(preference)
+        return preference
 
     @contextmanager
     def connected_client():
@@ -68,6 +82,8 @@ def run(query, profile, base, handle):
             config = store.load()
             if config is None:
                 dialog.ok('Online playback is not connected', 'Open Sources → Set up online playback. Discover remains a metadata catalogue until you connect a source.')
+                return
+            if action == 'torrentio_auto' and not autoplay_consent():
                 return
             history_window = xbmcgui.Window(10000)
             history_epoch = history_window.getProperty(EPOCH)
@@ -111,9 +127,17 @@ def run(query, profile, base, handle):
                                     epoch=history_epoch, resume=query.get('resume') == ['1'])
                 except HistoryError:
                     dialog.notification('Movies', 'History unavailable; playback is unaffected.')
+                # History preparation normally supplies the session. A metadata
+                # outage/clear must not remove startup ownership or replace a
+                # valid history token. No URL is used as identity.
+                if not item.getVideoInfoTag().getUniqueID('aperture_session'):
+                    item.getVideoInfoTag().setUniqueID(secrets.token_hex(16), 'aperture_session')
                 if not current():
+                    discard_pending(history_window, item)
                     return
                 outcome = start_video(xbmc, monitor, path, item, lambda: current(playing=True))
+                if outcome != 'started':
+                    discard_pending(history_window, item)
                 if outcome == 'timeout' and current():
                     dialog.ok('Playback did not start', 'Stopped waiting; no automatic retry. Use Choose source from the movie menu.')
                 if outcome != 'failed':
@@ -134,6 +158,7 @@ def run(query, profile, base, handle):
             'Check saved connection (no playback)',
             'Connection status and help',
             'Disconnect Torrentio from this profile',
+            'Automatic playback preference',
         ])
         if selected < 0 or not current():
             return
@@ -168,6 +193,8 @@ def run(query, profile, base, handle):
                 if current():
                     store.enable_native()
             if current():
+                autoplay_consent()
+            if current():
                 dialog.ok('Online playback enabled', 'No token copying needed. Provider and playback not verified. Open Discover → movie details → Find streams (Torrentio). No Torrentio request was made during setup.')
         elif selected == 1:
             if not consent('Advanced import · 1/2', 'This imports a secret Torrentio manifest from an owner-only local file. Torrentio receives its RD token and selected movie IDs when you search. No existing RD grant is reused. Selecting a movie automatically tries up to 3 sources; this may add RD history, queue a transfer and use traffic. Kodi may log the signed URL. Choose source remains in the movie menu. Continue?'):
@@ -181,7 +208,12 @@ def run(query, profile, base, handle):
                 if not current():
                     return
                 store.import_file(path)
+            autoplay_consent()
+            if not current():
+                return
             dialog.ok('Configuration saved · not tested', 'No provider request was made. Use Check saved connection, then Discover → movie context menu → Find streams (Torrentio). Keep the original secret file private or remove it yourself.')
+        elif selected == 5:
+            autoplay_consent(change=True)
         elif selected == 2:
             if config is None:
                 raise ProviderError('missing')

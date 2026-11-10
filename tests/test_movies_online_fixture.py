@@ -123,6 +123,8 @@ class OnlineHarnessTests(unittest.TestCase):
         journey = ast.unparse(functions['torrentio_journey'])
         for evidence in ('Connect with Real-Debrid (no token copying)',
                          'Share access with Torrentio', 'approve-synthetic-device',
+                         'Automatic movie playback', 'autoplay-effects-v1',
+                         'aperture_session',
                          'Check saved connection (no playback)', 'Input.SendText',
                          'Choose source', 'Choose a source',
                          'automatic movie selection', 'Player.GetActivePlayers',

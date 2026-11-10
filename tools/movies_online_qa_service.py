@@ -210,9 +210,16 @@ def torrentio_journey(online_path):
     # Simulate server approval only, never write credentials or a connection marker.
     # The real wizard/device client must exchange and persist the synthetic grant.
     (OUT/'approve-synthetic-device').touch()
+    until('versioned autoplay consent', lambda: xbmcgui.getCurrentWindowDialogId() == 10100
+          and xbmc.getInfoLabel('Control.GetLabel(1)') == 'Automatic movie playback')
+    for phrase in ('traffic', 'history', 'transfer', 'Choose source'):
+        assert phrase in xbmc.getInfoLabel('Control.GetLabel(9)')
+    assert not any(event.startswith('torrentio-') for event in events())
+    consent_choice(True)
     until('wizard completed', lambda: xbmcgui.getCurrentWindowDialogId() == 12002
           and xbmc.getInfoLabel('Control.GetLabel(1)') == 'Online playback enabled')
     assert connection.read_text() == 'rd-oauth-v1' and credentials.is_file()
+    assert (profile/'torrentio-private/autoplay-effects-v1').read_text() == 'allow'
     assert connection.stat().st_mode & 0o777 == 0o600
     assert credentials.stat().st_mode & 0o777 == 0o600
     assert events().count('fake-token-exchange') == 1
@@ -262,6 +269,7 @@ def torrentio_journey(online_path):
     monitor.waitForAbort(3)
     players = rpc('Player.GetActivePlayers')
     assert any(p['type'] == 'video' for p in players)
+    assert xbmc.Player().getVideoInfoTag().getUniqueID('aperture_session')
     playing = xbmc.Player().getPlayingFile()
     assert Path(playing) == RUNTIME/'movies/Amber Horizon.mkv'
     assert events().count('torrentio-streams') == 3  # Manual lookup + automatic lookup + playback refetch.

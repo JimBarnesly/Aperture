@@ -28,6 +28,17 @@ def prepare(window, item, movie, *, epoch='', now=None):
     return token
 
 
+def discard_pending(window, item):
+    """An abandoned startup cannot be adopted by a later history observer."""
+    try:
+        data = json.loads(window.getProperty(PENDING) or '{}')
+        token = item.getVideoInfoTag().getUniqueID('aperture_session')
+        if token and data.get('session') == token:
+            window.clearProperty(PENDING)
+    except (ValueError, TypeError, AttributeError):
+        pass  # Never clear another request on uncertain attribution.
+
+
 def prepare_history(window, item, identifier, *, profile, epoch, resume=False, store=None):
     import os
     if not valid_id(identifier):

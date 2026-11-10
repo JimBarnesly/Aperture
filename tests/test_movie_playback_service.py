@@ -33,6 +33,31 @@ class MoviePlaybackServiceTests(unittest.TestCase):
         factory.start()
         self.addCleanup(factory.stop)
 
+    def test_owner_change_during_pause_decision_does_not_pause_replacement(self):
+        tag = self.xbmc.Player.return_value.getVideoInfoTag.return_value
+        tag.getUniqueID.return_value = 'movie-a'
+        self.guard.update()
+        self.window = 10025
+        tag.getUniqueID.side_effect = ['movie-a', 'movie-b']
+        self.guard.update()
+        self.xbmc.executeJSONRPC.assert_not_called()
+
+    def test_replacement_movie_in_browser_does_not_inherit_fullscreen(self):
+        player = self.xbmc.Player.return_value
+        tag = player.getVideoInfoTag.return_value
+        tag.getUniqueID.return_value = 'movie-a-session'
+        player.getPlayingFile.return_value = 'same-file'
+        self.guard.update()
+        tag.getUniqueID.return_value = 'movie-b-session'
+        self.window = 10025
+        self.guard.update()
+        self.xbmc.executeJSONRPC.assert_not_called()
+        self.window = 12005
+        self.guard.update()
+        self.window = 10025
+        self.guard.update()
+        self.xbmc.executeJSONRPC.assert_called_once()
+
     def test_non_movie_or_stopped_player_is_never_paused(self):
         for video, movie, playing in ((False, True, True), (True, False, True),
                                       (True, True, False)):

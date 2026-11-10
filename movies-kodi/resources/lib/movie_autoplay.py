@@ -9,39 +9,71 @@ def start_video(xbmc, monitor, path, item, current):
         outcome = None
 
         def onAVStarted(self):
-            self.av_started = True
+            if owned():
+                self.av_started = True
 
         def onPlayBackError(self):
-            self.outcome = 'failed'
+            if owned():
+                self.outcome = 'failed'
 
         def onPlayBackStopped(self):
-            self.outcome = 'cancelled'
+            if owned():
+                self.outcome = 'cancelled'
 
         def onPlayBackEnded(self):
-            self.outcome = 'cancelled'
+            if owned():
+                self.outcome = 'cancelled'
 
     player = StartupPlayer()
+
+    def owner():
+        try:
+            return player.getVideoInfoTag().getUniqueID('aperture_session') or None
+        except (AttributeError, RuntimeError):
+            return None
+
+    token = item.getVideoInfoTag().getUniqueID('aperture_session')
+
+    def owned():
+        return bool(token) and owner() == token
+
+    def stop_owned():
+        if owned():
+            player.stop()
+
     if not current():
         return 'cancelled'
+    predecessor = owner()
+    cancelled = False
     player.play(path, item)
     for _ in range(150):
-        if player.isPlayingVideo() and player.getPlayingFile() != path.split('|', 1)[0]:
+        observed = owner()
+        if observed and observed not in (token, predecessor):
             return 'cancelled'  # Another player owns playback; never stop it.
-        if not current():
-            player.stop()
-            return 'cancelled'
+        cancelled = cancelled or not current()
+        if cancelled:
+            if owned():
+                stop_owned()
+                return 'cancelled'
+            if monitor.waitForAbort(0.1):
+                stop_owned()
+                return 'cancelled'
+            continue
         if player.outcome:
-            if player.outcome == 'failed' and player.isPlayingVideo():
-                player.stop()
-                return 'timeout'  # Do not overlap a possibly active player.
+            if player.outcome == 'failed':
+                if player.isPlayingVideo():
+                    stop_owned()
+                    return 'timeout'  # Do not overlap a possibly active player.
+                if not owned():
+                    return 'timeout'  # Lost attribution is not permission to retry.
             return player.outcome
-        if player.av_started and player.isPlayingVideo():
+        if player.av_started and player.isPlayingVideo() and owned():
             return 'started'
         if monitor.waitForAbort(0.1):
-            player.stop()
+            stop_owned()
             return 'cancelled'
-    player.stop()
-    return 'timeout'
+    stop_owned()
+    return 'cancelled' if cancelled else 'timeout'
 
 
 

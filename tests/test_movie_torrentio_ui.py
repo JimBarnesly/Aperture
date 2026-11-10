@@ -41,12 +41,109 @@ class TorrentioUITests(unittest.TestCase):
     def run_ui(self, query=None):
         self.ui.run(query or {'action': ['torrentio_setup']}, self.temp.name, 'plugin://movies/', 3)
 
-    def connect(self):
+    def connect(self, autoplay=True):
         source = Path(self.temp.name) / 'input.txt'
         source.write_text(MANIFEST)
         source.chmod(0o600)
         t.Store(self.temp.name).import_file(str(source))
+        if autoplay:
+            t.Store(self.temp.name).set_autoplay_preference(True)
         return str(source)
+
+    def test_cancelled_start_discards_only_its_pending_history(self):
+        from test_movie_history import MOVIE, history
+        from test_movie_history_playback import load
+        import types
+        bridge = load()
+        self.connect()
+        self.client.streams.return_value = [t.Source('unused', '1080p', 'one')]
+        props = {}
+        window = types.SimpleNamespace(getProperty=lambda k: props.get(k, ''),
+            setProperty=props.__setitem__, clearProperty=lambda k: props.pop(k, None))
+        self.gui.Window.return_value = window
+        item = self.gui.ListItem.return_value
+        tag = item.getVideoInfoTag.return_value
+        tag.setUniqueID.side_effect = lambda token, kind: setattr(tag.getUniqueID, 'return_value', token)
+        self.ui.prepare_history = lambda w, i, *a, **kw: bridge.prepare(w, i, MOVIE)
+        self.ui.start_video.side_effect = None
+        self.ui.start_video.return_value = 'cancelled'
+        self.run_ui({'action': ['torrentio_auto'], 'id': ['tt1234567']})
+        self.assertFalse(props.get(bridge.PENDING))
+        player = Mock()
+        player.isPlayingVideo.return_value = True
+        player.getVideoInfoTag.return_value = tag
+        player.getTime.return_value = 10
+        player.getTotalTime.return_value = 100
+        store = history.HistoryStore(Path(self.temp.name) / 'history-private')
+        bridge.HistoryMonitor(store, player, window).update()
+        self.assertEqual(store.records(), [])
+
+    def test_migration_accepts_once_before_resolver_and_never_repeats(self):
+        self.connect(autoplay=False)
+        self.client.streams.return_value = [t.Source('unused', '1080p', 'one')]
+        self.dialog.yesno.return_value = True
+        def resolve(*args, **kwargs):
+            self.assertIs(t.Store(self.temp.name).autoplay_preference(), True)
+            return 'https://seed.download.real-debrid.com/file.mkv'
+        self.client.playback.side_effect = resolve
+        for _ in range(2):
+            self.run_ui({'action': ['torrentio_auto'], 'id': ['tt1234567']})
+        self.dialog.yesno.assert_called_once()
+        self.assertEqual(self.client.playback.call_count, 2)
+        marker = Path(self.temp.name) / 'torrentio-private/autoplay-effects-v1'
+        self.assertEqual(marker.stat().st_mode & 0o777, 0o600)
+
+    def test_navigation_during_migration_prompt_records_no_preference(self):
+        self.connect(autoplay=False)
+        def answer(*args):
+            self.xbmc.getInfoLabel.return_value = 'other'
+            return True
+        self.dialog.yesno.side_effect = answer
+        self.run_ui({'action': ['torrentio_auto'], 'id': ['tt1234567']})
+        self.assertIsNone(t.Store(self.temp.name).autoplay_preference())
+        self.assertEqual(self.client.mock_calls, [])
+
+    def test_existing_connection_declines_versioned_autoplay_once_without_resolving(self):
+        self.connect(autoplay=False)
+        self.client.streams.return_value = [t.Source('unused', '1080p', 'one')]
+        self.dialog.yesno.return_value = False
+        for _ in range(2):
+            self.run_ui({'action': ['torrentio_auto'], 'id': ['tt1234567']})
+        self.client.playback.assert_not_called()
+        self.client.streams.assert_not_called()
+        self.dialog.yesno.assert_called_once()
+        message = self.dialog.yesno.call_args.args[1]
+        for phrase in ('traffic', 'history', 'transfer', 'Choose source'):
+            self.assertIn(phrase, message)
+        self.assertIsNotNone(t.Store(self.temp.name).load())
+        self.dialog.select.return_value = 0
+        self.run_ui({'action': ['torrentio_find'], 'id': ['tt1234567']})
+        self.client.playback.assert_called_once()
+        self.dialog.yesno.assert_called_once()
+
+    def test_setup_records_autoplay_preference_without_revoking_sharing_on_decline(self):
+        rd.Store(self.temp.name).save(dict(PAIR, access_token=TOKEN, refresh_token='refresh-fixture', expires_at=1e11))
+        self.dialog.select.return_value = 0
+        self.dialog.yesno.side_effect = [True, True, False]
+        self.run_ui()
+        self.assertEqual(t.Store(self.temp.name).load(), 'rd-oauth-v1')
+        self.assertIs(t.Store(self.temp.name).autoplay_preference(), False)
+        self.assertEqual(self.client.mock_calls, [])
+
+    def test_import_records_autoplay_decline_and_setup_can_change_it(self):
+        source = self.connect(autoplay=False)
+        t.Store(self.temp.name).clear()
+        self.dialog.select.return_value = 1
+        self.dialog.browseSingle.return_value = source
+        self.dialog.yesno.side_effect = [True, True, False]
+        self.run_ui()
+        self.assertIsNotNone(t.Store(self.temp.name).load())
+        self.assertIs(t.Store(self.temp.name).autoplay_preference(), False)
+        self.dialog.select.return_value = 5
+        self.dialog.yesno.side_effect = [True]
+        self.run_ui()
+        self.assertIs(t.Store(self.temp.name).autoplay_preference(), True)
+        self.assertEqual(self.client.mock_calls, [])
 
     def test_real_ui_handoff_records_only_monitor_progress_and_resumes_fresh_url(self):
         from test_movie_history import history, MOVIE
@@ -87,6 +184,21 @@ class TorrentioUITests(unittest.TestCase):
         self.assertEqual(self.ui.start_video.call_args.args[2], self.client.playback.return_value)
         item.setProperty.assert_called_once_with('StartOffset', '14')
         self.assertNotIn('https://', (store.directory / 'history.json').read_text())
+
+    def test_history_failure_still_tags_unique_startup_session(self):
+        from test_movie_history import history
+        self.connect()
+        self.client.streams.return_value = [t.Source('unused', '1080p', 'one')]
+        self.ui.prepare_history.side_effect = history.HistoryError('unavailable')
+        item = self.gui.ListItem.return_value
+        item.getVideoInfoTag.return_value.getUniqueID.return_value = ''
+        self.run_ui({'action': ['torrentio_auto'], 'id': ['tt1234567']})
+        tag = item.getVideoInfoTag.return_value
+        tag.setUniqueID.assert_called_once()
+        token, kind = tag.setUniqueID.call_args.args
+        self.assertRegex(token, r'^[a-f0-9]{32}$')
+        self.assertEqual(kind, 'aperture_session')
+        self.ui.start_video.assert_called_once()
 
     def test_history_failure_does_not_prevent_resolved_playback(self):
         from test_movie_history import history
@@ -150,7 +262,11 @@ class TorrentioUITests(unittest.TestCase):
             events.append('lookup')
             return Response(json.dumps(payload).encode())
         class Player:
+            item = None
+            def getVideoInfoTag(self):
+                return self.item.getVideoInfoTag() if self.item else Mock(getUniqueID=lambda key: '')
             def play(self, target, item):
+                self.item = item
                 events.append('play')
                 self.target = target
                 self.onAVStarted()
@@ -158,10 +274,13 @@ class TorrentioUITests(unittest.TestCase):
             def isPlayingVideo(self): return True
             def getPlayingFile(self): return self.target.split('|', 1)[0]
         self.xbmc.Player = Player
-        self.ui.start_video = load_policy().start_video
+        self.ui.start_video = Mock(wraps=load_policy().start_video)
+        self.xbmc.Monitor.return_value.waitForAbort.return_value = False
         with patch.object(self.ui, 'Client', lambda config, **kw: t.Client(config, request=request, **kw)), patch.object(t, 'public_addresses', return_value=[]):
             self.run_ui({'action': ['torrentio_auto'], 'id': ['tt1234567']})
         self.assertEqual(events, ['lookup', 'lookup', 'resolve', 'play'])
+        self.assertEqual(self.xbmc.Monitor.return_value.waitForAbort.call_count, 0)
+        self.ui.start_video.assert_called_once()
         self.dialog.yesno.assert_not_called()
         self.dialog.select.assert_not_called()
         self.dialog.ok.assert_not_called()
@@ -295,7 +414,7 @@ class TorrentioUITests(unittest.TestCase):
         self.dialog.yesno.side_effect = [True, False]
         self.run_ui()
         self.assertIsNone(t.Store(self.temp.name).load())
-        self.dialog.yesno.side_effect = [True, True]
+        self.dialog.yesno.side_effect = [True, True, True]
         self.run_ui()
         self.assertEqual(t.Store(self.temp.name).load(), 'rd-oauth-v1')
         self.assertEqual(self.client.mock_calls, [])

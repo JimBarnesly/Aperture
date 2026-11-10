@@ -52,6 +52,14 @@ class HistoryPlaybackTests(unittest.TestCase):
         item.getVideoInfoTag.return_value.setUniqueID.assert_called_once_with(token, 'aperture_session')
         return token
 
+    def test_abandoned_start_does_not_discard_newer_history_handoff(self):
+        old = self.arm()
+        new = self.arm()
+        item = Mock()
+        item.getVideoInfoTag.return_value.getUniqueID.return_value = old
+        self.module.discard_pending(self.window, item)
+        self.assertEqual(json.loads(self.props[self.module.PENDING])['session'], new)
+
     def test_new_selection_after_clear_records_immediately(self):
         monitor = self.monitor()
         token = self.arm()
