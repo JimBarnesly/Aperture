@@ -36,7 +36,7 @@ class CatalogTests(unittest.TestCase):
         with patch.object(catalog,'build_opener',side_effect=OSError('secret')):
             with self.assertRaisesRegex(catalog.CatalogError,'^Online catalogue unavailable$'):catalog.fetch('/catalog/movie/top.json')
     def test_redirects_refused(self):
-        with self.assertRaises(catalog.CatalogError):catalog.NoRedirect().redirect_request(None,None,None,None,None,None)
+        with self.assertRaises(catalog.CatalogError):catalog.CatalogRedirect().redirect_request(None,None,None,None,None,None)
     def test_oversized_response(self):
         class Response:
             def __enter__(self):return self
