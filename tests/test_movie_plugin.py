@@ -63,7 +63,7 @@ class PluginTests(unittest.TestCase):
         mods={
             'xbmc':types.SimpleNamespace(executeJSONRPC=rpc,executebuiltin=builtins.append,log=lambda *a:None,LOGERROR=4,getSupportedMedia=lambda kind:'.avi|.mkv|.mp4',Monitor=Monitor,getInfoLabel=folder_path,getCondVisibility=condition),
             'xbmcaddon':types.SimpleNamespace(Addon=lambda:types.SimpleNamespace(getAddonInfo=lambda key:self.profile)),
-            'xbmcgui':types.SimpleNamespace(ListItem=Item,Dialog=lambda:dialog),
+            'xbmcgui':types.SimpleNamespace(ListItem=Item,Dialog=lambda:dialog,getCurrentWindowId=lambda:10025),
             'xbmcplugin':types.SimpleNamespace(setContent=lambda *a:None,setPluginCategory=lambda *a:None,endOfDirectory=lambda *a,**kw:ended.append(kw),addDirectoryItem=lambda *a:entries.append(a)),
             'xbmcvfs':types.SimpleNamespace(translatePath=lambda p:p,File=F,exists=exists,listdir=listdir),
         }
@@ -83,17 +83,23 @@ class PluginTests(unittest.TestCase):
         c,e,d,x,b=self.run_plugin([],query='?mode=online',catalog_payload={'metas':[{'id':'tt1234567','name':'Online Film','poster':'https://example.org/p.jpg','streams':[{'url':'https://example.org/film'}]}]})
         self.assertEqual(c,[])
         self.assertEqual(e[0][2].props['IsPlayable'],'false')
-        self.assertIn('action=online_details',e[0][1])
+        self.assertIn('action=torrentio_auto',e[0][1])
         self.assertNotIn('https://example.org/film',repr(e))
         self.assertIn('start=1',e[-1][1])
     def test_local_playable_is_tagged_as_movie_for_pause_policy(self):
         c,e,d,x,b=self.run_plugin([{'file':'/movies/','label':'Movies'}],files=[{'file':'/movies/a.mkv','filetype':'file','label':'A'}])
         self.assertEqual(getattr(e[0][2], 'media_type', None), 'movie')
-    def test_online_movie_has_explicit_torrentio_action_without_changing_default(self):
+    def test_online_movie_has_manual_chooser_and_automatic_default(self):
         c,e,d,x,b=self.run_plugin([],query='?mode=online',catalog_payload={'metas':[{'id':'tt1234567','name':'Example'}]})
-        self.assertIn(('Find streams (Torrentio)', 'RunPlugin(plugin://plugin.video.aperture.movies/?action=torrentio_find&id=tt1234567)'), e[0][2].context)
-        self.assertIn('action=online_details', e[0][1])
+        self.assertIn(('Choose source', 'RunPlugin(plugin://plugin.video.aperture.movies/?action=torrentio_find&id=tt1234567)'), e[0][2].context)
+        self.assertIn('action=torrentio_auto', e[0][1])
         self.assertEqual(e[0][2].props['IsPlayable'], 'false')
+
+    def test_auto_action_dispatches_without_local_source_access(self):
+        c,e,d,x,b=self.run_plugin([],query='?action=torrentio_auto&id=tt1234567')
+        self.assertEqual(c, [])
+        self.assertIn('Online playback is not connected', repr(d))
+        self.assertEqual((e,x,b), ([],[],[]))
 
     def test_torrentio_action_dispatches_without_local_source_access(self):
         c,e,d,x,b=self.run_plugin([],query='?action=torrentio_find&id=tt1234567')

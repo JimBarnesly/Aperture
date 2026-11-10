@@ -23,12 +23,17 @@ class TorrentioUITests(unittest.TestCase):
         self.xbmc.Monitor.return_value.abortRequested.return_value = False
         path = ROOT / 'movies-kodi/resources/lib/torrentio_ui.py'
         self.assertTrue(path.exists(), 'Torrentio wizard/UI is missing')
-        with patch.dict(sys.modules, {'xbmc': self.xbmc, 'xbmcgui': self.gui, 'xbmcplugin': self.plugin, 'resources.lib.torrentio': t, 'resources.lib.debrid': rd}):
+        from test_movie_autoplay import load_policy
+        with patch.dict(sys.modules, {'resources.lib.movie_autoplay': load_policy(), 'xbmc': self.xbmc, 'xbmcgui': self.gui, 'xbmcplugin': self.plugin, 'resources.lib.torrentio': t, 'resources.lib.debrid': rd}):
             spec = importlib.util.spec_from_file_location('torrentio_ui_test', path)
             self.ui = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(self.ui)
         self.client = Mock()
         self.ui.Client = Mock(return_value=self.client)
+        def started(xbmc, monitor, path, item, current):
+            xbmc.Player().play(path, item)
+            return 'started'
+        self.ui.start_video = Mock(side_effect=started)
 
     def run_ui(self, query=None):
         self.ui.run(query or {'action': ['torrentio_setup']}, self.temp.name, 'plugin://movies/', 3)
@@ -39,6 +44,172 @@ class TorrentioUITests(unittest.TestCase):
         source.chmod(0o600)
         t.Store(self.temp.name).import_file(str(source))
         return str(source)
+
+    def test_auto_cancel_navigation_or_shutdown_during_resolve_never_retries_or_plays(self):
+        self.connect()
+        self.client.streams.return_value = [t.Source('unused', 'Real-Debrid · 1080p · AVC · English', str(i)) for i in range(3)]
+        for mode in ('cancel', 'navigation', 'shutdown'):
+            for fail in (False, True):
+                with self.subTest(mode=mode, fail=fail):
+                    self.client.playback.reset_mock()
+                    self.gui.DialogProgress.return_value.iscanceled.return_value = False
+                    self.xbmc.getInfoLabel.return_value = 'plugin://movies/?mode=online'
+                    self.xbmc.Monitor.return_value.abortRequested.return_value = False
+                    def resolve(*args, **kwargs):
+                        if mode == 'cancel': self.gui.DialogProgress.return_value.iscanceled.return_value = True
+                        if mode == 'navigation': self.xbmc.getInfoLabel.return_value = 'other'
+                        if mode == 'shutdown': self.xbmc.Monitor.return_value.abortRequested.return_value = True
+                        if fail: raise t.ProviderError('failed_rar_v3.mp4')
+                        return 'https://seed.download.real-debrid.com/file.mkv'
+                    self.client.playback.side_effect = resolve
+                    self.run_ui({'action': ['torrentio_auto'], 'id': ['tt1234567']})
+                    self.client.playback.assert_called_once()
+                    self.ui.start_video.assert_not_called()
+                    self.dialog.ok.assert_not_called()
+
+    def test_auto_real_parser_refetch_resolver_and_av_callbacks_end_to_end(self):
+        import json
+        from test_movie_torrentio import Response
+        from test_movie_autoplay import load_policy
+        self.connect()
+        events = []
+        path = 'https://seed.download.real-debrid.com/file.mkv'
+        payload = json.loads((ROOT / 'tests/fixtures/torrentio_rd_undefined.json').read_text())
+        def request(url):
+            if '/resolve/' in url:
+                events.append('resolve')
+                return Response(status=302, headers={'Location': path})
+            events.append('lookup')
+            return Response(json.dumps(payload).encode())
+        class Player:
+            def play(self, target, item):
+                events.append('play')
+                self.target = target
+                self.onAVStarted()
+            def stop(self): events.append('stop')
+            def isPlayingVideo(self): return True
+            def getPlayingFile(self): return self.target.split('|', 1)[0]
+        self.xbmc.Player = Player
+        self.ui.start_video = load_policy().start_video
+        with patch.object(self.ui, 'Client', lambda config, **kw: t.Client(config, request=request, **kw)), patch.object(t, 'public_addresses', return_value=[]):
+            self.run_ui({'action': ['torrentio_auto'], 'id': ['tt1234567']})
+        self.assertEqual(events, ['lookup', 'lookup', 'resolve', 'play'])
+        self.dialog.yesno.assert_not_called()
+        self.dialog.select.assert_not_called()
+        self.dialog.ok.assert_not_called()
+
+    def test_manual_selection_verifies_start_but_never_falls_back(self):
+        self.connect()
+        self.client.streams.return_value = [t.Source('unused', 'Real-Debrid · 1080p · AVC · English', str(i)) for i in range(3)]
+        self.dialog.select.return_value = 0
+        self.ui.start_video.side_effect = None
+        self.ui.start_video.return_value = 'failed'
+        self.run_ui({'action': ['torrentio_find'], 'id': ['tt1234567']})
+        self.ui.start_video.assert_called_once()
+        self.client.playback.assert_called_once()
+        self.assertIn('Choose source', repr(self.dialog.ok.call_args))
+
+    def test_manual_source_choice_has_no_repeated_play_prompt(self):
+        self.connect()
+        self.client.streams.return_value = [t.Source('unused', 'Real-Debrid · 1080p · AVC · English', 'one')]
+        self.dialog.select.return_value = 0
+        self.run_ui({'action': ['torrentio_find'], 'id': ['tt1234567']})
+        self.dialog.yesno.assert_not_called()
+        self.client.playback.assert_called_once()
+
+    def test_import_and_status_disclose_automatic_effects(self):
+        for selected in (1, 3):
+            self.dialog.select.return_value = selected
+            self.run_ui()
+            message = repr(self.dialog.yesno.call_args if selected == 1 else self.dialog.ok.call_args)
+            for text in ('automatically', 'history', 'transfer', 'traffic', 'signed URL', 'Choose source'):
+                self.assertIn(text, message)
+
+    def test_auto_timeout_explains_manual_recovery_without_retry(self):
+        self.connect()
+        self.client.streams.return_value = [t.Source('unused', 'Real-Debrid · 1080p · AVC · English', str(i)) for i in range(3)]
+        self.ui.start_video.side_effect = None
+        self.ui.start_video.return_value = 'timeout'
+        self.run_ui({'action': ['torrentio_auto'], 'id': ['tt1234567']})
+        self.client.playback.assert_called_once()
+        self.assertIn('Choose source', repr(self.dialog.ok.call_args))
+
+    def test_auto_home_navigation_during_resolve_discards_late_result(self):
+        self.connect()
+        self.gui.getCurrentWindowId.return_value = 10025
+        self.client.streams.return_value = [t.Source('unused', 'Real-Debrid · 1080p · AVC · English', 'one')]
+        def resolve(*args, **kwargs):
+            self.gui.getCurrentWindowId.return_value = 10000
+            return 'https://seed.download.real-debrid.com/file.mkv'
+        self.client.playback.side_effect = resolve
+        self.run_ui({'action': ['torrentio_auto'], 'id': ['tt1234567']})
+        self.ui.start_video.assert_not_called()
+        self.dialog.ok.assert_not_called()
+
+    def test_auto_skips_explicit_unsupported_source_but_never_retries_account_or_uncertain_errors(self):
+        self.connect()
+        sources = [t.Source('unused', 'Real-Debrid · 1080p · AVC · English', str(i)) for i in range(5)]
+        self.client.streams.return_value = sources
+        for kind in ('failed_rar_v3.mp4', 'failed_too_big_v2.mp4', 'downloading_v3.mp4',
+                     'failed_access_v3.mp4', 'limits_exceeded_v2.mp4', 'resolve', 'network', 'changed'):
+            with self.subTest(kind=kind):
+                self.client.playback.reset_mock()
+                self.client.playback.side_effect = t.ProviderError(kind)
+                self.run_ui({'action': ['torrentio_auto'], 'id': ['tt1234567']})
+                expected = 3 if kind in ('failed_rar_v3.mp4', 'failed_too_big_v2.mp4') else 1
+                self.assertEqual(self.client.playback.call_count, expected)
+                self.assertEqual(len({c.args[1] for c in self.client.playback.call_args_list}), expected)
+        self.ui.start_video.assert_not_called()
+
+    def test_auto_fallback_is_three_distinct_sources_after_explicit_player_error(self):
+        self.connect()
+        sources = [t.Source('unused', 'Real-Debrid · 1080p · AVC · English', str(i)) for i in range(5)]
+        self.client.streams.return_value = sources
+        self.client.playback.return_value = 'https://seed.download.real-debrid.com/file.mkv'
+        self.ui.start_video.side_effect = None
+        self.ui.start_video.return_value = 'failed'
+        self.run_ui({'action': ['torrentio_auto'], 'id': ['tt1234567']})
+        self.assertEqual([c.args[1] for c in self.client.playback.call_args_list], [s.id for s in sources[:3]])
+        self.assertIn('Choose source', repr(self.dialog.ok.call_args))
+
+    def test_auto_uses_av_start_verification(self):
+        self.connect()
+        self.client.streams.return_value = [t.Source('unused', 'Real-Debrid · 1080p · AVC · English', 'one')]
+        self.client.playback.return_value = 'https://seed.download.real-debrid.com/file.mkv'
+        self.assertTrue(hasattr(self.ui, 'start_video'), 'UI must verify actual AV start')
+        with patch.object(self.ui, 'start_video', return_value='started') as start:
+            self.run_ui({'action': ['torrentio_auto'], 'id': ['tt1234567']})
+        start.assert_called_once()
+        self.assertEqual(start.call_args.args[2], self.client.playback.return_value)
+        self.dialog.ok.assert_not_called()
+
+    def test_auto_has_no_repeated_effect_or_rights_confirmation(self):
+        self.connect()
+        self.client.streams.return_value = [t.Source('unused', 'Real-Debrid · 1080p · AVC · English', 'one')]
+        self.client.playback.return_value = 'https://seed.download.real-debrid.com/file.mkv'
+        self.run_ui({'action': ['torrentio_auto'], 'id': ['tt1234567']})
+        self.dialog.yesno.assert_not_called()
+        self.client.playback.assert_called_once()
+
+    def test_setup_discloses_automatic_play_account_effects(self):
+        self.dialog.select.return_value = 0
+        self.run_ui()
+        message = self.dialog.yesno.call_args.args[1]
+        for text in ('automatically', 'history', 'transfer', 'traffic', 'signed URL', 'Choose source'):
+            self.assertIn(text, message)
+
+    def test_auto_selects_best_source_without_picker(self):
+        self.connect()
+        self.dialog.yesno.return_value = True
+        self.client.streams.return_value = [
+            t.Source('unused', 'Real-Debrid · 2160p · HEVC · English', 'large'),
+            t.Source('unused', 'Real-Debrid · 1080p · AVC · English', 'suitable')]
+        self.client.playback.return_value = 'https://seed.download.real-debrid.com/file.mkv'
+        self.run_ui({'action': ['torrentio_auto'], 'id': ['tt1234567']})
+        self.client.streams.assert_called_once_with('tt1234567')
+        self.assertEqual(self.client.playback.call_args.args, ('tt1234567', self.client.streams.return_value[1].id))
+        self.dialog.select.assert_not_called()
+        self.xbmc.Player.return_value.play.assert_called_once()
 
     def test_cancel_and_decline_setup_never_connect(self):
         self.run_ui()
@@ -359,18 +530,6 @@ class TorrentioUITests(unittest.TestCase):
         self.assertIs(self.xbmc.Player.return_value.play.call_args.args[1], self.gui.ListItem.return_value)
         self.assertNotIn(TOKEN, repr(self.xbmc.mock_calls))
 
-    def test_play_retains_account_effect_confirmation_without_rights_warning(self):
-        self.connect()
-        self.client.streams.return_value = [Mock(id='a' * 64, label='Real-Debrid')]
-        self.dialog.select.return_value = 0
-        self.run_ui({'action': ['torrentio_find'], 'id': ['tt1234567']})
-        self.client.playback.assert_not_called()
-        self.dialog.yesno.assert_called_once()
-        message = self.dialog.yesno.call_args.args[1]
-        for text in ('history', 'transfer', 'traffic', 'signed URL'):
-            self.assertIn(text, message)
-        for text in ('permission', 'rights', 'Only play', 'Only use'):
-            self.assertNotIn(text, message)
 
     def test_stale_navigation_or_cancel_prevents_network(self):
         self.connect()

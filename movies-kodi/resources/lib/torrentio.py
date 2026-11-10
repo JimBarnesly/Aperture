@@ -39,7 +39,8 @@ class ProviderError(Exception):
             'changed': 'That source is no longer available. Find streams again and choose a source.',
             'resolve': 'Torrentio did not return a supported HTTPS Real-Debrid download. No playback started. Retry later or choose another source.',
         }
-        super().__init__(messages.get(kind, messages['invalid']))
+        self.kind = kind if kind in messages else 'invalid'
+        super().__init__(messages[self.kind])
 
 
 class Config:

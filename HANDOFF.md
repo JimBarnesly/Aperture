@@ -1,5 +1,17 @@
 # Aperture integration handoff
 
+## Automatic movie selection — local checkpoint
+
+`feat/movies-autoplay`, based on `570f1176`, routes poster Select through
+lookup/ranking/fresh resolution/actual AV-start verification. Manual Choose source
+remains; automatic fallback is bounded to three distinct sources after explicit
+failures only. Setup/status retains sharing and account-effect disclosure, without
+repeated playback prompts. Offline suite: 768 passed. Native synthetic journey
+updated; execution blocked by missing Xvfb/PulseAudio. No deployment/push/accounts/
+live Kodi. See [policy, TDD evidence and remaining gates](docs/movies-autoplay.md).
+History core `974ecc2d` is ready separately; session/UI integration is explicitly
+pending, not partially wired into this checkpoint. Parent review required.
+
 ## Movies playback UX — local bounded candidate
 
 Based on deployed Movies source `9d99d02117f025e36325a6c76f4d197ec4abb46a`,

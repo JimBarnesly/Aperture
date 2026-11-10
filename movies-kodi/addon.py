@@ -247,9 +247,10 @@ def online(query):
         match_route = BASE + '?' + urlencode({'mode': 'rd', 'imdb': movie['id']})
         stream_route = BASE + '?' + urlencode({'action': 'torrentio_find', 'id': movie['id']})
         li.addContextMenuItems([('Movie details (Cinemeta)', 'RunPlugin(' + route + ')'),
-                                ('Find streams (Torrentio)', 'RunPlugin(' + stream_route + ')'),
+                                ('Choose source', 'RunPlugin(' + stream_route + ')'),
                                 ('Check my Real-Debrid downloads (filename IMDb ID)', 'Container.Update(' + match_route + ')')])
-        xbmcplugin.addDirectoryItem(HANDLE, route, li, False)
+        play_route = BASE + '?' + urlencode({'action': 'torrentio_auto', 'id': movie['id']})
+        xbmcplugin.addDirectoryItem(HANDLE, play_route, li, False)
     if next_start is not None:
         state['start'] = next_start
         li = xbmcgui.ListItem(label='More online movies')
@@ -288,7 +289,7 @@ def online_details(query):
 def main():
     query = parse_qs(sys.argv[2].lstrip('?'))
     action = query.get('action', [''])[0]
-    if action in ('torrentio_setup', 'torrentio_find'):
+    if action in ('torrentio_setup', 'torrentio_find', 'torrentio_auto'):
         from resources.lib.torrentio_ui import run
         run(query, poster_profile(), BASE, HANDLE)
         return

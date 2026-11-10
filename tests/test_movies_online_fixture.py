@@ -94,7 +94,7 @@ class OnlineHarnessTests(unittest.TestCase):
     def test_native_journey_no_longer_waits_for_removed_rights_prompt(self):
         source = (ROOT / 'tools/movies_online_qa_service.py').read_text()
         self.assertNotIn('Find streams with Torrentio?', source)
-        self.assertIn("'permission' not in text", source)
+        self.assertNotIn('Play selected source?', source)
 
     def test_native_journey_requires_wizard_search_source_and_real_player(self):
         tree = ast.parse((ROOT / 'tools/movies_online_qa_service.py').read_text())
@@ -104,8 +104,8 @@ class OnlineHarnessTests(unittest.TestCase):
         for evidence in ('Connect with Real-Debrid (no token copying)',
                          'Share access with Torrentio', 'approve-synthetic-device',
                          'Check saved connection (no playback)', 'Input.SendText',
-                         'Find streams (Torrentio)', 'Choose a source',
-                         'Play selected source?', 'Player.GetActivePlayers',
+                         'Choose source', 'Choose a source',
+                         'automatic movie selection', 'Player.GetActivePlayers',
                          'getPlayingFile', 'ImageStat.Stat', 'Player.Stop',
                          'torrentio-resolve', 'torrentio-local-handoff'):
             self.assertIn(evidence, journey)
