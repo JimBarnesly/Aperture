@@ -9,7 +9,7 @@ SCENARIO="${APERTURE_MOVIES_SCENARIO:-single}"
 mkdir -p "$OUT"; OUT=$(cd "$OUT" && pwd)
 printf '{"status":"not_run","reason":"GUI acceptance has not completed"}\n' > "$OUT/result.json"
 printf '%s\n' "${GITHUB_SHA:-uncommitted-local-source}" > "$OUT/tested-revision.txt"
-RUNTIME=$(mktemp -d /tmp/aperture-movies-qa.XXXXXXXX)
+RUNTIME=$(mktemp -d "${TMPDIR:-/tmp}/aperture-movies-qa.XXXXXXXX")
 export APERTURE_MOVIES_OUT="$OUT" APERTURE_MOVIES_RUNTIME="$RUNTIME" APERTURE_MOVIES_SCENARIO="$SCENARIO"
 export HOME="$RUNTIME/home" KODI_DATA="$RUNTIME/data" KODI_HOME="$RUNTIME/system" KODI_TEMP="$OUT/logs"
 export XDG_CONFIG_HOME="$HOME/.config" XDG_CACHE_HOME="$HOME/.cache" XDG_DATA_HOME="$HOME/.local/share" XDG_RUNTIME_DIR="$RUNTIME/run"

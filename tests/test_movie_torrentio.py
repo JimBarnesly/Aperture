@@ -280,6 +280,64 @@ class NetworkTests(unittest.TestCase):
             t.Client(t.Config(MANIFEST), request=request).playback('tt1234567', source.id, cancelled=lambda: next(cancelled))
         self.assertEqual(calls, [t.Config(MANIFEST).lookup('tt1234567')])
 
+    def test_cancel_during_resolver_dns_sends_no_http_request(self):
+        from unittest.mock import Mock
+        payload = json.loads((ROOT / 'tests/fixtures/torrentio_rd_undefined.json').read_text())
+        source = t.parse_streams(payload, t.Config(MANIFEST))[0]
+        cancelled = [False]
+        def dns(*args, **kwargs):
+            cancelled[0] = True
+            return [(2, 1, 6, '', ('93.184.216.34', 443))]
+        connection = Mock()
+        connection.getresponse.return_value = Response(status=302, headers={
+            'Location': 'https://seed.download.real-debrid.com/file.mkv'})
+        client = t.Client(t.Config(MANIFEST))
+        with patch.object(client, 'streams', return_value=[source]), patch.object(t.socket, 'getaddrinfo', side_effect=dns), patch.object(t.http.client, 'HTTPSConnection', return_value=connection) as connect:
+            try:
+                client.playback('tt1234567', source.id, cancelled=lambda: cancelled[0])
+            except t.ProviderError:
+                pass
+        connection.request.assert_not_called()
+        connect.assert_not_called()
+
+    def test_cancel_after_resolver_send_discards_reply_without_retry(self):
+        from unittest.mock import Mock
+        payload = json.loads((ROOT / 'tests/fixtures/torrentio_rd_undefined.json').read_text())
+        source = t.parse_streams(payload, t.Config(MANIFEST))[0]
+        for failure in (False, True):
+            with self.subTest(failure=failure):
+                cancelled = [False]
+                connection = Mock()
+                def response():
+                    cancelled[0] = True
+                    if failure:
+                        raise OSError('synthetic late failure')
+                    return Response(status=302, headers={
+                        'Location': 'https://seed.download.real-debrid.com/file.mkv'})
+                connection.getresponse.side_effect = response
+                client = t.Client(t.Config(MANIFEST))
+                with patch.object(client, 'streams', return_value=[source]), patch.object(t, 'public_addresses', return_value=[(2, 1, 6, '', ('93.184.216.34', 443))]) as dns, patch.object(t.http.client, 'HTTPSConnection', return_value=connection):
+                    with self.assertRaises(t.ProviderError):
+                        client.playback('tt1234567', source.id, cancelled=lambda: cancelled[0])
+                connection.request.assert_called_once()
+                connection.close.assert_called_once()
+                dns.assert_called_once_with('torrentio.strem.fun')
+
+    def test_cancel_during_playback_refetch_dns_sends_nothing(self):
+        from unittest.mock import Mock
+        payload = json.loads((ROOT / 'tests/fixtures/torrentio_rd_undefined.json').read_text())
+        source = t.parse_streams(payload, t.Config(MANIFEST))[0]
+        cancelled = [False]
+        def dns(*args, **kwargs):
+            cancelled[0] = True
+            return [(2, 1, 6, '', ('93.184.216.34', 443))]
+        connection = Mock()
+        connection.getresponse.return_value = Response(json.dumps(payload).encode())
+        with patch.object(t.socket, 'getaddrinfo', side_effect=dns), patch.object(t.http.client, 'HTTPSConnection', return_value=connection):
+            with self.assertRaises(t.ProviderError):
+                t.Client(t.Config(MANIFEST)).playback('tt1234567', source.id, cancelled=lambda: cancelled[0])
+        connection.request.assert_not_called()
+
     def test_transport_no_proxy_no_redirect_public_dns_timeout_and_safe_errors(self):
         self.assertTrue(hasattr(t, 'request'), 'Safe transport is missing')
         from unittest.mock import Mock

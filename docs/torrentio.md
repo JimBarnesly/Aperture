@@ -76,10 +76,14 @@ file 0600), without a provider request. Original files and backups are not delet
   archive/size/opening/removal/unavailable/error-video outcomes produce distinct
   fixed messages. Error videos are never played. A queued transfer may remain on RD.
 - Progress dialogs support cancellation. Navigation/shutdown/cancel gates run
-  before requests, between re-fetch and resolver, and after the result. An in-flight
-  synchronous request is not forcibly interrupted by Cancel: its bounded network
-  deadline must finish, then the result is discarded. No later requests or playback
-  follow cancellation. Device approval uses cancellable short waits until expiry.
+  before requests, between re-fetch and resolver, after public DNS, immediately
+  before the token-bearing GET following TCP/TLS setup, and after the result.
+  The UI supplies the same cancellation state for manifest checks, lookups and
+  playback. Cancel during DNS/TLS prevents HTTP transmission once that stage
+  returns; it does not forcibly interrupt the blocking stage. Once transmission
+  begins it cannot be undone: the bounded request finishes and late results are
+  discarded without retry or playback. Device approval uses cancellable short
+  waits until expiry. See [transport TDD evidence](torrentio-cancellation-tdd.md).
 - Lookup/check redirects fail closed. Resolver redirects are inspected, not followed.
   Only 302 to HTTPS `<single-host-label>.download.real-debrid.com` with a direct
   video extension, no authority credentials/port/fragment/control characters or

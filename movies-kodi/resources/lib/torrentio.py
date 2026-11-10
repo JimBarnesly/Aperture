@@ -216,7 +216,7 @@ def public_addresses(host):
     return addresses
 
 
-def request(url):
+def request(url, cancelled=lambda: False):
     """One HTTPS request, no proxies, no redirect engine, pinned public DNS."""
     connection = None
     timer = None
@@ -227,6 +227,8 @@ def request(url):
         if parsed.scheme != 'https' or parsed.netloc != 'torrentio.strem.fun' or parsed.query or parsed.fragment:
             raise ProviderError()
         address = public_addresses(parsed.hostname)[0][4][0]
+        if cancelled():
+            raise ProviderError('changed')
         connection = http.client.HTTPSConnection(parsed.hostname, timeout=10, context=ssl.create_default_context())
         connection._create_connection = lambda target, timeout, source_address=None: socket.create_connection((address, 443), timeout)
         connection.connect()
@@ -239,6 +241,10 @@ def request(url):
         timer = threading.Timer(15, expire)
         timer.daemon = True
         timer.start()
+        # DNS/TCP/TLS can block while the user cancels, navigates or quits.
+        # This is the last gate before a token-bearing, potentially mutating GET.
+        if cancelled():
+            raise ProviderError('changed')
         connection.request('GET', quote(parsed.path, safe='/%=,'), headers={'Accept': 'application/json', 'Accept-Encoding': 'identity', 'User-Agent': 'Aperture-Movies/1'})
         response = connection.getresponse()
         return NetworkResponse(connection, response, timer)
@@ -251,12 +257,20 @@ def request(url):
 
 
 class Client:
-    def __init__(self, config, request=request):
+    def __init__(self, config, request=None, *, cancelled=lambda: False):
         self.config, self._request = config, request
+        self._cancelled = cancelled
 
-    def _json(self, url):
+    def _open(self, url, cancelled=lambda: False):
+        # Legacy injected transports take one argument; never probe by retrying
+        # a TypeError, since a resolver may already have mutated the account.
+        if self._request is not None:
+            return self._request(url)
+        return request(url, cancelled=lambda: self._cancelled() or cancelled())
+
+    def _json(self, url, cancelled=lambda: False):
         try:
-            with self._request(url) as response:
+            with self._open(url, cancelled=cancelled) as response:
                 if response.status != 200 or response.headers.get('Content-Encoding', 'identity') != 'identity':
                     raise ProviderError('network')
                 if response.headers.get('Content-Type', '').split(';')[0] != 'application/json':
@@ -276,20 +290,22 @@ class Client:
         if not isinstance(resources, list) or not any(resource == 'stream' or isinstance(resource, dict) and resource.get('name') == 'stream' for resource in resources):
             raise ProviderError()
 
-    def streams(self, identifier):
-        return parse_streams(self._json(self.config.lookup(identifier)), self.config)
+    def streams(self, identifier, cancelled=lambda: False):
+        return parse_streams(self._json(self.config.lookup(identifier), cancelled=cancelled), self.config)
 
     def playback(self, identifier, source_id, cancelled=lambda: False):
         if cancelled():
             raise ProviderError('changed')
         if not isinstance(source_id, str) or not re.fullmatch('[a-f0-9]{64}', source_id):
             raise ProviderError('changed')
-        selected = next((source for source in self.streams(identifier) if source.id == source_id), None)
+        selected = next((source for source in self.streams(identifier, cancelled=cancelled) if source.id == source_id), None)
         if selected is None or cancelled():
             raise ProviderError('changed')
         try:
             # Provider GET can mutate RD history/queue. Only after explicit Play.
-            with self._request(selected._url) as response:
+            with self._open(selected._url, cancelled=cancelled) as response:
+                if self._cancelled() or cancelled():
+                    raise ProviderError('changed')
                 if response.status != 302:
                     raise ProviderError('resolve')
                 url = response.headers.get('Location')

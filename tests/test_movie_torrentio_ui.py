@@ -175,6 +175,92 @@ class TorrentioUITests(unittest.TestCase):
         self.run_ui({'action': ['torrentio_find'], 'id': ['tt1234567']})
         self.xbmc.Player.return_value.play.assert_not_called()
 
+    def test_cancel_navigation_shutdown_during_resolver_tls_sends_nothing(self):
+        import json
+        from test_movie_torrentio import Response
+        self.connect()
+        self.dialog.yesno.return_value = True
+        self.dialog.select.return_value = 0
+        payload = json.loads((ROOT / 'tests/fixtures/torrentio_rd_undefined.json').read_text())
+        for stop in ('cancel', 'navigation', 'shutdown'):
+            with self.subTest(stop=stop):
+                self.gui.DialogProgress.return_value.iscanceled.return_value = False
+                self.xbmc.getInfoLabel.return_value = 'plugin://movies/?mode=online'
+                self.xbmc.Monitor.return_value.abortRequested.return_value = False
+                def interrupt():
+                    if stop == 'cancel':
+                        self.gui.DialogProgress.return_value.iscanceled.return_value = True
+                    elif stop == 'navigation':
+                        self.xbmc.getInfoLabel.return_value = 'plugin://movies/?mode=other'
+                    else:
+                        self.xbmc.Monitor.return_value.abortRequested.return_value = True
+                lookup = Mock()
+                lookup.getresponse.side_effect = lambda: Response(json.dumps(payload).encode())
+                resolver = Mock()
+                resolver.connect.side_effect = interrupt
+                resolver.getresponse.return_value = Response(status=302, headers={
+                    'Location': 'https://seed.download.real-debrid.com/file.mkv'})
+                with patch.object(self.ui, 'Client', t.Client), patch.object(t.socket, 'getaddrinfo', return_value=[(2, 1, 6, '', ('93.184.216.34', 443))]), patch.object(t.http.client, 'HTTPSConnection', side_effect=[lookup, lookup, resolver]):
+                    self.run_ui({'action': ['torrentio_find'], 'id': ['tt1234567']})
+                self.xbmc.Player.return_value.play.assert_not_called()
+                self.dialog.ok.assert_not_called()
+                resolver.request.assert_not_called()
+                resolver.close.assert_called_once()
+                self.assertEqual(lookup.request.call_count, 2)
+
+    def test_cancel_during_lookup_dns_prevents_token_disclosure(self):
+        import json
+        from test_movie_torrentio import Response
+        self.connect()
+        self.dialog.yesno.return_value = True
+        payload = json.loads((ROOT / 'tests/fixtures/torrentio_rd_undefined.json').read_text())
+        def dns(*args, **kwargs):
+            self.gui.DialogProgress.return_value.iscanceled.return_value = True
+            return [(2, 1, 6, '', ('93.184.216.34', 443))]
+        connection = Mock()
+        connection.getresponse.return_value = Response(json.dumps(payload).encode())
+        with patch.object(self.ui, 'Client', t.Client), patch.object(t.socket, 'getaddrinfo', side_effect=dns), patch.object(t.http.client, 'HTTPSConnection', return_value=connection):
+            self.run_ui({'action': ['torrentio_find'], 'id': ['tt1234567']})
+        connection.request.assert_not_called()
+        self.xbmc.Player.return_value.play.assert_not_called()
+        self.dialog.ok.assert_not_called()
+
+    def test_late_real_transport_reply_or_error_is_silent_without_retry(self):
+        import json
+        from test_movie_torrentio import Response
+        self.connect()
+        self.dialog.yesno.return_value = True
+        self.dialog.select.return_value = 0
+        payload = json.loads((ROOT / 'tests/fixtures/torrentio_rd_undefined.json').read_text())
+        for stop in ('cancel', 'navigation', 'shutdown'):
+            for failure in (False, True):
+                with self.subTest(stop=stop, failure=failure):
+                    self.gui.DialogProgress.return_value.iscanceled.return_value = False
+                    self.xbmc.getInfoLabel.return_value = 'plugin://movies/?mode=online'
+                    self.xbmc.Monitor.return_value.abortRequested.return_value = False
+                    def response():
+                        if stop == 'cancel':
+                            self.gui.DialogProgress.return_value.iscanceled.return_value = True
+                        elif stop == 'navigation':
+                            self.xbmc.getInfoLabel.return_value = 'plugin://movies/?mode=other'
+                        else:
+                            self.xbmc.Monitor.return_value.abortRequested.return_value = True
+                        if failure:
+                            raise OSError('synthetic late failure')
+                        return Response(status=302, headers={
+                            'Location': 'https://seed.download.real-debrid.com/file.mkv'})
+                    lookup = Mock()
+                    lookup.getresponse.side_effect = lambda: Response(json.dumps(payload).encode())
+                    resolver = Mock()
+                    resolver.getresponse.side_effect = response
+                    with patch.object(self.ui, 'Client', t.Client), patch.object(t.socket, 'getaddrinfo', return_value=[(2, 1, 6, '', ('93.184.216.34', 443))]), patch.object(t.http.client, 'HTTPSConnection', side_effect=[lookup, lookup, resolver]):
+                        self.run_ui({'action': ['torrentio_find'], 'id': ['tt1234567']})
+                    self.xbmc.Player.return_value.play.assert_not_called()
+                    self.dialog.ok.assert_not_called()
+                    resolver.request.assert_called_once()
+                    resolver.close.assert_called_once()
+                    self.assertEqual(lookup.request.call_count, 2)
+
     def test_shutdown_during_device_approval_saves_nothing_and_leaves_ui_closed(self):
         from test_movie_debrid import DEVICE
         self.dialog.select.return_value = 0
@@ -211,7 +297,7 @@ class TorrentioUITests(unittest.TestCase):
         rotated = 'ROTATED1234567890'
         refresh = Mock(return_value=dict(access_token=rotated, refresh_token='new-refresh', expires_in=3600, token_type='Bearer'))
         requests = []
-        def factory(config):
+        def factory(config, **kwargs):
             def request(url):
                 requests.append(url)
                 if '/resolve/' in url:
@@ -219,7 +305,7 @@ class TorrentioUITests(unittest.TestCase):
                 payload = json.loads((ROOT / 'tests/fixtures/torrentio_rd_undefined.json').read_text())
                 payload['streams'][0]['url'] = payload['streams'][0]['url'].replace(TOKEN, config._token)
                 return Response(json.dumps(payload).encode())
-            return t.Client(config, request=request)
+            return t.Client(config, request=request, **kwargs)
         with patch.object(self.ui, 'RDClient', lambda store: rd.Client(store, refresh, lambda: now[0])), patch.object(self.ui, 'Client', factory), patch.object(t, 'public_addresses', return_value=[]):
             self.run_ui({'action': ['torrentio_find'], 'id': ['tt1234567']})
         self.assertEqual(refresh.call_count, 1)

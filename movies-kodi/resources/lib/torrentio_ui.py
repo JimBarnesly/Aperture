@@ -54,7 +54,7 @@ def run(query, profile, base, handle):
                 config = Config.from_token(RDClient(rd_store).token())
             if not current():
                 raise ProviderError('changed')
-            yield Client(config)
+            yield Client(config, cancelled=lambda: not current())
 
     try:
         action = query.get('action', [''])[0]
