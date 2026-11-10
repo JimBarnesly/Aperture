@@ -31,6 +31,24 @@ live Kodi controls, account calls, personal profile/media/settings changes.
 Public-only Cinemeta probe: each default batch returned 50, all with plot/year/genres.
 See [behavior, TDD evidence and pending gates](docs/movies-home.md).
 
+## Stream suitability / manual choice — local checkpoint
+
+Owner: delegated source-choice worker; parent integrates/deploys. Base `9d48581`
+matched all19 installed Movies source files read-only. Branch
+`development/Aperture-stream-choice`, READY for review; no push/deploy/device or
+account actions. Provider release hints survive bounded sanitization; automatic
+selection excludes explicit extras before technical ranking, keeps unknowns and
+legitimate Trailer title words. Dedicated nonmodal source directory/pick,
+Browse/search single-press Choose source, explicit resume and native OSD Change
+source added.851 offline tests pass in isolated network; real skin ZIP passes.
+Exact Big Lebowski provider response was not inspected; cause remains plausible,
+not confirmed. **Home11120 row730–732 visible source-button integration remains
+parent work**, with explicit per-row identity/resume and RunPlugin navigation
+shim contract in [docs](docs/movies-stream-choice.md). Long-held remote OK physical
+acceptance and exact integrated native CI remain pending; no synthetic-only
+claim that remote cancellation is solved. Format/Games/media/credentials unchanged.
+
+
 ## PR31 native pause failures — local candidate, 2026-11-10 UTC
 
 Owner: delegated CI-fix agent; parent review/publish owner. Base `c857dee`.

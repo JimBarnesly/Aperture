@@ -118,6 +118,36 @@ class PluginTests(unittest.TestCase):
         self.assertIn('action=torrentio_auto', e[0][1])
         self.assertEqual(e[0][2].props['IsPlayable'], 'false')
 
+    def test_visible_source_button_has_selected_identity_and_directory_dispatch(self):
+        c,e,d,x,b=self.run_plugin([],query='?mode=online',catalog_payload={'metas':[{'id':'tt1234567','name':'Example'}]})
+        self.assertEqual(e[0][2].props.get('Aperture.MovieID'), 'tt1234567')
+        c,e,d,x,b=self.run_plugin([],query='?action=torrentio_sources&id=tt1234567')
+        self.assertEqual(c, [])
+        self.assertIn('Choose source', repr(d))
+        self.assertEqual(x, [{'succeeded': False, 'cacheToDisc': False}])
+
+    def test_current_change_action_dispatches_to_ui(self):
+        # Route contract; player ownership behavior is exercised in UI tests.
+        import ast
+        tree = ast.parse((ROOT / 'movies-kodi/addon.py').read_text())
+        dispatches = [node for node in ast.walk(tree) if isinstance(node, ast.If)
+                      and isinstance(node.test, ast.Compare)
+                      and isinstance(node.test.left, ast.Name) and node.test.left.id == 'action'
+                      and isinstance(node.test.comparators[0], ast.Tuple)]
+        routes = [node for node in dispatches if any(isinstance(v, ast.Constant) and v.value == 'torrentio_auto'
+                  for v in node.test.comparators[0].elts)]
+        self.assertEqual(len(routes), 1)
+        self.assertIn('torrentio_change', [v.value for v in routes[0].test.comparators[0].elts])
+
+    def test_history_manual_choice_keeps_resume_intent(self):
+        from test_movie_history import history, MOVIE
+        history.HistoryStore(Path(self.profile) / 'history-private').record_playback(MOVIE, is_playing=True, position_seconds=90, duration_seconds=1000, lastplayed=1)
+        c,e,d,x,b = self.run_plugin([], query='?mode=continue')
+        item = e[0][2]
+        self.assertEqual(item.props.get('Aperture.MovieID'), MOVIE['id'])
+        self.assertEqual(item.props.get('Aperture.SourceResume'), '1')
+        self.assertTrue(any('torrentio_sources' in route and 'resume=1' in route for label, route in item.context if label == 'Choose source'))
+
     def test_auto_action_dispatches_without_local_source_access(self):
         c,e,d,x,b=self.run_plugin([],query='?action=torrentio_auto&id=tt1234567')
         self.assertEqual(c, [])
@@ -138,7 +168,7 @@ class PluginTests(unittest.TestCase):
         self.assertEqual(b,[])
     def test_movie_details_exposes_visible_find_streams_action(self):
         c,e,d,x,b=self.run_plugin([],query='?action=online_details&id=tt1234567',selection=0,catalog_payload={'meta':{'id':'tt1234567','name':'Example','description':'A plot'}})
-        self.assertEqual(b, ['RunPlugin(plugin://plugin.video.aperture.movies/?action=torrentio_find&id=tt1234567)'])
+        self.assertEqual(b, ['Container.Update(plugin://plugin.video.aperture.movies/?action=torrentio_sources&id=tt1234567)'])
         self.assertIn('Playback availability not checked', repr(d))
         self.assertEqual(c, [])
 

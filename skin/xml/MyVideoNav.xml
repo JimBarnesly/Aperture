@@ -405,10 +405,20 @@
         <texturefocus>aperture/movies/accent.png</texturefocus>
         <texturenofocus>aperture/movies/plate.png</texturenofocus>
         <onleft>714</onleft>
-        <onright>710</onright>
+        <onright>716</onright>
         <onup>61</onup>
         <ondown>61</ondown>
         <onclick>RunPlugin(plugin://plugin.video.aperture.movies/?action=providers)</onclick>
+      </control>
+      <control type="button" id="716">
+        <left>1644</left><top>112</top><width>244</width><height>48</height>
+        <label>Choose source</label><font>font20_title</font>
+        <textcolor>FFE8F2F3</textcolor><focusedcolor>FF102C35</focusedcolor>
+        <texturefocus>aperture/movies/accent.png</texturefocus>
+        <texturenofocus>aperture/movies/plate.png</texturenofocus>
+        <onleft>715</onleft><onright>710</onright><onup>61</onup><ondown>61</ondown>
+        <enable>!String.IsEmpty(Container(61).ListItem.Property(Aperture.MovieID))</enable>
+        <onclick>Container.Update(plugin://plugin.video.aperture.movies/?action=torrentio_sources&amp;id=$INFO[Container(61).ListItem.Property(Aperture.MovieID)]&amp;resume=$INFO[Container(61).ListItem.Property(Aperture.SourceResume)])</onclick>
       </control>
     </control>
     <control type="panel" id="61">
@@ -418,7 +428,7 @@
       <height>350</height>
       <orientation>horizontal</orientation>
       <viewtype label="Cinema">icon</viewtype>
-      <visible>String.IsEqual(Container.PluginName,plugin.video.aperture.movies)</visible>
+      <visible>String.IsEqual(Container.PluginName,plugin.video.aperture.movies) + !Container.Content(files)</visible>
       <scrolltime>240</scrolltime>
       <onleft>61</onleft>
       <onright>61</onright>

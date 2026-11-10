@@ -250,6 +250,7 @@ def online(query):
         li.setProperty('IsPlayable', 'false')
         li.setProperty('Aperture.MovieFolder', 'false')
         li.setProperty('Aperture.Availability', 'Not checked')
+        li.setProperty('Aperture.MovieID', movie['id'])
         route = BASE + '?' + urlencode({'action': 'online_details', 'id': movie['id']})
         match_route = BASE + '?' + urlencode({'mode': 'rd', 'imdb': movie['id']})
         stream_route = BASE + '?' + urlencode({'action': 'torrentio_find', 'id': movie['id']})
@@ -298,12 +299,12 @@ def online_details(query):
                        '\n\nMetadata: Cinemeta. Playback availability not checked. This catalogue does not supply streams.')
     if not current():
         return
-    selected = xbmcgui.Dialog().select('Movie actions', ['Find streams (Torrentio)', 'Set up online playback', 'Back to browsing'])
+    selected = xbmcgui.Dialog().select('Movie actions', ['Choose source', 'Set up online playback', 'Back to browsing'])
     if not current():
         return
     if selected == 0:
-        route = BASE + '?' + urlencode({'action': 'torrentio_find', 'id': movie['id']})
-        xbmc.executebuiltin('RunPlugin(' + route + ')')
+        route = BASE + '?' + urlencode({'action': 'torrentio_sources', 'id': movie['id']})
+        xbmc.executebuiltin('Container.Update(' + route + ')')
     elif selected == 1:
         xbmc.executebuiltin('RunPlugin(' + BASE + '?action=torrentio_setup)')
 
@@ -342,7 +343,11 @@ def history_directory(mode):
         li.setArt({'icon': 'DefaultVideo.png'})
         li.setProperty('IsPlayable', 'false')
         li.setProperty('Aperture.MovieFolder', 'false')
-        li.addContextMenuItems([('Play from beginning', 'RunPlugin(' + beginning + ')')])
+        li.setProperty('Aperture.MovieID', row['id'])
+        li.setProperty('Aperture.SourceResume', '1' if resume else '0')
+        source_route = dict(route, action='torrentio_sources')
+        li.addContextMenuItems([('Play from beginning', 'RunPlugin(' + beginning + ')'),
+                               ('Choose source', 'Container.Update(' + BASE + '?' + urlencode(source_route) + ')')])
         xbmcplugin.addDirectoryItem(HANDLE, BASE + '?' + urlencode(route), li, False)
     li = xbmcgui.ListItem(label='Clear history')
     li.setProperty('Aperture.MovieFolder', 'true')
@@ -468,7 +473,7 @@ def main():
     if not action and query.get('mode', [''])[0] in ('history', 'continue', 'suggested'):
         history_directory(query['mode'][0])
         return
-    if action in ('torrentio_setup', 'torrentio_find', 'torrentio_auto'):
+    if action in ('torrentio_setup', 'torrentio_find', 'torrentio_auto', 'torrentio_sources', 'torrentio_pick', 'torrentio_change'):
         from resources.lib.torrentio_ui import run
         run(query, poster_profile(), BASE, HANDLE)
         return
