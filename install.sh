@@ -88,7 +88,7 @@ sed -i '/<addon /s/id="skin.estuary"/id="skin.aperture"/; /<addon /s/name="Estua
 if [ "$BASELINE" -eq 0 ]; then
   # Use one complete, matching source checkout, never moving remote fragments.
   [ -f "$SOURCE_DIR/skin/xml/Home.xml" ] || fail 'Use the complete source checkout or install the complete ZIP through Kodi.'
-  HOME_SHA=1cd13e743b826697a83ef666ba7eeb8d793ec1bc0f5910e79d2b15d03159e904
+  HOME_SHA=f888f027b90c877cb295e21468aeb82e455eee807a2cb5f79d1a3780611c36f0
   cp "$SOURCE_DIR/skin/xml/Home.xml" "$STAGE/Home.xml"
   printf '%s  %s\n' "$HOME_SHA" "$STAGE/Home.xml" | sha256sum -c - >/dev/null || fail 'Home.xml integrity check failed'
   [ -d "$SOURCE_DIR/skin/media/aperture" ] || fail 'Matching Aperture artwork missing'
@@ -105,8 +105,12 @@ if [ "$BASELINE" -eq 0 ]; then
   GAMES_SHA=0338a9eac75c4b3200ec050df0cd66d21f7bec9557293066aa7a5c9419dfeb5b
   printf '%s  %s\n' "$GAMES_SHA" "$SOURCE_DIR/skin/xml/MyGames.xml" | sha256sum -c - >/dev/null || fail 'MyGames.xml integrity check failed'
   cp "$SOURCE_DIR/skin/xml/MyGames.xml" "$TMP/xml/MyGames.xml"
+  MOVIES_HOME_SHA=6e88b9604e59b8cf8695a204457637eb9fac771f0a625fce0cb48937aaed748f
+  [ -f "$SOURCE_DIR/skin/xml/Custom_1120_MoviesHome.xml" ] || fail 'Matching Movies home missing'
+  printf '%s  %s\n' "$MOVIES_HOME_SHA" "$SOURCE_DIR/skin/xml/Custom_1120_MoviesHome.xml" | sha256sum -c - >/dev/null || fail 'Movies home integrity check failed'
+  cp "$SOURCE_DIR/skin/xml/Custom_1120_MoviesHome.xml" "$TMP/xml/Custom_1120_MoviesHome.xml"
   [ -f "$SOURCE_DIR/skin/xml/MyVideoNav.xml" ] || fail 'Matching movie browser XML missing'
-  MOVIES_SHA=26090c003f1e55e8d288f28a989792ef1ef40ff4237585be40e18cef98facf99
+  MOVIES_SHA=eed77e03fd5d103f5a09847456e37bab58a033a4c893af30696bd1cdf45eb09e
   printf '%s  %s\n' "$MOVIES_SHA" "$SOURCE_DIR/skin/xml/MyVideoNav.xml" | sha256sum -c - >/dev/null || fail 'MyVideoNav.xml integrity check failed'
   cp "$SOURCE_DIR/skin/xml/MyVideoNav.xml" "$TMP/xml/MyVideoNav.xml"
   [ -f "$SOURCE_DIR/skin/xml/MyMusicNav.xml" ] || fail 'Matching music browser XML missing'
@@ -129,6 +133,11 @@ if [ "$BASELINE" -eq 0 ]; then
   MUSIC_OSD_SHA=8cd76a3fe091a9a359d723cd00417d7ddaf3d2d09a87f754593fad2711d54c3c
   printf '%s  %s\n' "$MUSIC_OSD_SHA" "$SOURCE_DIR/skin/xml/MusicOSD.xml" | sha256sum -c - >/dev/null || fail 'MusicOSD.xml integrity check failed'
   cp "$SOURCE_DIR/skin/xml/MusicOSD.xml" "$TMP/xml/MusicOSD.xml"
+  if command -v python3 >/dev/null 2>&1; then
+    python3 "$SOURCE_DIR/tools/movie_source_return.py" "$TMP"
+  else
+    printf 'Python 3 unavailable: Movies source-return integration unavailable; install the complete ZIP.\n'
+  fi
   cp -R "$SOURCE_DIR/skin/media/." "$TMP/media/"
   mkdir -p "$TMP/licenses"
   cp -R "$SOURCE_DIR/skin/licenses/." "$TMP/licenses/"

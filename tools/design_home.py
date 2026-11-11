@@ -48,7 +48,7 @@ for index,(ident,label) in enumerate(items):
         E.SubElement(b,'onclick',{'condition':f'!{enabled}'}).text='Notification(Music needs Format,Install or enable Aperture Format in Add-ons.,8000)'
     elif ident==100:
         enabled='System.AddonIsEnabled(plugin.video.aperture.movies)'
-        E.SubElement(b,'onclick',{'condition':enabled}).text='ActivateWindow(Videos,plugin://plugin.video.aperture.movies/,return)'
+        E.SubElement(b,'onclick',{'condition':enabled}).text='ActivateWindow(1120)'
         E.SubElement(b,'onclick',{'condition':f'!{enabled} + Library.HasContent(Movies)'}).text='ActivateWindow(Videos,videodb://movies/titles/,return)'
         E.SubElement(b,'onclick',{'condition':f'!{enabled} + !Library.HasContent(Movies)'}).text='ActivateWindow(Videos,sources://video/,return)'
     elif ident==101:

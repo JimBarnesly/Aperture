@@ -114,6 +114,7 @@ def assemble(source: Path, output: Path, home: Path, font_roots=()):
         games = ROOT / 'skin/xml/MyGames.xml'
         if games.is_file():
             shutil.copy2(games, staged / 'xml/MyGames.xml')
+        shutil.copy2(ROOT / 'skin/xml/Custom_1120_MoviesHome.xml', staged / 'xml/Custom_1120_MoviesHome.xml')
         movies = ROOT / 'skin/xml/MyVideoNav.xml'
         if movies.is_file():
             shutil.copy2(movies, staged / 'xml/MyVideoNav.xml')
@@ -124,6 +125,8 @@ def assemble(source: Path, output: Path, home: Path, font_roots=()):
         shutil.copy2(ROOT / 'skin/xml/DialogSeekBar.xml', staged / 'xml/DialogSeekBar.xml')
         shutil.copy2(ROOT / 'skin/xml/Custom_1109_TopBarOverlay.xml', staged / 'xml/Custom_1109_TopBarOverlay.xml')
         shutil.copy2(ROOT / 'skin/xml/MusicOSD.xml', staged / 'xml/MusicOSD.xml')
+        from movie_source_return import apply as movie_source_return
+        movie_source_return(staged)
         for folder in ('media', 'licenses'):
             extra=ROOT/'skin'/folder
             if extra.is_dir(): shutil.copytree(extra, staged/folder, dirs_exist_ok=True)

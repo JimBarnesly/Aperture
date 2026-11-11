@@ -5,6 +5,8 @@ import secrets
 from contextlib import contextmanager
 import xbmc
 import xbmcgui
+import xbmcplugin
+from urllib.parse import urlencode
 from resources.lib.movie_autoplay import rank_sources, start_video
 from resources.lib.history_playback import EPOCH, HistoryError, prepare_history, discard_pending
 from resources.lib.torrentio import Client, Config, Store, ProviderError
@@ -18,6 +20,7 @@ def run(query, profile, base, handle):
     origin_window = xbmcgui.getCurrentWindowId()
     active_progress = [None]
     cancelled_action = [False]
+    directory_done = [False]
 
     def current(playing=False):
         window = xbmcgui.getCurrentWindowId()
@@ -76,11 +79,28 @@ def run(query, profile, base, handle):
                 raise ProviderError('changed')
             yield Client(config, cancelled=lambda: not current())
 
+    action = query.get('action', [''])[0]
     try:
-        action = query.get('action', [''])[0]
-        if action in ('torrentio_find', 'torrentio_auto'):
+        if action == 'torrentio_change':
+            player = xbmc.Player()
+            try:
+                tag = player.getVideoInfoTag()
+                identifier = tag.getUniqueID('aperture_movie')
+                session = tag.getUniqueID('aperture_session')
+                if (player.isPlayingVideo() and tag.getMediaType() == 'movie'
+                        and isinstance(session, str) and re.fullmatch('[a-f0-9]{32}', session)
+                        and isinstance(identifier, str) and re.fullmatch(r'tt[0-9]{7,10}', identifier)
+                        and player.getVideoInfoTag().getUniqueID('aperture_session') == session):
+                    route = base + '?' + urlencode({'action': 'torrentio_sources', 'id': identifier})
+                    xbmc.executebuiltin('ActivateWindow(Videos,' + route + ',return)')
+            except (AttributeError, RuntimeError):
+                pass
+            return
+        if action in ('torrentio_find', 'torrentio_auto', 'torrentio_sources', 'torrentio_pick'):
             config = store.load()
             if config is None:
+                if action == 'torrentio_sources':
+                    raise ProviderError('missing')
                 dialog.ok('Online playback is not connected', 'Open Sources → Set up online playback. Discover remains a metadata catalogue until you connect a source.')
                 return
             if action == 'torrentio_auto' and not autoplay_consent():
@@ -92,16 +112,46 @@ def run(query, profile, base, handle):
                 raise ProviderError()
             if not current():
                 return
-            with connected_client() as client:
+            # A directory lookup must not open a focused Cancel button under
+            # a held remote OK key. Native directory loading handles progress;
+            # navigation/abort still cancels bounded provider requests.
+            connection = locked_client if action in ('torrentio_sources', 'torrentio_pick') else connected_client
+            with connection() as client:
                 entries = client.streams(identifier)
             if not current():
                 return
             if not entries:
+                if action == 'torrentio_sources':
+                    dialog.notification('Choose source', 'No supported sources returned. Try later; availability is unverified.')
+                    return
                 dialog.ok('No supported sources returned', 'No supported Real-Debrid sources were returned for this movie. This is not proof the movie is unavailable. Try again later.')
+                return
+            if action == 'torrentio_sources':
+                xbmcplugin.setContent(handle, 'files')
+                xbmcplugin.setPluginCategory(handle, 'Choose source · provider hints, availability unverified')
+                for index, entry in enumerate(entries):
+                    item = xbmcgui.ListItem(label=str(index + 1) + '. ' + entry.label)
+                    item.setProperty('IsPlayable', 'false')
+                    route = {'action': 'torrentio_pick', 'id': identifier, 'source': entry.id}
+                    if query.get('resume') == ['1']:
+                        route['resume'] = '1'
+                    xbmcplugin.addDirectoryItem(handle, base + '?' + urlencode(route), item, False)
+                directory_done[0] = True
+                xbmcplugin.endOfDirectory(handle, cacheToDisc=False)
                 return
             if action == 'torrentio_auto':
                 entries = rank_sources(entries)
+                if not entries:
+                    dialog.ok('No likely full-movie sources', 'Provider hints mark these sources as trailers, teasers, samples or clips. Use Choose source to inspect them manually; nothing was resolved.')
+                    return
                 selected = 0
+            elif action == 'torrentio_pick':
+                source_id = query.get('source', [''])[0]
+                if not re.fullmatch('[a-f0-9]{64}', source_id):
+                    raise ProviderError('changed')
+                selected = next((i for i, entry in enumerate(entries) if entry.id == source_id), -1)
+                if selected < 0:
+                    raise ProviderError('changed')
             else:
                 selected = dialog.select('Choose a source · availability unverified', [str(i + 1) + '. ' + entry.label for i, entry in enumerate(entries)])
             if selected < 0 or selected >= len(entries) or not current():
@@ -111,7 +161,7 @@ def run(query, profile, base, handle):
                 if not current():
                     return
                 try:
-                    with connected_client() as client:
+                    with connection() as client:
                         path = client.playback(identifier, entry.id, cancelled=lambda: not current())
                 except ProviderError as error:
                     if (action == 'torrentio_auto' and current()
@@ -122,6 +172,7 @@ def run(query, profile, base, handle):
                     return
                 item = xbmcgui.ListItem(path=path)
                 item.getVideoInfoTag().setMediaType('movie')
+                item.getVideoInfoTag().setUniqueID(identifier, 'aperture_movie')
                 try:
                     prepare_history(history_window, item, identifier, profile=profile,
                                     epoch=history_epoch, resume=query.get('resume') == ['1'])
@@ -239,4 +290,11 @@ def run(query, profile, base, handle):
         error = sys.exc_info()[1]
         if not current() or isinstance(error, DebridError) and error.kind == 'cancelled':
             return
+        if action == 'torrentio_sources':
+            if current():
+                dialog.notification('Choose source', 'Could not list sources. Check connection in Sources setup or try later.')
+            return
         dialog.ok('Online playback', str(error) if isinstance(error, (ProviderError, DebridError)) else 'Could not complete this action safely. Check private storage and retry.')
+    finally:
+        if query.get('action') == ['torrentio_sources'] and not directory_done[0]:
+            xbmcplugin.endOfDirectory(handle, succeeded=False, cacheToDisc=False)

@@ -9,7 +9,7 @@ class Item:
     def setArt(self,a):self.art=a
     def addContextMenuItems(self,a):self.context=a
     def setProperty(self,k,v):self.props[k]=v
-    def setInfo(self,*a):pass
+    def setInfo(self,kind,info):self.info=info
     def getVideoInfoTag(self):return self
     def setDuration(self,x):pass
     def setDbId(self,x):self.dbid=x
@@ -21,15 +21,23 @@ class PluginTests(unittest.TestCase):
         self.temporary=tempfile.TemporaryDirectory()
         self.profile=self.temporary.name
         self.addCleanup(self.temporary.cleanup)
-    def run_plugin(self,sources,query='',default='',files=None,fail=False,vfs_listing=None,vfs_exists=(),vfs_trace=None,folder_paths=None,busy_checks=0,view_trace=None,abort=False,picture="",movies=None,limits=None,search="",selection=-1,genres=None,catalog_payload=None,http_trace=None,categories=None,confirm=False,properties=None,on_wait=None):
+    def run_plugin(self,sources,query='',default='',files=None,fail=False,vfs_listing=None,vfs_exists=(),vfs_trace=None,folder_paths=None,busy_checks=0,view_trace=None,abort=False,picture="",movies=None,limits=None,search="",selection=-1,genres=None,catalog_payload=None,http_trace=None,categories=None,confirm=False,properties=None,on_wait=None,window_ids=None,catalog_payloads=None,on_fetch=None,select_trace=None,on_ok=None,on_select=None):
         calls=[]; entries=[]; dialogs=[]; ended=[]; builtins=[]
+        windows = iter([10025] if callable(window_ids) else window_ids or [10025])
+        current_window = [10025]
+        def window_id():
+            if callable(window_ids): return window_ids()
+            current_window[0] = next(windows, current_window[0])
+            return current_window[0]
         properties = properties if properties is not None else {}
         window = types.SimpleNamespace(getProperty=lambda k:properties.get(k, ''),
             setProperty=properties.__setitem__, clearProperty=lambda k:properties.pop(k, None))
         categories = categories if categories is not None else []
+        payloads = iter(catalog_payloads) if catalog_payloads is not None else None
         def fetch(request, **kwargs):
             if http_trace is not None: http_trace.append(request.full_url)
-            return io.BytesIO(json.dumps(catalog_payload or {'metas': []}).encode())
+            if on_fetch: on_fetch()
+            return io.BytesIO(json.dumps(next(payloads) if payloads is not None else catalog_payload or {'metas': []}).encode())
         vfs_trace = vfs_trace if vfs_trace is not None else []
         def exists(path):
             vfs_trace.append(('exists', path))
@@ -67,11 +75,18 @@ class PluginTests(unittest.TestCase):
             def __init__(self,*a):vfs_trace.append(('File', a))
             def read(self):return '<sources><video><default>'+default+'</default></video></sources>'
             def close(self):pass
-        dialog=types.SimpleNamespace(yesno=lambda *a:dialogs.append(a) or confirm,ok=lambda *a:dialogs.append(a),notification=lambda *a,**kw:dialogs.append(a),browseSingle=lambda *a:picture,input=lambda *a,**kw:search,select=lambda *a:selection)
+        def ok(*args):
+            dialogs.append(args)
+            if on_ok: on_ok()
+        def select(*args):
+            if select_trace is not None: select_trace.append(args)
+            if on_select: on_select()
+            return selection
+        dialog=types.SimpleNamespace(yesno=lambda *a:dialogs.append(a) or confirm,ok=ok,notification=lambda *a,**kw:dialogs.append(a),browseSingle=lambda *a:picture,input=lambda *a,**kw:search,select=select)
         mods={
             'xbmc':types.SimpleNamespace(executeJSONRPC=rpc,executebuiltin=builtins.append,log=lambda *a:None,LOGERROR=4,getSupportedMedia=lambda kind:'.avi|.mkv|.mp4',Monitor=Monitor,getInfoLabel=folder_path,getCondVisibility=condition),
             'xbmcaddon':types.SimpleNamespace(Addon=lambda:types.SimpleNamespace(getAddonInfo=lambda key:self.profile)),
-            'xbmcgui':types.SimpleNamespace(Window=lambda *a:window,ListItem=Item,Dialog=lambda:dialog,getCurrentWindowId=lambda:10025),
+            'xbmcgui':types.SimpleNamespace(Window=lambda *a:window,ListItem=Item,Dialog=lambda:dialog,getCurrentWindowId=window_id),
             'xbmcplugin':types.SimpleNamespace(setContent=lambda *a:None,setPluginCategory=lambda *a:categories.append(a),endOfDirectory=lambda *a,**kw:ended.append(kw),addDirectoryItem=lambda *a:entries.append(a)),
             'xbmcvfs':types.SimpleNamespace(translatePath=lambda p:p,File=F,exists=exists,listdir=listdir),
         }
@@ -103,6 +118,36 @@ class PluginTests(unittest.TestCase):
         self.assertIn('action=torrentio_auto', e[0][1])
         self.assertEqual(e[0][2].props['IsPlayable'], 'false')
 
+    def test_visible_source_button_has_selected_identity_and_directory_dispatch(self):
+        c,e,d,x,b=self.run_plugin([],query='?mode=online',catalog_payload={'metas':[{'id':'tt1234567','name':'Example'}]})
+        self.assertEqual(e[0][2].props.get('Aperture.MovieID'), 'tt1234567')
+        c,e,d,x,b=self.run_plugin([],query='?action=torrentio_sources&id=tt1234567')
+        self.assertEqual(c, [])
+        self.assertIn('Choose source', repr(d))
+        self.assertEqual(x, [{'succeeded': False, 'cacheToDisc': False}])
+
+    def test_current_change_action_dispatches_to_ui(self):
+        # Route contract; player ownership behavior is exercised in UI tests.
+        import ast
+        tree = ast.parse((ROOT / 'movies-kodi/addon.py').read_text())
+        dispatches = [node for node in ast.walk(tree) if isinstance(node, ast.If)
+                      and isinstance(node.test, ast.Compare)
+                      and isinstance(node.test.left, ast.Name) and node.test.left.id == 'action'
+                      and isinstance(node.test.comparators[0], ast.Tuple)]
+        routes = [node for node in dispatches if any(isinstance(v, ast.Constant) and v.value == 'torrentio_auto'
+                  for v in node.test.comparators[0].elts)]
+        self.assertEqual(len(routes), 1)
+        self.assertIn('torrentio_change', [v.value for v in routes[0].test.comparators[0].elts])
+
+    def test_history_manual_choice_keeps_resume_intent(self):
+        from test_movie_history import history, MOVIE
+        history.HistoryStore(Path(self.profile) / 'history-private').record_playback(MOVIE, is_playing=True, position_seconds=90, duration_seconds=1000, lastplayed=1)
+        c,e,d,x,b = self.run_plugin([], query='?mode=continue')
+        item = e[0][2]
+        self.assertEqual(item.props.get('Aperture.MovieID'), MOVIE['id'])
+        self.assertEqual(item.props.get('Aperture.SourceResume'), '1')
+        self.assertTrue(any('torrentio_sources' in route and 'resume=1' in route for label, route in item.context if label == 'Choose source'))
+
     def test_auto_action_dispatches_without_local_source_access(self):
         c,e,d,x,b=self.run_plugin([],query='?action=torrentio_auto&id=tt1234567')
         self.assertEqual(c, [])
@@ -123,7 +168,7 @@ class PluginTests(unittest.TestCase):
         self.assertEqual(b,[])
     def test_movie_details_exposes_visible_find_streams_action(self):
         c,e,d,x,b=self.run_plugin([],query='?action=online_details&id=tt1234567',selection=0,catalog_payload={'meta':{'id':'tt1234567','name':'Example','description':'A plot'}})
-        self.assertEqual(b, ['RunPlugin(plugin://plugin.video.aperture.movies/?action=torrentio_find&id=tt1234567)'])
+        self.assertEqual(b, ['Container.Update(plugin://plugin.video.aperture.movies/?action=torrentio_sources&id=tt1234567)'])
         self.assertIn('Playback availability not checked', repr(d))
         self.assertEqual(c, [])
 

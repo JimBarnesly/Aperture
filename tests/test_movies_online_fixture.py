@@ -2,6 +2,7 @@
 import ast
 from pathlib import Path
 from types import SimpleNamespace
+from typing import Any
 import unittest
 from unittest.mock import Mock
 
@@ -91,6 +92,187 @@ class OnlineTransportTests(unittest.TestCase):
 
 
 class OnlineHarnessTests(unittest.TestCase):
+    def test_until_persists_pending_stage_before_native_predicate(self):
+        import json
+        import tempfile
+        import time
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp)
+            ns: dict[str, Any] = dict(OUT=out, json=json, time=time, checks=[{'check': 'prior-stage'}],
+                      xbmcgui=SimpleNamespace(getCurrentWindowId=lambda: 11120,
+                                              getCurrentWindowDialogId=lambda: 0),
+                      xbmc=SimpleNamespace(getInfoLabel=lambda key: 'synthetic',
+                          getCondVisibility=lambda key: False,
+                          Window=lambda key: None),
+                      monitor=SimpleNamespace(waitForAbort=lambda seconds: False))
+            exec(service_functions('until', 'checkpoint'), ns)
+            def native_fault():
+                self.assertTrue((out / 'progress.json').exists(),
+                                'Native crash loses pending stage and completed assertions')
+                progress = json.loads((out / 'progress.json').read_text())
+                self.assertEqual(progress['stage'], 'browse after home resume')
+                self.assertEqual(progress['status'], 'waiting')
+                self.assertEqual(progress['window'], 11120)
+                self.assertEqual(progress['checks'], [{'check': 'prior-stage'}])
+                raise RuntimeError('simulated native boundary')
+            with self.assertRaisesRegex(RuntimeError, 'simulated native boundary'):
+                ns['until']('browse after home resume', native_fault)
+            ns['until']('completed-stage', lambda: True)
+            self.assertEqual(json.loads((out / 'progress.json').read_text())['stage'], 'completed-stage')
+
+    def test_online_navigation_rejects_visible_closing_modals(self):
+        ns: dict[str, Any] = dict(xbmcgui=SimpleNamespace(getCurrentWindowId=lambda: 10025),
+                  xbmc=SimpleNamespace(getCondVisibility=lambda condition:
+                                       condition == 'System.HasVisibleModalDialog'))
+        exec(service_functions('settled'), ns)
+        self.assertFalse(ns['settled'](), 'Closing dialogs still consume input in Omega')
+        tree = ast.parse((ROOT / 'tools/movies_online_qa_service.py').read_text())
+        conditions = [n.args[0].value for n in ast.walk(tree)
+                      if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
+                      and n.func.attr == 'getCondVisibility' and n.args
+                      and isinstance(n.args[0], ast.Constant)]
+        self.assertNotIn('System.HasModalDialog', conditions,
+                         'Every online/home transition must use a supported Kodi condition')
+
+    def test_home_search_reopens_only_after_keyboard_close_and_focus_restore(self):
+        # Replay native run 42818993595: the removed HasModalDialog is false
+        # while the keyboard still owns input during its closing animation.
+        state: dict[str, Any] = dict(window=10000, keyboard=False, closing=False, now=0,
+                                    opens=0, cancels=0, focus='Movies')
+        inputs = []
+
+        class FinishedSearchChecks(Exception):
+            pass
+
+        def rpc(action):
+            inputs.append(action)
+            if state['closing']:
+                self.fail('Kodi ignores input while the modal closing animation runs')
+            if action == 'Input.Select':
+                if state['window'] == 10000:
+                    state.update(window=11120, focus='Search')
+                else:
+                    self.assertEqual(state['focus'], 'Search')
+                    state.update(keyboard=True, focus='Keyboard')
+                    state['opens'] += 1
+            elif action == 'Input.Back':
+                state.update(keyboard=False, closing=True)
+                state['cancels'] += 1
+            elif action == 'Input.Down':
+                self.assertEqual(state['focus'], 'Search')
+                raise FinishedSearchChecks()
+
+        def condition(expression):
+            return {
+                'Window.IsActive(virtualkeyboard)': state['keyboard'],
+                'System.HasVisibleModalDialog': state['keyboard'] or state['closing'],
+                'Control.HasFocus(720)': state['focus'] == 'Search',
+                # Unsupported Omega conditions, including HasModalDialog, are false.
+            }.get(expression, False)
+
+        def wait(_):
+            state['now'] += .15
+            if state['closing']:
+                state.update(closing=False, focus='Search')
+            return False
+
+        def label(key):
+            return {'System.CurrentControl': state['focus'],
+                    'Container(730).NumItems': '0',
+                    'Container(731).NumItems': '1',
+                    'Container(732).NumItems': '1'}.get(key, '')
+
+        ns = dict(rpc=rpc, capture=Mock(), checkpoint=Mock(), json=__import__('json'),
+                  time=SimpleNamespace(monotonic=lambda: state['now']),
+                  monitor=SimpleNamespace(waitForAbort=wait),
+                  xbmc=SimpleNamespace(getInfoLabel=label, getCondVisibility=condition,
+                                       executebuiltin=Mock()),
+                  xbmcgui=SimpleNamespace(getCurrentWindowId=lambda: state['window'],
+                                         getCurrentWindowDialogId=lambda: 9999))
+        exec(service_functions('until', 'movies_home_journey'), ns)
+        with self.assertRaises(FinishedSearchChecks):
+            ns['movies_home_journey']()
+        self.assertEqual((state['opens'], state['cancels']), (2, 2))
+        self.assertEqual(inputs, ['Input.Select', 'Input.Select', 'Input.Back',
+                                  'Input.Select', 'Input.Back', 'Input.Down'])
+
+    def test_local_fallback_back_waits_past_retained_view_and_nested_busy_gap(self):
+        # Run42953881470: Videos reopens its retained view before the new
+        # directory completes. A gap between busy dialogs passed cinematic();
+        # queued Back then cancelled the listing and Kodi fell back to Files.
+        tree = ast.parse((ROOT / 'tools/movies_online_qa_service.py').read_text())
+        journey = next(n for n in tree.body if isinstance(n, ast.FunctionDef)
+                       and n.name == 'movies_home_journey')
+        starts = [i for i, n in enumerate(journey.body)
+                  if ast.unparse(n) == "home_focus('Local files')"]
+        self.assertEqual(len(starts), 2)
+        for start in starts:
+            with self.subTest(visit=start):
+                end = next(i for i, node in enumerate(journey.body)
+                           if i >= start and isinstance(node, ast.Expr)
+                           and isinstance(node.value, ast.Call)
+                           and node.value.args
+                           and isinstance(node.value.args[0], ast.Constant)
+                           and node.value.args[0].value in
+                           ('local Back to Movies home', 'offline fallback Back'))
+                state = dict(now=0., window=11120, backs=0)
+                root = 'plugin://plugin.video.aperture.movies/'
+
+                def condition(key):
+                    # Initially there is retained content and no busy overlay;
+                    # then an outer busy dialog, a gap, and a nested directory
+                    # busy dialog. Listing completes at .9, not at first view.
+                    busy = .15 <= state['now'] < .3 or .45 <= state['now'] < .9
+                    return {'Control.IsVisible(61)': True,
+                            'System.HasVisibleModalDialog': busy,
+                            'Window.IsActive(busydialog)': busy}.get(key, False)
+
+                def rpc(action):
+                    if action == 'Input.Select':
+                        state['window'] = 10025
+                    elif action == 'Input.Back':
+                        self.assertGreaterEqual(state['now'], .9,
+                            'Back cancels the loading local directory, landing in native Files')
+                        state['backs'] += 1
+                        state['window'] = 11120
+                    else:
+                        self.fail('Unexpected input: ' + action)
+
+                def wait(seconds):
+                    state['now'] += seconds
+                    return False
+
+                ns = dict(ROOT=root, rpc=rpc, home_focus=Mock(), focus=Mock(),
+                          capture=Mock(), checkpoint=Mock(), json=__import__('json'),
+                          time=SimpleNamespace(monotonic=lambda: state['now']),
+                          monitor=SimpleNamespace(waitForAbort=wait),
+                          xbmc=SimpleNamespace(getCondVisibility=condition,
+                              getInfoLabel=lambda key: {
+                                  'Container.FolderPath': root + '?mode=local',
+                                  'ListItem.Label': 'Amber Horizon',
+                                  'Container.NumItems': '3'}.get(key, '')),
+                          xbmcgui=SimpleNamespace(getCurrentWindowId=lambda: state['window'],
+                                                 getCurrentWindowDialogId=lambda: 9999))
+                exec(service_functions('until', 'settled', 'cinematic', 'wait_for_movie_idle'), ns)
+                exec(compile(ast.Module(body=journey.body[start:end + 1], type_ignores=[]),
+                             '<local-fallback-journey>', 'exec'), ns)
+                self.assertEqual((state['backs'], state['window']), (1, 11120))
+
+    def test_home_source_journey_uses_row_buttons_and_native_directory(self):
+        tree = ast.parse((ROOT / 'tools/movies_online_qa_service.py').read_text())
+        functions = {n.name: n for n in tree.body if isinstance(n, ast.FunctionDef)}
+        self.assertIn('home_source_journey', functions)
+        source = ast.unparse(functions['home_source_journey'])
+        for evidence in ('730', '731', '732', '740', '741', '742', 'Input.Right',
+                         'Input.Select', 'Input.Back', 'torrentio_sources', 'resume=1',
+                         'torrentio-resolve', 'home-source-directory-cancel'):
+            self.assertIn(evidence, source)
+        for bypass in ('RunPlugin(', 'SetFocus(', 'Container.Update(', 'Player.Open'):
+            self.assertNotIn(bypass, source)
+        calls = [n for n in ast.walk(tree) if isinstance(n, ast.Call)
+                 and isinstance(n.func, ast.Name) and n.func.id == 'home_source_journey']
+        self.assertEqual(len(calls), 1)
+
     def test_online_harness_budget_includes_history_wait(self):
         source = (ROOT / 'tools/movies_smoke.sh').read_text()
         self.assertIn('240s', source, 'Online journey now includes a 22-second stale-write observation')
@@ -151,7 +333,7 @@ class OnlineHarnessTests(unittest.TestCase):
 
     def test_details_assert_actions_before_return_to_browsing(self):
         state = {'dialog': 12002, 'choice': 0}
-        choices = ['Find streams (Torrentio)', 'Set up online playback', 'Back to browsing']
+        choices = ['Choose source', 'Set up online playback', 'Back to browsing']
         inputs = []
         def rpc(action):
             inputs.append(action)

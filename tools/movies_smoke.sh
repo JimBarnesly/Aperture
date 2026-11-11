@@ -49,7 +49,11 @@ touch "$XAUTHORITY"; xauth -f "$XAUTHORITY" add "$DISPLAY" . "$(python3 -c 'impo
 Xvfb "$DISPLAY" -auth "$XAUTHORITY" -screen 0 1920x1080x24 -nolisten tcp +extension GLX +render > "$OUT/xvfb.log" 2>&1 & X_PID=$!
 for _ in {1..100}; do xdpyinfo >/dev/null 2>&1 && pactl info >/dev/null 2>&1 && break; sleep .1; done
 xdpyinfo >/dev/null; pactl info > "$OUT/pulse-info.txt"
-timeout --kill-after=5s 240s "$KODI_BIN" --windowing=x11 --gl-interface=glx --audio-backend=pulseaudio --debug -fs > "$OUT/kodi.stdout" 2>&1 & K_PID=$!
+if [[ "${APERTURE_MOVIES_NATIVE_DEBUG:-0}" == 1 ]]; then
+  bash "$ROOT/tools/movies_native_debug.sh" "$KODI_BIN" --windowing=x11 --gl-interface=glx --audio-backend=pulseaudio --debug -fs > "$OUT/kodi.stdout" 2>&1 & K_PID=$!
+else
+  timeout --kill-after=5s 240s "$KODI_BIN" --windowing=x11 --gl-interface=glx --audio-backend=pulseaudio --debug -fs > "$OUT/kodi.stdout" 2>&1 & K_PID=$!
+fi
 for _ in {1..2400}; do
   grep -q '"status": "\(passed\|failed\)"' "$OUT/result.json" && break
   kill -0 "$K_PID" 2>/dev/null || { echo 'Kodi exited before acceptance result'; cat "$OUT/kodi.stdout"; exit 1; }

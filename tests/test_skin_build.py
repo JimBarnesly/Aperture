@@ -35,6 +35,21 @@ class SkinBuildTests(unittest.TestCase):
     def assemble(self):
         return build.assemble(self.source, self.out, ROOT/'skin/xml/Home.xml')
 
+    def test_osd_change_source_preserves_pause_and_navigates_from_native_group(self):
+        path = self.source / 'xml/VideoOSD.xml'
+        path.write_text('<window><controls><control type="grouplist" id="201"><control type="button" id="602"><onclick>PlayerControl(Play)</onclick></control></control></controls></window>')
+        self.assemble()
+        root = ET.parse(self.out / 'xml/VideoOSD.xml').getroot()
+        button = root.find('.//control[@id="201"]/control[@id="699"]')
+        self.assertIsNotNone(button, 'Change source must be reachable in native OSD navigation')
+        self.assertEqual(button.findtext('label'), 'Change source')
+        self.assertIn('torrentio_change', button.findtext('onclick'))
+        self.assertIn('aperture_movie', button.findtext('visible'))
+        self.assertEqual(root.findtext('.//control[@id="602"]/onclick'), 'PlayerControl(Play)')
+        from movie_exit_signal import apply
+        apply(self.out)
+        self.assertEqual(len(ET.parse(self.out / 'xml/VideoOSD.xml').findall('.//control[@id="699"]')), 1)
+
     def test_fullscreen_exit_latch_preserves_native_controls_and_is_session_bound(self):
         path = self.source / 'xml/VideoFullScreen.xml'
         path.write_text('<window><onload>Existing()</onload><controls><control type="group" id="1"/></controls></window>')
@@ -67,7 +82,7 @@ class SkinBuildTests(unittest.TestCase):
         self.assertEqual(condition, 'Player.HasVideo + VideoPlayer.Content(movies) + '
                          '!String.IsEmpty(VideoPlayer.UniqueID(aperture_session)) + [' +
                          ' | '.join('Window.Next(%d)' % n for n in
-                                    (10000, 10001, 10002, 10025, 10500, 10501, 10502, 10800)) + ']')
+                                    (10000, 10001, 10002, 10025, 10500, 10501, 10502, 10800, 11120)) + ']')
 
     def test_manifest_upgrade_and_license_preserved(self):
         self.assemble()

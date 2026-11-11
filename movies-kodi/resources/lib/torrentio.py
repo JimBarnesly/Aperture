@@ -118,10 +118,12 @@ def read_private(fd, name):
 
 class Source:
     """Raw provider text/URLs never enter labels, reprs or navigation."""
-    def __init__(self, url, label, identity):
+    def __init__(self, url, label, identity, hint='', suitability='unknown'):
         self._url = url
         self.id = hashlib.sha256(identity.encode('utf-8')).hexdigest()
         self.label = label
+        self.hint = hint
+        self.suitability = suitability
 
 
 def strict_url(url):
@@ -134,6 +136,36 @@ def strict_url(url):
     if parsed.scheme != 'https' or parsed.username or parsed.password or parsed.fragment or parsed.port is not None:
         raise ProviderError()
     return parsed
+
+
+def source_hint(entry, hints, token, limit=100):
+    """Bounded display-only release hint; never derive it from a resolver URL."""
+    for value in (hints.get('filename'), entry.get('title')):
+        if not isinstance(value, str):
+            continue
+        line = value[:2048].split('\n', 1)[0]
+        # Discard an unsafe line rather than risk showing part of a signed URL.
+        if (token in line or re.search(r'[:/@?=&%\\\\\[\]\x00-\x1f\x7f]', line)
+                or re.search(r'[A-Za-z0-9_-]{32,}', line)):
+            continue
+        line = re.sub(r'[^\w .()\-]', ' ', line).strip()[:min(limit, 2048)]
+        if line:
+            return line
+    return ''
+
+
+def source_suitability(hint):
+    # Release modifiers after a year are not words in the movie's title.
+    if re.search(r'(?i)\s-\s+official[. -]+(?:trailer|teaser)\b', hint):
+        return 'extra'
+    release = re.split(r'\b(?:19|20)\d{2}\b', hint.replace('_', '.'), maxsplit=1)
+    if len(release) == 2:
+        match = re.search(r'(?i)\b(trailer|teaser|sample|clip|behind[. -]+the[. -]+scenes)\b', release[1])
+        if match:
+            return 'extra'
+        if re.search(r'(?i)\b(full[. -]+(?:movie|film)|feature[. -]+film)\b', release[1]):
+            return 'feature'
+    return 'unknown'
 
 
 def source_label(entry, hints):
@@ -173,9 +205,17 @@ def parse_streams(payload, config):
                 continue
             if not re.fullmatch('[a-fA-F0-9]{40}', parts[4]) or not re.fullmatch(r'[A-Za-z0-9_-]{1,256}', parts[5]) or not re.fullmatch(r'(?:null|undefined|[0-9]{1,6})', parts[6]):
                 continue
+            hint = source_hint(entry, hints, config._token, 2048)
+            title_hint = source_hint({'title': entry.get('title')}, {}, config._token, 2048)
+            flags = [source_suitability(value) for value in (hint, title_hint)]
+            hint = hint[:100]
+            suitability = 'extra' if 'extra' in flags else 'feature' if 'feature' in flags else 'unknown'
             label = source_label(entry, hints)
+            if hint:
+                label = hint + ' · ' + label
+            label += ' · ' + ('content unknown' if suitability == 'unknown' else suitability + ' hint')
             # Only validated resolver identity, never the rotating credential.
-            source = Source(entry['url'], label, '/'.join(parts[1:3] + parts[4:]))
+            source = Source(entry['url'], label[:280], '/'.join(parts[1:3] + parts[4:]), hint, suitability)
             found.setdefault(source.id, source)
         except (ProviderError, ValueError):
             continue

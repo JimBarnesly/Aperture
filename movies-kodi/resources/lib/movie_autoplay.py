@@ -88,8 +88,10 @@ def rank_sources(sources):
         language = 0 if 'english' in text else 1 if 'multi' in text else 2 if 'language unspecified' in text else 3
         codec = 0 if re.search(r'\b(avc|x264|h\.?264)\b', text) else 1 if 'codec unspecified' in text else 2 if re.search(r'\b(hevc|x265|h\.?265)\b', text) else 3
         resolution = next((rank for value, rank in [('1080p', 0), ('720p', 1), ('480p', 2), ('2160p', 4), ('4k', 4)] if value in text), 3)
-        return language, resolution == 4, codec, resolution
+        return getattr(source, 'suitability', 'unknown') != 'feature', language, resolution == 4, codec, resolution
     unique = {}
     for source in sources:
+        if getattr(source, 'suitability', 'unknown') == 'extra':
+            continue
         unique.setdefault(source.id, source)
     return sorted(unique.values(), key=score)

@@ -491,14 +491,18 @@ class DriverSafetyTest(unittest.TestCase):
         subject.check_movies()
         self.assertEqual([call.args[0] for call in subject.focus_home.call_args_list], [100, 100])
         self.assertEqual([call.args[0] for call in subject.key.call_args_list],
-                         ['Return', 'Return', 'BackSpace', 'Return', 'BackSpace', 'BackSpace'])
+                         ['Return', 'Right', 'Right', 'Right', 'Return', 'Return', 'BackSpace', 'BackSpace',
+                          'Return', 'Return', 'BackSpace', 'BackSpace', 'BackSpace'])
         predicates = [call.args[1] for call in subject.wait.call_args_list]
-        for guidance, empty, home in (predicates[:3], predicates[3:]):
+        for attempt, (landing, guidance, empty, restored, home) in enumerate((predicates[:5], predicates[5:]), 1):
+            self.assertTrue(landing({'window': 11120, 'dialog': 9999, 'focus': 720 if attempt == 1 else 723}))
+            self.assertFalse(landing({'window': 10025, 'dialog': 9999, 'focus': 720}))
             self.assertIs(guidance, driver.movies_guidance)
-            valid = {'window': 10025, 'dialog': 9999, 'folder': 'plugin://plugin.video.aperture.movies/'}
+            valid = {'window': 10025, 'dialog': 9999, 'folder': 'plugin://plugin.video.aperture.movies/?mode=local'}
             self.assertTrue(empty(valid))
             self.assertFalse(empty({**valid, 'folder': 'sources://video/'}))
             self.assertFalse(empty({**valid, 'dialog': 12002}))
+            self.assertTrue(restored({'window': 11120, 'dialog': 9999}))
             self.assertTrue(home({'window': 10000, 'dialog': 9999, 'focus': 100}))
             self.assertFalse(home({'window': 10000, 'dialog': 12002, 'focus': 100}))
         self.assertTrue(all(call.kwargs['after'] == 42 for call in subject.wait.call_args_list))

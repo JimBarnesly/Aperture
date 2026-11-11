@@ -431,13 +431,24 @@ class Driver:
         for attempt, dismiss in ((1, 'Return'), (2, 'BackSpace')):
             self.focus_home(100)
             before = self.key('Return')
+            initial_focus = 720 if attempt == 1 else 723
+            self.wait('ZIP-installed Movies online-first home', lambda s, focus=initial_focus: s.get('window') == 11120
+                and s.get('dialog') == 9999 and s.get('focus') == focus, after=before)
+            self.capture('zip-11-installed-movies-home-' + str(attempt))
+            # Reentry preserves Local files focus; first entry starts on Search.
+            for _ in range(3 if attempt == 1 else 0):
+                self.key('Right')
+            before = self.key('Return')
             self.wait('ZIP-installed Movies no-source guidance', movies_guidance, after=before)
             self.capture('zip-11-installed-movies-guidance-' + str(attempt))
             before = self.key(dismiss)
-            self.wait('ZIP-installed Movies empty root', lambda s: s.get('window') == 10025
+            self.wait('ZIP-installed Movies empty local files', lambda s: s.get('window') == 10025
                 and s.get('dialog') == 9999
-                and s.get('folder', '').rstrip('/') == 'plugin://plugin.video.aperture.movies', after=before)
-            self.record('zip-installed-movies-empty-root-' + str(attempt))
+                and s.get('folder') == 'plugin://plugin.video.aperture.movies/?mode=local', after=before)
+            self.record('zip-installed-movies-empty-local-' + str(attempt))
+            before = self.key('BackSpace')
+            self.wait('Back restores Movies home', lambda s: s.get('window') == 11120
+                and s.get('dialog') == 9999, after=before)
             before = self.key('BackSpace')
             self.wait('Home after installed Movies', lambda s: s.get('window') == 10000
                 and s.get('dialog') == 9999 and s.get('focus') == 100, after=before)

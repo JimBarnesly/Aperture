@@ -61,7 +61,7 @@ class LocalMediaNavigationTests(unittest.TestCase):
     def test_movies_prefer_cinematic_plugin_with_native_fallback(self):
         enabled = 'System.AddonIsEnabled(plugin.video.aperture.movies)'
         self.assertEqual(self.actions(100), {
-            enabled: 'ActivateWindow(Videos,plugin://plugin.video.aperture.movies/,return)',
+            enabled: 'ActivateWindow(1120)',
             f'!{enabled} + Library.HasContent(Movies)': 'ActivateWindow(Videos,videodb://movies/titles/,return)',
             f'!{enabled} + !Library.HasContent(Movies)': 'ActivateWindow(Videos,sources://video/,return)',
         })

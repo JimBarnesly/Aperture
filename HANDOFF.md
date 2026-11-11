@@ -1,5 +1,128 @@
 # Aperture integration handoff
 
+## PR32 offline Local files Back — 2026-11-11T03:45 UTC
+
+Owner: delegated fallback investigator; parent owns review/push. Base `04e433d`.
+READY for review; exact-head native gate remains closed. Full run42953881470
+online artifact proves directory cancellation, not another PreviousWindow/history
+collision: second Local files opens nested Busy dialogs, script is cancelled,
+Kodi falls back to empty-path Files. QA's instantaneous cinematic readiness
+queues Back into loading UI. Both local visits now reuse exact-folder continuous
+idle guard; one real Input.Back and11120 assertions retained. Product/global
+Back and scoped source-home return are unchanged; no speculative Files redirect.
+Regression RED→GREEN;891 full offline tests pass in loopback-only namespace.
+Crash capture/progress retained. Prior b773579 late Stop/Browse SIGSEGV unresolved:
+this run did not reach it. Native tools absent; no push/CI dispatch/deploy/live
+Kodi/account/profile/media actions. [Evidence and gate](docs/movies-offline-fallback-back.md).
+
+## PR32 native SIGSEGV — 2026-11-10 UTC
+
+Owner: delegated crash investigator; parent owns review/push. Base `b773579`.
+BLOCKED on native faulting stack; no speculative product fix. Run42826398013
+online artifact has real SIGSEGV but no core/backtrace. Full log advances through
+both scoped source Back returns and immediate home-resume Back/pause, then dies
+after Stop → Browse all while native row jobs overlap. Exactly two source-Back
+handler launches; repeated rows agree with native OnPlay/OnStop invalidation,
+not demonstrated recursion. VDPAU warning also occurs in passing default case.
+Diagnostic-only next-run child GDB + atomic QA progress prepared, no rerun/push.
+RED→GREEN capture tests include a real tiny C SIGSEGV;890 offline tests pass.
+No product/skin edits, live Kodi/profile/account/device actions or deployment.
+[Evidence, hypotheses, capture limits and gate](docs/movies-native-segfault.md).
+
+## PR32 native source Back — 2026-11-10 UTC
+
+Owner: delegated navigation-fix agent; parent owns review/push. Base `ea3276a`.
+READY for review; exact-head native gate remains. Run42820458960 proves Videos
+history collision, not input timing: Kodi truncates11120 when reactivating an
+already-visited10025, and `return` only sets the directory root. Home sources
+now carry a local return marker; scoped inherited-control Back + guarded
+ReplaceWindow returns11120 without a source/home loop. Both assembly paths wired;
+row identity/resume/no-resolution/nonmodal behavior retained. Native focus/row
+assertions strengthened, no expected-return weakening or delays. Regression
+RED→GREEN;886 full offline tests and complete ZIP assembly pass. Native runtime
+unavailable locally; no push/deployment/live Kodi/profile/account actions.
+[Root cause, source references, verification and rollback](docs/movies-source-back.md).
+
+## PR32 native home keyboard CI — local candidate, 2026-11-10 UTC
+
+Owner: delegated CI-fix agent; parent owns review/push. Base `add9d428`.
+READY for review; native exact-head rerun pending. Run42818993595 artifacts prove
+Search opened once, then Kodi ignored the second Select during keyboard close.
+Removed `System.HasModalDialog` made QA's cancellation barrier pass early.
+Online QA now uses `System.HasVisibleModalDialog` and checks restored Search focus;
+same predicate corrected in native source-directory checks and settled navigation.
+Two regressions observed RED→GREEN;10 focused and880 full offline tests pass
+(loopback-only namespace). Product handlers/routes audited and unchanged: privacy,
+async identity/generation, source-choice/resume/history and immediate Back retained.
+No delay/retry/check weakening, push, deployment, live Kodi or account access.
+Native tools absent; parent must rerun exact-head CI before lifting gate.
+[Evidence, scope audit and rollback](docs/movies-home-ci-fix.md).
+
+## Integrated home / manual sources — local candidate, 2026-11-10 UTC
+
+Owner: delegated async/integration agent; parent owns review/deployment.
+Async commit `211207fb1467d687702901f2af4d6019623aa530`; source-choice
+`15cd3e2e4cc72a903b72da60f2f3cdcba28402f2` locally cherry-picked as
+`5a36a8440b3929a4c2f3d8c806e55ba5d2dc98c2`. Overlap resolution retains both.
+READY for review: persistent row730–732 Choose source buttons740–742, explicit
+validated identity/resume, origin-checked navigation shim into Videos and correct
+Home details navigation. OSD Change source, extras filtering, consent/history,
+async stale-result guards and immediate Back assertions retained. Both XML
+installer checksums regenerated. 878 full offline tests and 33 focused tests pass;
+complete skin ZIP assembly passes. Native synthetic integration updated, not run:
+Xvfb/PulseAudio/pactl absent. Physical held-OK and native exact-head acceptance
+remain pending. No push/deployment/live Kodi/accounts/personal-profile changes;
+source-choice worktree untouched. See [integration evidence](docs/movies-stream-choice.md).
+
+## Movies async UI review fixes — 2026-11-10T12:36:11Z
+
+Owner: delegated async-fix agent; parent owns integration/review and deployment.
+Base `26ad95f1beca211f4d8fdb133c8cd525e2782fd5`, branch `feat/movies-home`.
+READY for parent review. Row statuses compare the URL refresh generation before
+publishing; details guard success/error dialogs and subsequent menu/actions by
+window, path and opaque invocation identity. Overlapping Retry and 11120 → 10000
+regressions observed RED then GREEN; same-window replacement also covered.
+Final loopback-only namespace: 72 focused and 857 full-suite tests pass.
+No weakened native assertions; native race recipe is documented but pending.
+No push/deploy/live Kodi/account/personal-profile changes. Separate source-choice
+tree untouched. Rollback is the base above; next step is parent review/integration
+and exact-head native synthetic acceptance. See [evidence](docs/movies-home.md).
+
+## Online-first Movies home — local candidate, 2026-11-10 UTC
+
+Owner: delegated Movies-home agent; parent owns review and any deployment.
+Base `9d4858102e9d297a3a98815539b64ad06ab15b92`, branch `feat/movies-home`.
+READY for review; native acceptance BLOCKED (Xvfb/PulseAudio/pactl absent).
+Home Movies opens native three-row online home, not local folders. Search,
+local Continue watching, locally ranked suggestions, public Popular/Featured,
+inline recovery and secondary Local files/Sources retained. Focused real
+synopsis/year/genres plus explicit metadata-only details; no guessed identity,
+TV relabelling or focus-triggered source lookup. Existing auto-source/resume and
+pause-on-Back extended to custom home. Matching skin + Movies required.
+852 full offline tests pass; complete skin/Movies package build passes.
+Native synthetic and ZIP journeys updated, not executed here. No push, deployment,
+live Kodi controls, account calls, personal profile/media/settings changes.
+Public-only Cinemeta probe: each default batch returned 50, all with plot/year/genres.
+See [behavior, TDD evidence and pending gates](docs/movies-home.md).
+
+## Stream suitability / manual choice — local checkpoint
+
+Owner: delegated source-choice worker; parent integrates/deploys. Base `9d48581`
+matched all19 installed Movies source files read-only. Branch
+`development/Aperture-stream-choice`, READY for review; no push/deploy/device or
+account actions. Provider release hints survive bounded sanitization; automatic
+selection excludes explicit extras before technical ranking, keeps unknowns and
+legitimate Trailer title words. Dedicated nonmodal source directory/pick,
+Browse/search single-press Choose source, explicit resume and native OSD Change
+source added.851 offline tests pass in isolated network; real skin ZIP passes.
+Exact Big Lebowski provider response was not inspected; cause remains plausible,
+not confirmed. **Home11120 row730–732 visible source-button integration remains
+parent work**, with explicit per-row identity/resume and RunPlugin navigation
+shim contract in [docs](docs/movies-stream-choice.md). Long-held remote OK physical
+acceptance and exact integrated native CI remain pending; no synthetic-only
+claim that remote cancellation is solved. Format/Games/media/credentials unchanged.
+
+
 ## PR31 native pause failures — local candidate, 2026-11-10 UTC
 
 Owner: delegated CI-fix agent; parent review/publish owner. Base `c857dee`.

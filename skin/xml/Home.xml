@@ -50,7 +50,7 @@
         <onright condition="![Player.HasAudio | Player.HasVideo]">100</onright>
         <onup>106</onup>
         <ondown>101</ondown>
-        <onclick condition="System.AddonIsEnabled(plugin.video.aperture.movies)">ActivateWindow(Videos,plugin://plugin.video.aperture.movies/,return)</onclick>
+        <onclick condition="System.AddonIsEnabled(plugin.video.aperture.movies)">ActivateWindow(1120)</onclick>
         <onclick condition="!System.AddonIsEnabled(plugin.video.aperture.movies) + Library.HasContent(Movies)">ActivateWindow(Videos,videodb://movies/titles/,return)</onclick>
         <onclick condition="!System.AddonIsEnabled(plugin.video.aperture.movies) + !Library.HasContent(Movies)">ActivateWindow(Videos,sources://video/,return)</onclick>
       </control>

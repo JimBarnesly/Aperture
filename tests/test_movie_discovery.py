@@ -25,10 +25,10 @@ class DiscoveryModelTests(unittest.TestCase):
         self.assertNotIn('filter',params);self.assertNotIn('search',state)
     def test_navigation_has_closed_focus_graph(self):
         root=ET.parse(ROOT/'skin/xml/MyVideoNav.xml')
-        for n in range(710,716):
+        for n in range(710,717):
             button=root.find(f".//control[@id='{n}']")
             self.assertIsNotNone(button)
             for direction in ('onleft','onright'):
-                self.assertIn(int(button.findtext(direction)),range(710,716))
+                self.assertIn(int(button.findtext(direction)),range(710,717))
             self.assertEqual(button.findtext('ondown'),'61')
         self.assertEqual(root.find(".//control[@id='61']/onup").text,'710')

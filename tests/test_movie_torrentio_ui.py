@@ -50,6 +50,87 @@ class TorrentioUITests(unittest.TestCase):
             t.Store(self.temp.name).set_autoplay_preference(True)
         return str(source)
 
+    def test_sources_directory_never_opens_select_or_resolves_and_uses_only_ids(self):
+        from urllib.parse import urlsplit, parse_qs
+        self.connect()
+        source = t.Source('private-url', 'Example 1998 · 1080p · content unknown', 'one')
+        self.client.streams.return_value = [source]
+        self.gui.DialogProgress.reset_mock()
+        self.run_ui({'action': ['torrentio_sources'], 'home': ['1'], 'id': ['tt1234567'], 'resume': ['1']})
+        self.client.streams.assert_called_once_with('tt1234567')
+        self.dialog.select.assert_not_called()
+        self.gui.DialogProgress.assert_not_called()
+        self.client.playback.assert_not_called()
+        self.xbmc.Player.assert_not_called()
+        self.plugin.addDirectoryItem.assert_called_once()
+        args = self.plugin.addDirectoryItem.call_args.args
+        query = parse_qs(urlsplit(args[1]).query)
+        self.assertEqual(query, {'action': ['torrentio_pick'], 'id': ['tt1234567'],
+                                 'source': [source.id], 'resume': ['1']})
+        self.assertFalse(args[3])
+        self.gui.ListItem.assert_called_with(label='1. ' + source.label)
+        self.plugin.endOfDirectory.assert_called_with(3, cacheToDisc=False)
+
+    def test_directory_pick_resolves_exact_fresh_id_with_explicit_resume(self):
+        self.connect()
+        source = t.Source('private-url', 'Example', 'one')
+        self.client.streams.return_value = [source]
+        self.gui.DialogProgress.reset_mock()
+        self.run_ui({'action': ['torrentio_pick'], 'id': ['tt1234567'],
+                     'source': [source.id], 'resume': ['1']})
+        self.gui.DialogProgress.assert_not_called()
+        self.client.playback.assert_called_once()
+        self.assertEqual(self.client.playback.call_args.args, ('tt1234567', source.id))
+        self.assertTrue(self.ui.prepare_history.call_args.kwargs['resume'])
+        self.gui.ListItem.return_value.getVideoInfoTag.return_value.setUniqueID.assert_any_call('tt1234567', 'aperture_movie')
+        self.dialog.select.assert_not_called()
+        self.dialog.yesno.assert_not_called()
+        self.client.reset_mock()
+        self.client.streams.return_value = []
+        self.run_ui({'action': ['torrentio_pick'], 'id': ['tt1234567'], 'source': [source.id]})
+        self.client.playback.assert_not_called()
+
+    def test_change_source_navigates_only_for_owned_tagged_movie_without_player_control(self):
+        player = self.xbmc.Player.return_value
+        player.isPlayingVideo.return_value = True
+        tag = player.getVideoInfoTag.return_value
+        tag.getMediaType.return_value = 'movie'
+        ids = {'aperture_session': 'a' * 32, 'aperture_movie': 'tt1234567'}
+        tag.getUniqueID.side_effect = ids.get
+        self.run_ui({'action': ['torrentio_change']})
+        self.xbmc.executebuiltin.assert_called_once_with('ActivateWindow(Videos,plugin://movies/?action=torrentio_sources&id=tt1234567,return)')
+        player.pause.assert_not_called()
+        player.stop.assert_not_called()
+        self.assertEqual(self.client.mock_calls, [])
+        self.xbmc.executebuiltin.reset_mock()
+        ids['aperture_session'] = ''
+        self.run_ui({'action': ['torrentio_change']})
+        self.xbmc.executebuiltin.assert_not_called()
+
+    def test_only_extra_sources_explain_auto_rejection_without_resolution(self):
+        self.connect()
+        self.client.streams.return_value = [t.Source('unused', 'Trailer', 'one', suitability='extra')]
+        self.run_ui({'action': ['torrentio_auto'], 'id': ['tt1234567']})
+        self.client.playback.assert_not_called()
+        self.assertIn('Choose source', str(self.dialog.ok.call_args))
+        self.assertIn('trailer', str(self.dialog.ok.call_args).lower())
+
+    def test_directory_error_finishes_without_focused_modal(self):
+        self.connect()
+        self.client.streams.side_effect = t.ProviderError()
+        self.run_ui({'action': ['torrentio_sources'], 'id': ['tt1234567']})
+        self.dialog.ok.assert_not_called()
+        self.plugin.endOfDirectory.assert_called_once_with(3, succeeded=False, cacheToDisc=False)
+
+    def test_directory_missing_or_empty_connection_has_no_focusable_modal(self):
+        self.run_ui({'action': ['torrentio_sources'], 'id': ['tt1234567']})
+        self.dialog.ok.assert_not_called()
+        self.plugin.endOfDirectory.assert_called_with(3, succeeded=False, cacheToDisc=False)
+        self.connect()
+        self.client.streams.return_value = []
+        self.run_ui({'action': ['torrentio_sources'], 'id': ['tt1234567']})
+        self.dialog.ok.assert_not_called()
+
     def test_cancelled_start_discards_only_its_pending_history(self):
         from test_movie_history import MOVIE, history
         from test_movie_history_playback import load
@@ -194,7 +275,8 @@ class TorrentioUITests(unittest.TestCase):
         item.getVideoInfoTag.return_value.getUniqueID.return_value = ''
         self.run_ui({'action': ['torrentio_auto'], 'id': ['tt1234567']})
         tag = item.getVideoInfoTag.return_value
-        tag.setUniqueID.assert_called_once()
+        self.assertEqual(tag.setUniqueID.call_count, 2)
+        tag.setUniqueID.assert_any_call('tt1234567', 'aperture_movie')
         token, kind = tag.setUniqueID.call_args.args
         self.assertRegex(token, r'^[a-f0-9]{32}$')
         self.assertEqual(kind, 'aperture_session')

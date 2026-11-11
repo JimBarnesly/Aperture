@@ -20,7 +20,7 @@ class MoviePauseOnExit:
         fullscreen = window == 12005
         # Use the underlying window, not focused dialogs/OSD. Fail closed for
         # unknown windows; only Home and native media browsing are exits.
-        browsing = window in (10000, 10001, 10002, 10025, 10500, 10501, 10502, 10800)
+        browsing = window in (10000, 10001, 10002, 10025, 10500, 10501, 10502, 10800, 11120)
         eligible = (xbmc.getCondVisibility('Player.HasVideo')
                     and xbmc.getCondVisibility('VideoPlayer.Content(movies)')
                     and xbmc.getCondVisibility('Player.Playing'))
