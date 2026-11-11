@@ -196,6 +196,68 @@ class OnlineHarnessTests(unittest.TestCase):
         self.assertEqual(inputs, ['Input.Select', 'Input.Select', 'Input.Back',
                                   'Input.Select', 'Input.Back', 'Input.Down'])
 
+    def test_local_fallback_back_waits_past_retained_view_and_nested_busy_gap(self):
+        # Run42953881470: Videos reopens its retained view before the new
+        # directory completes. A gap between busy dialogs passed cinematic();
+        # queued Back then cancelled the listing and Kodi fell back to Files.
+        tree = ast.parse((ROOT / 'tools/movies_online_qa_service.py').read_text())
+        journey = next(n for n in tree.body if isinstance(n, ast.FunctionDef)
+                       and n.name == 'movies_home_journey')
+        starts = [i for i, n in enumerate(journey.body)
+                  if ast.unparse(n) == "home_focus('Local files')"]
+        self.assertEqual(len(starts), 2)
+        for start in starts:
+            with self.subTest(visit=start):
+                end = next(i for i, node in enumerate(journey.body)
+                           if i >= start and isinstance(node, ast.Expr)
+                           and isinstance(node.value, ast.Call)
+                           and node.value.args
+                           and isinstance(node.value.args[0], ast.Constant)
+                           and node.value.args[0].value in
+                           ('local Back to Movies home', 'offline fallback Back'))
+                state = dict(now=0., window=11120, backs=0)
+                root = 'plugin://plugin.video.aperture.movies/'
+
+                def condition(key):
+                    # Initially there is retained content and no busy overlay;
+                    # then an outer busy dialog, a gap, and a nested directory
+                    # busy dialog. Listing completes at .9, not at first view.
+                    busy = .15 <= state['now'] < .3 or .45 <= state['now'] < .9
+                    return {'Control.IsVisible(61)': True,
+                            'System.HasVisibleModalDialog': busy,
+                            'Window.IsActive(busydialog)': busy}.get(key, False)
+
+                def rpc(action):
+                    if action == 'Input.Select':
+                        state['window'] = 10025
+                    elif action == 'Input.Back':
+                        self.assertGreaterEqual(state['now'], .9,
+                            'Back cancels the loading local directory, landing in native Files')
+                        state['backs'] += 1
+                        state['window'] = 11120
+                    else:
+                        self.fail('Unexpected input: ' + action)
+
+                def wait(seconds):
+                    state['now'] += seconds
+                    return False
+
+                ns = dict(ROOT=root, rpc=rpc, home_focus=Mock(), focus=Mock(),
+                          capture=Mock(), checkpoint=Mock(), json=__import__('json'),
+                          time=SimpleNamespace(monotonic=lambda: state['now']),
+                          monitor=SimpleNamespace(waitForAbort=wait),
+                          xbmc=SimpleNamespace(getCondVisibility=condition,
+                              getInfoLabel=lambda key: {
+                                  'Container.FolderPath': root + '?mode=local',
+                                  'ListItem.Label': 'Amber Horizon',
+                                  'Container.NumItems': '3'}.get(key, '')),
+                          xbmcgui=SimpleNamespace(getCurrentWindowId=lambda: state['window'],
+                                                 getCurrentWindowDialogId=lambda: 9999))
+                exec(service_functions('until', 'settled', 'cinematic', 'wait_for_movie_idle'), ns)
+                exec(compile(ast.Module(body=journey.body[start:end + 1], type_ignores=[]),
+                             '<local-fallback-journey>', 'exec'), ns)
+                self.assertEqual((state['backs'], state['window']), (1, 11120))
+
     def test_home_source_journey_uses_row_buttons_and_native_directory(self):
         tree = ast.parse((ROOT / 'tools/movies_online_qa_service.py').read_text())
         functions = {n.name: n for n in tree.body if isinstance(n, ast.FunctionDef)}

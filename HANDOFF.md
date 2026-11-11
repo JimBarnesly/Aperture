@@ -1,5 +1,20 @@
 # Aperture integration handoff
 
+## PR32 offline Local files Back — 2026-11-11T03:45 UTC
+
+Owner: delegated fallback investigator; parent owns review/push. Base `04e433d`.
+READY for review; exact-head native gate remains closed. Full run42953881470
+online artifact proves directory cancellation, not another PreviousWindow/history
+collision: second Local files opens nested Busy dialogs, script is cancelled,
+Kodi falls back to empty-path Files. QA's instantaneous cinematic readiness
+queues Back into loading UI. Both local visits now reuse exact-folder continuous
+idle guard; one real Input.Back and11120 assertions retained. Product/global
+Back and scoped source-home return are unchanged; no speculative Files redirect.
+Regression RED→GREEN;891 full offline tests pass in loopback-only namespace.
+Crash capture/progress retained. Prior b773579 late Stop/Browse SIGSEGV unresolved:
+this run did not reach it. Native tools absent; no push/CI dispatch/deploy/live
+Kodi/account/profile/media actions. [Evidence and gate](docs/movies-offline-fallback-back.md).
+
 ## PR32 native SIGSEGV — 2026-11-10 UTC
 
 Owner: delegated crash investigator; parent owns review/push. Base `b773579`.

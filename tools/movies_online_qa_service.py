@@ -431,7 +431,10 @@ def movies_home_journey():
     assert not any(event.startswith(('torrentio-', 'fake-')) for event in events())
     checks.append({'check': 'home-rows-no-source-lookup'})
     home_focus('Local files'); rpc('Input.Select')
-    until('home local fallback', cinematic)
+    # A retained Videos view can be visible before the replacement listing
+    # finishes (including gaps between nested busy dialogs). Do not queue Back
+    # into that load: it cancels the directory and Kodi falls back to Files.
+    wait_for_movie_idle('home local fallback', ROOT + '?mode=local')
     focus('Amber Horizon'); capture('home-local-fallback')
     rpc('Input.Back')
     until('local Back to Movies home', lambda: xbmcgui.getCurrentWindowId() == 11120)
@@ -439,7 +442,7 @@ def movies_home_journey():
     home_focus('Retry'); rpc('Input.Select')
     until('home catalogue failure visible', lambda: 'unavailable' in xbmcgui.Window(10000).getProperty('Aperture.Home.popular.status'))
     home_focus('Local files'); rpc('Input.Select')
-    until('offline fallback remains available', cinematic)
+    wait_for_movie_idle('offline fallback remains available', ROOT + '?mode=local')
     rpc('Input.Back')
     until('offline fallback Back', lambda: xbmcgui.getCurrentWindowId() == 11120)
     (OUT / 'catalogue-offline').unlink()
